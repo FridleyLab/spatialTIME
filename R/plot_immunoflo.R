@@ -14,10 +14,6 @@
 #' @return A list of ggplots (the length of dlist) - one for each TMA or ROI
 #'    
 #' @export
-#' 
-#' @examples
-#' plot_immunoflo(tma.data[[1]],
-#'  .id = "subid.x", mnames = marker_names, wshape = "r")
 #'
 plot_immunoflo <- function(
   dlist,
