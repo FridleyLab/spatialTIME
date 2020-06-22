@@ -68,6 +68,6 @@ tma_four <- tibble::tibble(
 if_data <- list(tma_one, tma_two, tma_three, tma_four)
 
 # store 
-usethis::use_data(if_data, overwrite = TRUE)
+# usethis::use_data(if_data, overwrite = TRUE)
 
 ```
