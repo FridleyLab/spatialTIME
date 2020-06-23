@@ -2,11 +2,10 @@ Package: spatialIHC
 Title: What the Package Does (One Line, Title Case)
 Version: 0.0.0.9000
 Authors@R: 
-    person(given = "First",
-           family = "Last",
-           role = c("aut", "cre"),
-           email = "first.last@example.com",
-           comment = c(ORCID = "YOUR-ORCID-ID"))
+    c(person(given = "Jordan", family = "Creed", role = "aut",
+             email = "jordan.h.creed@moffitt.org"),
+      person("Ram", "Thapa", role = c("aut", "cre"),
+             email = "ram.thapa@moffitt.org"))
 Description: What the package does (one paragraph).
 License: MIT + file LICENSE
 Encoding: UTF-8
