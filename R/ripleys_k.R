@@ -11,13 +11,12 @@
 #'  circular window and "i" or "irregular" for a custom polygon.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
 #' 
-#' @return Returns a list of components
-#'    \item{Subject ID}{Subject ID in TMA data}
-#'    \item{Translation K}{Ripley's K estimate using translation edge correction}
-#'    \item{Isotropic K}{Ripley's K estimate using isotropic edge correction}
-#'    \item{Theoritical K}{Theoritical value of Ripley's K}
-#'    \item{Intensity estimate}{Intensity of TMA data}
-#'    \item{N points}{Number of cells where the markers are positive}
+#' @return Returns a data frame
+#'    \item{r}{Subject ID in TMA data}
+#'    \item{theo}{Ripley's K estimate using translation edge correction}
+#'    \item{border}{Ripley's K estimate using isotropic edge correction}
+#'    \item{trans}{Theoritical value of Ripley's K}
+#'    \item{iso}{Intensity of TMA data}
 #'    
 #' @export
 #' 
@@ -61,9 +60,10 @@ ripleys_k <- function(data, id, mnames,
   p <- spatstat::ppp(x = X$xloc, y = X$yloc, window = w)
   
   # estimate K for variety of distances (r)
-  k_est <- spatstat::Kest(p, r = r_range)
-  # l_est <- spatstat::Lest(p, r = r_range)
-  return(k_est)
+  # k_est <- spatstat::Kest(p, r = r_range)
+  # we need the function to eventually return K and L estimates 
+  l_est <- spatstat::Lest(p, r = r_range)
+  return(l_est)
   
   # # border edge correction, not good for small number of points
   # border <- mean(k_est$border[round(k_est$r) == dist]) 
