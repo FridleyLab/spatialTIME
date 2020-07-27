@@ -27,6 +27,13 @@ plot_immunoflo <- function(
   cell_type = NULL#, 
   # path = NULL
   ) {
+  
+  ### changes to make
+  # 1. input will be new data type 
+  # 2. plot to pdf unless given subset of samples 
+  
+  
+  
   # convert to list of dataframes - throw error message if missing
   if (missing(dlist)) stop("dlist is missing; must provide data for plotting")
   if (is.data.frame(dlist)) dlist = list(dlist)
@@ -44,6 +51,11 @@ plot_immunoflo <- function(
     # pretty up labels 
     mlabels = stringr::str_wrap(mlabels,20)
   }
+  
+  # # if cell types are the same / null - mark as such 
+  # if (is.null(cell_type)) {
+  #   cell_type <- "same"
+  # }
   
   # progress bar for creating plots
   pb <- dplyr::progress_estimated(length(dlist))
@@ -78,10 +90,13 @@ plot_immunoflo <- function(
     }
     
     basic_plot <- plot_data %>% 
-      dplyr::filter(indicator == 1) %>% 
+      dplyr::filter(.data$indicator == 1) %>% 
       ggplot2::ggplot(aes(x = xloc, y = yloc, color = marker,
                           shape = !!as.name(cell_type))) +
-      ggplot2::geom_point(data = filter(plot_data, indicator == 0),
+      # ggplot2::geom_point(data = filter(plot_data, indicator == 0),
+      #                     # aes(fill = "grey70"),
+      #                     color = "gray70") +
+      ggplot2::geom_point(data = plot_data[plot_data$indicator == 0,],
                           # aes(fill = "grey70"),
                           color = "gray70") +
       ggplot2::geom_point(size = 3) +
