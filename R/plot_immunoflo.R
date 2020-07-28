@@ -19,12 +19,12 @@ plot_immunoflo <- function(
   dlist,
   plot_title, 
   mnames, 
-  # filename, 
   mlabels = NULL, 
   # pretty_labels = TRUE,
   mcolors = NULL, 
   dark_mode = FALSE,
-  cell_type = NULL#, 
+  cell_type = NULL, 
+  filename = NULL#,
   # path = NULL
   ) {
   
@@ -51,11 +51,6 @@ plot_immunoflo <- function(
     # pretty up labels 
     mlabels = stringr::str_wrap(mlabels,20)
   }
-  
-  # # if cell types are the same / null - mark as such 
-  # if (is.null(cell_type)) {
-  #   cell_type <- "same"
-  # }
   
   # progress bar for creating plots
   pb <- dplyr::progress_estimated(length(dlist))
@@ -113,8 +108,6 @@ plot_immunoflo <- function(
       basic_plot <- basic_plot + theme_dark_mode()
     }
     
-    return(basic_plot)
-    
   })
   
   # # file name with full path
@@ -138,4 +131,19 @@ plot_immunoflo <- function(
   #     print(plot[[x]])
   #   })
   # )
+  
+  # output to pdf if filename is specified 
+  if(!is.null(filename)){
+    pdf(sprintf("%s.pdf",filename), height = 10, width = 10)
+    on.exit(dev.off())
+    invisible(
+      lapply(seq_along(plot), function(x) {
+        print(plot[[x]])
+      })
+    )
+    dev.off()
+  }
+  
+  return(plot)
+  
 }
