@@ -10,6 +10,10 @@
 #'  "r" or "rectangle" for rectanglular window, "c" or "circle" for
 #'  circular window and "i" or "irregular" for a custom polygon.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
+#' @param dist Numeric value for something (Brooke or Chris please fill in)
+#' @param  kestimation Logical value determining the type estimation performed.
+#'  TRUE estimates Ripley's reduced second moment function while FALSE 
+#'  estimates Besags's transformation of Ripley's K
 #' 
 #' @return Returns a data frame
 #'    \item{r}{Subject ID in TMA data}
@@ -24,7 +28,10 @@
 #' ripleys_k(if_data[[1]], .id = "subid.x", mnames = marker_names)
 #'
 ripleys_k <- function(data, id, mnames, 
-                      wshape = "irregular", r_range = seq(0, 100, 50)) {
+                      wshape = "irregular",
+                      r_range = seq(0, 100, 50),
+                      dist = 200,
+                      kestimation = FALSE) {
   # check if any/all provided marker names are not present in the data
   if (all(!mnames %in% colnames(data))) {
     stop("No marker names are in the data")
@@ -62,28 +69,35 @@ ripleys_k <- function(data, id, mnames,
   # estimate K for variety of distances (r)
   # k_est <- spatstat::Kest(p, r = r_range)
   # we need the function to eventually return K and L estimates 
-  l_est <- spatstat::Lest(p, r = r_range)
-  return(l_est)
+  if (kestimation == TRUE) {
+    est <- spatstat::Kest(p, r = r_range)
+  } else {
+    est <- spatstat::Lest(p, r = r_range)
+  }
   
-  # # border edge correction, not good for small number of points
-  # border <- mean(k_est$border[round(k_est$r) == dist]) 
-  # 
-  # # translation edge correction, good for small number of points
-  # translate <- mean(k_est$trans[round(k_est$r) == dist])  
-  # 
-  # # isotropic edge correction, good for small number of points
-  # # if stationary process, trans and iso should be similar
-  # isotropic <- mean(k_est$iso[round(k_est$r) == dist])  
-  # 
-  # # possion process - therotical
-  # theo <- mean(k_est$theo[round(k_est$r) == dist])  
-  # 
-  # # intensity 
-  # int_est <- spatstat::intensity(p)
-  # 
-  # list(
-  #   `Subject ID` = unique(X[[.id]]), `Translation K` = translate,
-  #   `Isotropic K` = isotropic, `Theoritical K` = theo,
-  #   `Intensity estimate` = int_est, `N points` = sum(X[["positive_cell"]]))
+  # border edge correction, not good for small number of points
+  border <- mean(est$border[round(est$r) == dist]) 
+  
+  # translation edge correction, good for small number of points
+  translate <- mean(est$trans[round(est$r) == dist])  
+  
+  # isotropic edge correction, good for small number of points
+  # if stationary process, trans and iso should be similar
+  isotropic <- mean(est$iso[round(est$r) == dist])  
+  
+  # possion process - therotical
+  theo <- mean(est$theo[round(est$r) == dist])  
+  
+  # intensity 
+  int_est <- spatstat::intensity(p)
+
+  results_list <- list(
+    `Subject ID` = unique(X[[id]]), 
+    `Translation K` = translate,
+    `Isotropic K` = isotropic, 
+    `Theoritical K` = theo,
+    `Intensity estimate` = int_est, 
+    `N points` = sum(X %>% dplyr::pull(positive_cell))
+    )
 }
 
