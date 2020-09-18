@@ -1,7 +1,7 @@
 #' Generate plot of TMA point process
 #'
 #' @describtion This function generates plot of point process in rectangular or circular window.
-#' @param dlist List of TMA/ROI data frames or single TMA/ROI data frame.
+#' @param mif MIF object created using create_MIF().
 #' @param plot_title Character string or vector of character strings of variable name(s) to serve as plot title(s).
 #' @param mnames Character vector containing marker names.
 #' @param filename Character string of file name to store plots. Plots are generated as single .pdf file.
@@ -16,7 +16,7 @@
 #' @export
 #'
 plot_immunoflo <- function(
-  dlist,
+  mif,
   plot_title, 
   mnames, 
   mlabels = NULL, 
@@ -24,8 +24,8 @@ plot_immunoflo <- function(
   mcolors = NULL, 
   dark_mode = FALSE,
   cell_type = NULL, 
-  filename = NULL#,
-  # path = NULL
+  filename = NULL,
+  path = NULL
   ) {
   
   ### changes to make
@@ -35,14 +35,14 @@ plot_immunoflo <- function(
   
   
   # convert to list of dataframes - throw error message if missing
-  if (missing(dlist)) stop("dlist is missing; must provide data for plotting")
-  if (is.data.frame(dlist)) dlist = list(dlist)
+  if (missing(mif)) stop("MIF is missing; please provide the appropriate data")
+  # if (is.data.frame()) dlist = list(dlist) - need to change to MIF object
   
   # if (missing(filename)) stop("filename is missing; filename must be a string")
   
   # check if marker names and labels are equal in length
   if (!is.null(mlabels) && length(mnames) != length(mlabels)) {
-    stop("mnames and mlabels must be equal in length")
+    stop("gene names and labels must be equal in length")
   }
   
   # set marker label to marker name if no marker label provided
@@ -53,10 +53,10 @@ plot_immunoflo <- function(
   }
   
   # progress bar for creating plots
-  pb <- dplyr::progress_estimated(length(dlist))
+  pb <- dplyr::progress_estimated(length(mif[["spatial"]]))
   
   # plots
-  plot <- lapply(dlist, function(x){
+  plot <- lapply(MIF[["spatial"]], function(x){
     # update progress bar
     pb$tick()$print()
     # data to generate plot
@@ -100,12 +100,12 @@ plot_immunoflo <- function(
       ggplot2::ggtitle(plot_title) +
       ggplot2::scale_color_manual(NULL, values = mcolors, drop = FALSE) +
       ggplot2::scale_shape_manual(NULL, values = c(3, 16), drop = FALSE) +
-      theme_bw(base_size = 18) +
-      theme(axis.title = element_blank(),
-            panel.grid = element_blank())
+      ggplot::theme_bw(base_size = 18) +
+      ggplot::theme(axis.title = ggplot2::element_blank(),
+                    panel.grid = ggplot2::element_blank())
     
     if(dark_mode == TRUE){
-      basic_plot <- basic_plot + theme_dark_mode()
+      basic_plot <- basic_plot + ggdark::theme_dark_mode()
     }
     
   })
@@ -134,7 +134,7 @@ plot_immunoflo <- function(
   
   # output to pdf if filename is specified 
   if(!is.null(filename)){
-    pdf(sprintf("%s.pdf",filename), height = 10, width = 10)
+    grDevices::pdf(sprintf("%s.pdf",filename), height = 10, width = 10)
     on.exit(dev.off())
     invisible(
       lapply(seq_along(plot), function(x) {

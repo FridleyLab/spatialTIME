@@ -3,7 +3,7 @@
 #' @description This function calculates Ripley's K function of IF data to 
 #'   characterize correlation of spatial point process using tranlation and
 #'   isotropic edge correction method.
-#' @param data A TMA data frame.
+#' @param mif An MIF object
 #' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames Character vector of marker names to calculate Ripley's K on.
 #' @param wshape Character string of window shape. Potenital values are
@@ -23,15 +23,16 @@
 #'    \item{iso}{Intensity of TMA data}
 #'    
 #' @export
-#' 
-#' @examples
-#' ripleys_k(if_data[[1]], .id = "subid.x", mnames = marker_names)
 #'
-ripleys_k <- function(data, id, mnames, 
+ripleys_k <- function(mif,
+                      id,
+                      mnames, 
                       wshape = "irregular",
                       r_range = seq(0, 100, 50),
                       dist = 200,
                       kestimation = FALSE) {
+  data <- mif[["spatial"]]
+  
   # check if any/all provided marker names are not present in the data
   if (all(!mnames %in% colnames(data))) {
     stop("No marker names are in the data")
@@ -45,6 +46,10 @@ ripleys_k <- function(data, id, mnames,
   if (!wshape %in% c("circle", "c", "rectangle", "r", "i", "irregular"))
     stop("invalid window shape name")
   
+  # progress bar for k estimation
+  pb <- dplyr::progress_estimated(length(dlist))
+  
+  # estimate_list <- lapply(dlist, function(data){
   # x and y coordinates for cells
   X <- data %>% 
     dplyr::mutate(xloc = (XMin + XMax) / 2) %>%

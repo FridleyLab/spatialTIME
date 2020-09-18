@@ -16,9 +16,8 @@
 #'    \item{derived}{List of data derived using the MIF object}
 #'    
 #' @export
-#'
-create_MIF <- function(spatial_list, clinical_data, sample_data){
-  
+create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL){
+
   # create color schemes for output text 
   emphesis <- crayon::make_style("deepskyblue")
   
@@ -26,7 +25,7 @@ create_MIF <- function(spatial_list, clinical_data, sample_data){
   # image tag (does every file come with image.tage and is it always named
   # "image.tag")
   if(is.null(names(spatial_list))) {
-    spatial_names <- lappy(spatial_list, function(x){x$`image.tag`[[1]]})
+    spatial_names <- lapply(spatial_list, function(x) {x$image.tag[[1]]})
     spatial_names <- unlist(spatial_names)
     
     names(spatial_list) <- spatial_names
@@ -58,15 +57,18 @@ create_MIF <- function(spatial_list, clinical_data, sample_data){
   
   spatial_list <- spatial_list[spatial_sample_names]
   
-  MIF <- list("spatial" = spatial_list,
+  mif <- list("spatial" = spatial_list,
               "clinical" = clinical_data,
               "sample" = sample_data,
               "derived" = list())
   
-  cat(emphesis(length(spatial_list)), "spatial data frames \n",
-      emphesis(length(unique(clinical_data$patient_id))), " patients spanning",
-      emphesis(length(unique(sample_data$image.tag))), "samples")
+  class(mif) <- c("mif")
   
-  return(MIF)
+  # cat(emphesis(length(unique(clinical_data$patient_id))), "patients spanning",
+  #     emphesis(length(unique(sample_data$image.tag))), "samples and",
+  #     emphesis(length(spatial_list)), "spatial data frames were found \n")
+  # add number/names of genes in a panel
+  
+  return(mif)
 
 }
