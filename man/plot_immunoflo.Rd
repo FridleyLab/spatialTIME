@@ -5,17 +5,19 @@
 \title{Generate plot of TMA point process}
 \usage{
 plot_immunoflo(
-  dlist,
+  mif,
   plot_title,
   mnames,
   mlabels = NULL,
   mcolors = NULL,
   dark_mode = FALSE,
-  cell_type = NULL
+  cell_type = NULL,
+  filename = NULL,
+  path = NULL
 )
 }
 \arguments{
-\item{dlist}{List of TMA/ROI data frames or single TMA/ROI data frame.}
+\item{mif}{MIF object created using create_MIF().}
 
 \item{plot_title}{Character string or vector of character strings of variable name(s) to serve as plot title(s).}
 
