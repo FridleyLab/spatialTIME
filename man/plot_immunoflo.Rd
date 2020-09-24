@@ -39,5 +39,5 @@ plot_immunoflo(
 A list of ggplots (the length of dlist) - one for each TMA or ROI
 }
 \description{
-Generate plot of TMA point process
+This function generates plot of point process in rectangular or circular window.
 }

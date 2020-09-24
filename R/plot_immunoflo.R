@@ -1,6 +1,6 @@
 #' Generate plot of TMA point process
 #'
-#' @describtion This function generates plot of point process in rectangular or circular window.
+#' @description This function generates plot of point process in rectangular or circular window.
 #' @param mif MIF object created using create_MIF().
 #' @param plot_title Character string or vector of character strings of variable name(s) to serve as plot title(s).
 #' @param mnames Character vector containing marker names.
