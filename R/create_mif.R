@@ -17,9 +17,6 @@
 #'    
 #' @export
 create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL){
-
-  # create color schemes for output text 
-  emphesis <- crayon::make_style("deepskyblue")
   
   # if spatial data list is unnamed - name each element according to 
   # image tag (does every file come with image.tage and is it always named
@@ -57,18 +54,15 @@ create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL){
   
   spatial_list <- spatial_list[spatial_sample_names]
   
-  mif <- list("spatial" = spatial_list,
-              "clinical" = clinical_data,
-              "sample" = sample_data,
-              "derived" = list())
+  mif <- list(spatial = spatial_list,
+              clinical = clinical_data,
+              sample = sample_data,
+              derived = list())
   
-  class(mif) <- c("mif")
+  # class(mif) <- c("mif", class(mif))
   
-  # cat(emphesis(length(unique(clinical_data$patient_id))), "patients spanning",
-  #     emphesis(length(unique(sample_data$image.tag))), "samples and",
-  #     emphesis(length(spatial_list)), "spatial data frames were found \n")
-  # add number/names of genes in a panel
+  structure(mif, class="mif")
   
-  return(mif)
+  # return(mif)
 
 }

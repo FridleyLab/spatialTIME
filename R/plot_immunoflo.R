@@ -36,6 +36,7 @@ plot_immunoflo <- function(
   
   # convert to list of dataframes - throw error message if missing
   if (missing(mif)) stop("MIF is missing; please provide the appropriate data")
+  if (class(mif) != "mif") stop("Please use a mif object")
   # if (is.data.frame()) dlist = list(dlist) - need to change to MIF object
   
   # if (missing(filename)) stop("filename is missing; filename must be a string")
@@ -56,7 +57,7 @@ plot_immunoflo <- function(
   pb <- dplyr::progress_estimated(length(mif[["spatial"]]))
   
   # plots
-  plot <- lapply(MIF[["spatial"]], function(x){
+  plot <- lapply(mif[["spatial"]], function(x){
     # update progress bar
     pb$tick()$print()
     # data to generate plot
@@ -86,8 +87,10 @@ plot_immunoflo <- function(
     
     basic_plot <- plot_data %>% 
       dplyr::filter(.data$indicator == 1) %>% 
-      ggplot2::ggplot(aes(x = xloc, y = yloc, color = marker,
-                          shape = !!as.name(cell_type))) +
+      ggplot2::ggplot(ggplot2::aes(x = xloc, 
+                                   y = yloc, 
+                                   color = marker, 
+                                   shape = !!as.name(cell_type))) +
       # ggplot2::geom_point(data = filter(plot_data, indicator == 0),
       #                     # aes(fill = "grey70"),
       #                     color = "gray70") +
@@ -100,37 +103,17 @@ plot_immunoflo <- function(
       ggplot2::ggtitle(plot_title) +
       ggplot2::scale_color_manual(NULL, values = mcolors, drop = FALSE) +
       ggplot2::scale_shape_manual(NULL, values = c(3, 16), drop = FALSE) +
-      ggplot::theme_bw(base_size = 18) +
-      ggplot::theme(axis.title = ggplot2::element_blank(),
+      ggplot2::theme_bw(base_size = 18) +
+      ggplot2::theme(axis.title = ggplot2::element_blank(),
                     panel.grid = ggplot2::element_blank())
     
     if(dark_mode == TRUE){
       basic_plot <- basic_plot + ggdark::theme_dark_mode()
     }
     
+    return(basic_plot)
+    
   })
-  
-  # # file name with full path
-  # if (!is.null(path)) {
-  #   filename <- file.path(path, sprintf("%s.pdf", filename))
-  # } else {
-  #   filename <- sprintf("%s.pdf", filename)
-  # }
-  # 
-  # # progress bar for saving plots
-  # pb <- dplyr::progress_estimated(length(plot))
-  # 
-  # # save plots with probress bar
-  # pdf(filename, height = 10, width = 10)
-  # on.exit(dev.off())
-  # invisible(
-  #   lapply(seq_along(plot), function(x) {
-  #     # update progress bar
-  #     pb$tick()$print()
-  #     
-  #     print(plot[[x]])
-  #   })
-  # )
   
   # output to pdf if filename is specified 
   if(!is.null(filename)){
