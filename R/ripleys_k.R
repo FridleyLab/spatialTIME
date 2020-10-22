@@ -80,8 +80,9 @@ ripleys_k <- function(mif,
     est <- spatstat::Lest(p, r = r_range)
   }
   
+  # remove border correction -> only good if you have a bunch + cells 
   # border edge correction, not good for small number of points
-  border <- mean(est$border[round(est$r) == dist]) 
+  # border <- mean(est$border[round(est$r) == dist]) 
   
   # translation edge correction, good for small number of points
   translate <- mean(est$trans[round(est$r) == dist])  
