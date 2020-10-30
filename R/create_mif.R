@@ -16,7 +16,8 @@
 #'    \item{derived}{List of data derived using the MIF object}
 #'    
 #' @export
-create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL){
+create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL,
+                       clean_columns = TRUE){
   
   # if spatial data list is unnamed - name each element according to 
   # image tag (does every file come with image.tage and is it always named
@@ -24,6 +25,7 @@ create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL){
   if(is.null(names(spatial_list))) {
     spatial_names <- lapply(spatial_list, function(x) {x$image.tag[[1]]})
     spatial_names <- unlist(spatial_names)
+    spatial_names <- gsub(".tif", "", spatial_names)
     
     names(spatial_list) <- spatial_names
   }
@@ -53,6 +55,17 @@ create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL){
     dplyr::filter(patient_id %in% clinical_sample_names)
   
   spatial_list <- spatial_list[spatial_sample_names]
+  
+  if(clean_columns== TRUE){
+    sample_data <- sample_data %>% 
+      janitor::clean_names()
+    
+    clinical_data <- clinical_data %>% 
+      janitor::clean_names()
+    
+    spatial_list <- lapply(spatial_list, 
+                           function(x) {janitor::clean_names(x)})
+  }
   
   mif <- list(spatial = spatial_list,
               clinical = clinical_data,
