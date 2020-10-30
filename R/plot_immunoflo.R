@@ -11,7 +11,7 @@
 #' @param path Different path than file name or to use in conjunction with filename ???
 #' @param dark_mode Plot using dark color scheme 
 #' 
-#' @return A list of ggplots (the length of dlist) - one for each TMA or ROI
+#' @return A list of ggplots (the length of mif[["spatial]]) - one for each TMA or ROI
 #'    
 #' @export
 #'
