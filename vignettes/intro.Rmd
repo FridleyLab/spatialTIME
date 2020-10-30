@@ -1,0 +1,85 @@
+---
+title: "Introduction to spatialIF"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Introduction to pkgname}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(spatialIHC)
+```
+
+# Create Multiplex ImmunoFlourescent (mif) object 
+
+spatialIF functions use a custom mif object which can be created using `create_mif`. 
+
+```{r create}
+load("_notes/example_data.RData")
+
+names(example_tma)
+
+# grabbing image tag names to make sample and clinical file -----
+spatial_names <- lapply(example_tma, function(x) {x$image.tag[[1]]})
+spatial_names <- unlist(spatial_names)
+spatial_names <- gsub(".tif", "", spatial_names)
+
+set.seed(8675309)
+example_sample <- data.frame(image.tag = spatial_names,
+                             patient_id = sample(c("patient_x", "patient_y", "patient_z"),
+                                                 10, replace = TRUE))
+
+example_clinical <- data.frame(patient_id = c("patient_x", "patient_y", "patient_z"),
+                               covar_one = c("low", "high", "low"),
+                               covar_two = rnorm(3))
+
+x <- create_mif(example_tma, clinical_data = example_clinical, sample_data = example_sample)
+x
+
+```
+
+Four slots are available in an `mif` object. 
+*spatial* is a list of data frames with each data frame containing the spatial 
+information for a single sample. 
+If this list is unnamed, then names with be assigned based off the `image.tag` value.
+*clinical* is a data frame that contains relevant patient level data - at a 
+minimum this data frame should contain patient level IDs (one row per patient). 
+*sample* is a data frame containing any sample level values and contain sample 
+names and pateint IDs at a minimum (one row per sample). 
+An empty list for *derived* is created as a place to store results from the 
+`spatialIF` package within the object (*this it the temporary usage - need to implement R6 classes to automatically update the argument supplied to the function*).
+
+# Plotting Cores
+
+An individual plot for each core (each sample) is created. 
+Plots can be assigned to an R object, such as within the empty `derived` slot and printed to a PDF if a file name is provided. 
+ 
+```{r plot}
+mnames <- c("FOXP3..Opal.620..Positive", "CD3..Opal.570..Positive", "CD8..Opal.520..Positive",
+            "PD1..Opal.650..Positive", "PDL1..Opal.540..Positive")
+mnames <- janitor::make_clean_names(mnames)
+
+mlabels <- c("FOXP3", "CD3", "CD8", "PD1", "PDL1")
+
+x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "image_tag", mnames = mnames, mlabels = mlabels, cell_type = "classifier_label")
+
+x[["derived"]][["spatial_plots"]][[2]]
+```
+
+# Univariate Ripleys K/L
+
+CHRIS/BROOKE can you add some summary information here on calculating univariate ripley's k and what each of the output measures are and when you would suggest to use each. 
+
+```{r ripleys}
+
+x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames)
+
+```
