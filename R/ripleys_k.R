@@ -31,12 +31,13 @@ ripleys_k <- function(mif,
                       r_range = seq(0, 100, 50),
                       dist = 200,
                       kestimation = FALSE) {
+  
   data <- mif[["spatial"]]
   
   # check if any/all provided marker names are not present in the data
-  if (all(!mnames %in% colnames(data))) {
+  if (all(!mnames %in% colnames(data[[1]]))) {
     stop("No marker names are in the data")
-  } else if (any(!mnames %in% colnames(data))) {
+  } else if (any(!mnames %in% colnames(data[[1]]))) {
     stop("Marker names: `", 
          paste(mnames[!mnames %in% colnames(data)], collapse = ", "),
          "` are not in the data")
@@ -47,21 +48,22 @@ ripleys_k <- function(mif,
     stop("invalid window shape name")
   
   # progress bar for k estimation
-  pb <- dplyr::progress_estimated(length(dlist))
+  pb <- dplyr::progress_estimated(length(data))
   
-  # estimate_list <- lapply(dlist, function(data){
+  estimate_list <- lapply(data, function(data){
   # x and y coordinates for cells
   X <- data %>% 
-    dplyr::mutate(xloc = (XMin + XMax) / 2) %>%
-    dplyr::mutate(yloc = (YMin + YMax) / 2) %>%
+    janitor::clean_names() %>% 
+    dplyr::mutate(xloc = (x_min + x_max) / 2) %>%
+    dplyr::mutate(yloc = (y_min + y_max) / 2) %>%
     dplyr::mutate(positive_cell = rowSums(dplyr::select(., !!mnames)) > 0) 
   
   w <- spatstat::convexhull.xy(x = X$xloc, y = X$yloc)
   if (wshape %in% c("circle", "c")) {
-    w <- boundingcircle(w)
+    w <- spatstat::boundingcircle(w)
   } 
   if(wshape %in% c("rectangle", "r")) {
-    w <- boundingbox(w)
+    w <- spatstat::boundingbox(w)
   }
   
   X <- X %>%
@@ -98,12 +100,17 @@ ripleys_k <- function(mif,
   int_est <- spatstat::intensity(p)
 
   results_list <- list(
-    `Subject ID` = unique(X[[id]]), 
-    `Translation K` = translate,
-    `Isotropic K` = isotropic, 
-    `Theoritical K` = theo,
-    `Intensity estimate` = int_est, 
-    `N points` = sum(X %>% dplyr::pull(positive_cell))
+    `sample_id` = unique(X[[id]]), 
+    `translation_k` = translate,
+    `isotropic_k` = isotropic, 
+    `theoritical_k` = theo,
+    `intensity_est` = int_est, 
+    `num_points` = sum(X %>% dplyr::pull(positive_cell))
     )
+  
+  return(results_list)
+  
+  })
+  
 }
 

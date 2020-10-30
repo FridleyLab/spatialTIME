@@ -62,12 +62,13 @@ plot_immunoflo <- function(
     pb$tick()$print()
     # data to generate plot
     plot_data <- x %>% 
+      janitor::clean_names() %>%
       dplyr::select(
-        !!plot_title, XMin, XMax, YMin, YMax, !!mnames, !!cell_type) %>% 
+        !!plot_title, x_min, x_max, y_min, y_max, !!mnames, !!cell_type) %>% 
       tidyr::pivot_longer(cols = !!mnames,
                           names_to = "marker", values_to = "indicator") %>% 
-      dplyr::mutate(xloc = (XMin + XMax) / 2,
-                    yloc = (YMin + YMax) / 2,
+      dplyr::mutate(xloc = (x_min + x_max) / 2,
+                    yloc = (y_min + y_max) / 2,
                     marker = factor(
                       marker, levels = mnames, labels = mlabels)) 
     
