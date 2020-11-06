@@ -48,7 +48,7 @@ create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL,
                                      clinical_data[["patient_id"]])
   
   sample_data <- sample_data %>% 
-    dplyr::filter(image.tag %in% spatial_sample_names | 
+    dplyr::filter(image.tag %in% paste0(spatial_sample_names,".tif") | 
                     patient_id %in% clinical_sample_names)
   
   clinical_data <- clinical_data %>%
