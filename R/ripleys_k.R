@@ -7,13 +7,16 @@
 #' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames Character vector of marker names to calculate Ripley's K on.
 #' @param wshape Character string of window shape. Potenital values are
-#'  "r" or "rectangle" for rectanglular window, "c" or "circle" for
-#'  circular window and "i" or "irregular" for a custom polygon.
+#'  'rectangle" for rectanglular window or "circle" for
+#'  circular window. Default is circle.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
-#' @param dist Numeric value for something (Brooke or Chris please fill in)
+#' @param edge_correction Character value indicating the type of edge correction 
+#'  to use. Options include "theoretical", "translation", "isotropic" or "border". 
+#'  Various edges corrections are most appropriate in different settings. Default
+#'  is "theroretical". 
 #' @param  kestimation Logical value determining the type estimation performed.
 #'  TRUE estimates Ripley's reduced second moment function while FALSE 
-#'  estimates Besags's transformation of Ripley's K
+#'  estimates Besags's transformation of Ripley's K.
 #' 
 #' @return Returns a data frame
 #'    \item{r}{Subject ID in TMA data}
@@ -27,10 +30,14 @@
 ripleys_k <- function(mif,
                       id,
                       mnames, 
-                      wshape = "irregular",
+                      wshape = c("circle", "rectangle"),
                       r_range = seq(0, 100, 50),
-                      dist = 200,
-                      kestimation = FALSE) {
+                      # pick permutation vs theoretical 
+                      # permutation number 
+                      # edge correction 
+                      edge_correction = c("theoretical", "translation", "isotropic", "border"),
+                      # k or l 
+                      kestimation = TRUE) {
   
   data <- mif[["spatial"]]
   
@@ -44,7 +51,7 @@ ripleys_k <- function(mif,
   }
   
   # check if provided window shape is valid 
-  if (!wshape %in% c("circle", "c", "rectangle", "r", "i", "irregular"))
+  if (!wshape %in% c("circle", "rectangle"))
     stop("invalid window shape name")
   
   # progress bar for k estimation
@@ -59,10 +66,10 @@ ripleys_k <- function(mif,
     dplyr::mutate(positive_cell = rowSums(dplyr::select(., !!mnames)) > 0) 
   
   w <- spatstat::convexhull.xy(x = X$xloc, y = X$yloc)
-  if (wshape %in% c("circle", "c")) {
+  if (wshape == "circle") {
     w <- spatstat::boundingcircle(w)
   } 
-  if(wshape %in% c("rectangle", "r")) {
+  if(wshape == "rectangle") {
     w <- spatstat::boundingbox(w)
   }
   
@@ -82,29 +89,28 @@ ripleys_k <- function(mif,
     est <- spatstat::Lest(p, r = r_range)
   }
   
-  # remove border correction -> only good if you have a bunch + cells 
-  # border edge correction, not good for small number of points
-  # border <- mean(est$border[round(est$r) == dist]) 
-  
-  # translation edge correction, good for small number of points
-  translate <- mean(est$trans[round(est$r) == dist])  
-  
-  # isotropic edge correction, good for small number of points
-  # if stationary process, trans and iso should be similar
-  isotropic <- mean(est$iso[round(est$r) == dist])  
-  
-  # possion process - therotical
-  theo <- mean(est$theo[round(est$r) == dist])  
+  # need to figure out dist information from chris 
+  if(edge_correction == "theoretical") {
+    # possion process - therotical
+    k_value <- mean(est$theo) 
+  } else if (edge_correction == "isotropic") {
+    # isotropic edge correction, good for small number of points
+    # if stationary process, trans and iso should be similar
+    k_value <- mean(est$iso)  
+  } else if (edge_correction == "translation") {
+    # translation edge correction, good for small number of points
+    k_value <- mean(est$trans)  
+  } else {
+    k_value <- mean(est$border)  
+  }
   
   # intensity 
   int_est <- spatstat::intensity(p)
 
   results_list <- list(
     `sample_id` = unique(X[[id]]), 
-    `translation_k` = translate,
-    `isotropic_k` = isotropic, 
-    `theoritical_k` = theo,
-    `intensity_est` = int_est, 
+    `estimate` = k_value,
+    `intensity` = int_est, 
     `num_points` = sum(X %>% dplyr::pull(positive_cell))
     )
   
