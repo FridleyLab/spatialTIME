@@ -126,9 +126,9 @@ univariate_ripleys_k <- function(data,
     
     results_list <- list(
       `sample_id` = unique(X[[id]]), 
-      `estimate` = k_value,
-      `intensity` = int_est, 
-      `num_points` = sum(X %>% dplyr::pull(positive_cell))
+      `estimate` = k_value#,
+      #`intensity` = int_est, 
+      #`num_points` = sum(X %>% dplyr::pull(positive_cell))
     )
     
     return(results_list)

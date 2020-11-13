@@ -65,34 +65,51 @@ ripleys_k <- function(mif,
   # progress bar for k estimation
   pb <- dplyr::progress_estimated(length(data))
   
-  estimate_list <- lapply(data, function(data){
-    
-    # update progress bar
-    pb$tick()$print()
-  
-    perms <- modelr::permute(data, n = num_permutations, mnames) 
-    
-    perms_df <- lapply(perms$perm, as.data.frame)
-    
-    ripleys_estimates <- lapply(perms_df, function(perm_data){
-      perm_k <- univariate_ripleys_k(perm_data, id, mnames, wshape, r_range,
-                                     edge_correction, kestimation) 
+  if (calculation == "theoretical") {
+    estimate_list <- lapply(data, function(data){
       
-      return(perm_k)
+      # update progress bar
+      pb$tick()$print()
+      
+      ripleys_estimates <- univariate_ripleys_k(data, id, mnames, wshape, r_range,
+                                       edge_correction, kestimation) 
+        
+      return(ripleys_estimates)
       
     })
     
-    k_distribution <- ripleys_estimates %>% purrr::map("estimate") %>% unlist()
-    k_mean <- mean(k_distribution)
+  } else {
     
-    results_list <- list(
-      `sample_id` = unique(data[[id]]), 
-      `estimate` = k_mean
-    )
+    estimate_list <- lapply(data, function(data){
+      
+      # update progress bar
+      pb$tick()$print()
+      
+      perms <- modelr::permute(data, n = num_permutations, mnames) 
+      
+      perms_df <- lapply(perms$perm, as.data.frame)
+      
+      ripleys_estimates <- lapply(perms_df, function(perm_data){
+        perm_k <- univariate_ripleys_k(perm_data, id, mnames, wshape, r_range,
+                                       edge_correction, kestimation) 
+        
+        return(perm_k)
+        
+      })
+      
+      k_distribution <- ripleys_estimates %>% purrr::map("estimate") %>% unlist()
+      k_mean <- mean(k_distribution)
+      
+      results_list <- list(
+        `sample_id` = unique(data[[id]]), 
+        `estimate` = k_mean
+      )
+      
+      return(results_list)
+      
+    })
     
-    return(results_list)
-  
-  })
+  }
   
 }
 
