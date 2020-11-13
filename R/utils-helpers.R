@@ -65,4 +65,75 @@ dist_function <- function(a, other_data){
   closest <- exp(-z)
 }
 
+univariate_ripleys_k <- function(data,
+                                 id,
+                                 mnames, 
+                                 wshape = c("circle", "rectangle"),
+                                 r_range = seq(0, 100, 50),
+                                 edge_correction = c("theoretical", "translation", "isotropic", "border"),
+                                 kestimation = TRUE) {
+  
+  # estimate_list <- lapply(data, function(data){
+  
+    # x and y coordinates for cells
+    X <- data %>% 
+      janitor::clean_names() %>% 
+      dplyr::mutate(xloc = (x_min + x_max) / 2) %>%
+      dplyr::mutate(yloc = (y_min + y_max) / 2) %>%
+      dplyr::mutate(positive_cell = rowSums(dplyr::select(., !!mnames)) > 0) 
+    
+    w <- spatstat::convexhull.xy(x = X$xloc, y = X$yloc)
+    if (wshape == "circle") {
+      w <- spatstat::boundingcircle(w)
+    } 
+    if(wshape == "rectangle") {
+      w <- spatstat::boundingbox(w)
+    }
+    
+    X <- X %>%
+      # data with positive marker cell only
+      dplyr::filter(positive_cell == TRUE) 
+    
+    # point pattern object
+    p <- spatstat::ppp(x = X$xloc, y = X$yloc, window = w)
+    
+    # estimate K for variety of distances (r)
+    # k_est <- spatstat::Kest(p, r = r_range)
+    # we need the function to eventually return K and L estimates 
+    if (kestimation == TRUE) {
+      est <- spatstat::Kest(p, r = r_range)
+    } else {
+      est <- spatstat::Lest(p, r = r_range)
+    }
+    
+    # need to figure out dist information from chris 
+    if(edge_correction == "theoretical") {
+      # possion process - therotical
+      k_value <- mean(est$theo) 
+    } else if (edge_correction == "isotropic") {
+      # isotropic edge correction, good for small number of points
+      # if stationary process, trans and iso should be similar
+      k_value <- mean(est$iso)  
+    } else if (edge_correction == "translation") {
+      # translation edge correction, good for small number of points
+      k_value <- mean(est$trans)  
+    } else {
+      k_value <- mean(est$border)  
+    }
+    
+    # intensity 
+    int_est <- spatstat::intensity(p)
+    
+    results_list <- list(
+      `sample_id` = unique(X[[id]]), 
+      `estimate` = k_value,
+      `intensity` = int_est, 
+      `num_points` = sum(X %>% dplyr::pull(positive_cell))
+    )
+    
+    return(results_list)
+    
+  # })
+    
+}
 
