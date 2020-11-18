@@ -26,7 +26,10 @@ Imports:
     Surrogate,
     spatstat,
     purrr,
-    janitor
+    janitor,
+    rlang,
+    modelr,
+    plyr
 Depends: 
     R (>= 2.10)
 Suggests: 
