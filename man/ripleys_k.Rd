@@ -2,16 +2,19 @@
 % Please edit documentation in R/ripleys_k.R
 \name{ripleys_k}
 \alias{ripleys_k}
-\title{Calculate Ripley's K function for IF data}
+\title{Calculate Univariate Ripley's K function for IF data}
 \usage{
 ripleys_k(
   mif,
   id,
   mnames,
-  wshape = "irregular",
+  wshape = "circle",
   r_range = seq(0, 100, 50),
-  dist = 200,
-  kestimation = FALSE
+  calculation = "permutation",
+  num_permutations = 1000,
+  edge_correction = "translation",
+  kestimation = TRUE,
+  keep_perm_dis = FALSE
 )
 }
 \arguments{
@@ -22,24 +25,31 @@ ripleys_k(
 \item{mnames}{Character vector of marker names to calculate Ripley's K on.}
 
 \item{wshape}{Character string of window shape. Potenital values are
-"r" or "rectangle" for rectanglular window, "c" or "circle" for
-circular window and "i" or "irregular" for a custom polygon.}
+'rectangle" for rectangular window or "circle" for
+circular window. Default is circle.}
 
 \item{r_range}{Numeric vector of potential r values to estimate K at.}
 
-\item{dist}{Numeric value for something (Brooke or Chris please fill in)}
+\item{calculation}{Character value indicating the method of calculating Ripley's K}
+
+\item{num_permutations}{Numeric value indicating the number of permutations used}
+
+\item{edge_correction}{Character value indicating the type of edge correction
+to use. Options include "theoretical", "translation", "isotropic" or "border".
+Various edges corrections are most appropriate in different settings. Default
+is "none".}
 
 \item{kestimation}{Logical value determining the type estimation performed.
 TRUE estimates Ripley's reduced second moment function while FALSE
-estimates Besags's transformation of Ripley's K}
+estimates Besags's transformation of Ripley's K.}
+
+\item{keep_perm_dis}{Logical value determining whether or not to keep the full
+distribution of permuted K values}
 }
 \value{
-Returns a data frame
+Returns a list
 \item{r}{Subject ID in TMA data}
 \item{theo}{Ripley's K estimate using translation edge correction}
-\item{border}{Ripley's K estimate using isotropic edge correction}
-\item{trans}{Theoritical value of Ripley's K}
-\item{iso}{Intensity of TMA data}
 }
 \description{
 This function calculates Ripley's K function of IF data to

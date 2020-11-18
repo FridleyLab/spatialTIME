@@ -12,6 +12,9 @@ create_mif(
 )
 }
 \arguments{
+\item{spatial_list}{A named list of data frames with the spatial data from
+each sample making up each individual data frame}
+
 \item{clinical_data}{A data frame containing patient level data. Patient ID
 indicated with variable \code{patient_id}}
 
@@ -19,8 +22,8 @@ indicated with variable \code{patient_id}}
 should be indicated with variable \code{image.tag} while patient ID should
 be indicated with variable  \code{patient_id}.}
 
-\item{spatial_lsit}{A named list of data frames with the spatial data from
-each sample making up each individual data frame}
+\item{clean_columns}{A logical value indicating if names in spatial data frames
+should be rewritten in a cleaner format. Default is TRUE.}
 }
 \value{
 Returns a custom MIF

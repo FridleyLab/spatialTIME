@@ -36,7 +36,7 @@ plot_immunoflo(
 \item{path}{Different path than file name or to use in conjunction with filename ???}
 }
 \value{
-A list of ggplots (the length of mif[\link{"spatial}]) - one for each TMA or ROI
+A list of ggplots (the length of spatial data frames) - one for each TMA or ROI
 }
 \description{
 This function generates plot of point process in rectangular or circular window.
