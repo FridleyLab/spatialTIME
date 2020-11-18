@@ -10,6 +10,7 @@
 #'  'rectangle" for rectangular window or "circle" for
 #'  circular window. Default is circle.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
+#' @param calculation Character value indicating the method of calculating Ripley's K
 #' @param edge_correction Character value indicating the type of edge correction 
 #'  to use. Options include "theoretical", "translation", "isotropic" or "border". 
 #'  Various edges corrections are most appropriate in different settings. Default
@@ -17,7 +18,8 @@
 #' @param kestimation Logical value determining the type estimation performed.
 #'  TRUE estimates Ripley's reduced second moment function while FALSE 
 #'  estimates Besags's transformation of Ripley's K.
-#'  @param keep_perm_dis Logical value determining whether or not to keep the full 
+#' @param num_permutations Numeric value indicating the number of permutations used 
+#' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted K values
 #' 
 #' @return Returns a list
@@ -31,14 +33,14 @@
 ripleys_k <- function(mif,
                       id,
                       mnames, 
-                      wshape = c("circle", "rectangle"),
+                      wshape = "circle",
                       r_range = seq(0, 100, 50),
                       # pick permutation vs theoretical 
-                      calculation = c("permutation", "theoretical"),
+                      calculation = "permutation",
                       # permutation number 
                       num_permutations = 1000,
                       # edge correction 
-                      edge_correction = c("none", "translation", "isotropic", "border"),
+                      edge_correction = "translation",
                       # k or l 
                       kestimation = TRUE,
                       keep_perm_dis = FALSE) {
@@ -58,6 +60,14 @@ ripleys_k <- function(mif,
   if (!wshape %in% c("circle", "rectangle"))
     stop("invalid window shape name")
   
+  # determine calc type
+  if (!calculation %in% c("permutation", "theoretical"))
+    stop("invalid calculation type")
+  
+  # determine edge correction
+  if (!edge_correction %in% c("none", "translation", "isotropic", "border"))
+    stop("invalid edge correction")
+  
   # check if provided window shape is valid 
   if  (calculation == "theoretical" & keep_perm_dis == TRUE)
     stop("Permutation distributions not available for theoretical K/L calculations")
@@ -66,17 +76,12 @@ ripleys_k <- function(mif,
   pb <- dplyr::progress_estimated(length(data))
   
   if (calculation == "theoretical") {
-    estimate_list <- lapply(data, function(data){
+    
+    #   # update progress bar
+    #   pb$tick()$print()
       
-      # update progress bar
-      pb$tick()$print()
-      
-      ripleys_estimates <- univariate_ripleys_k(data, id, mnames, wshape, r_range,
-                                       edge_correction, kestimation) 
-        
-      return(ripleys_estimates)
-      
-    })
+    estimate_list <- purrr::map(data, univariate_ripleys_k, id, mnames, 
+                                wshape, r_range, edge_correction, kestimation) 
     
   } else {
     

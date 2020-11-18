@@ -37,37 +37,37 @@ simulate_mif <- function(k = 10,
   pp <- spatstat::rpoispp(25, win = spatstat::owin(c(0,10),c(0,10))) %>% 
     data.frame() 
   
-  for(i in 1:nrow(pp)){
-    
-    dist <- sapply(1:nrow(center_peak), dist_function, 
-                   other_data = center_peak)
-    
-    pp$prob_stroma[i] = max(dist)
-    
-    pp$prob_stroma_label[i] = sample(c('Stroma', 'Tumor'), 1,
-                                     prob = c(pp$prob_stroma[i],
-                                              (1-pp$prob_stroma[i])))
-    
-    dist <- sapply(1:nrow(center_pos_cell_tumor), dist_function,
-                   other_data = center_pos_cell_tumor)
-    
-    pp$prob_positive_tumor[i] = max(max(dist) * (upper_lim_tumor - 
-                                                   pp$prob_stroma[i]), 0)
-    
-    dist <- sapply(1:nrow(center_pos_cell_stroma), dist_function,
-                   other_data = center_pos_cell_stroma)
-    
-    pp$prob_positive_stroma[i] = max(dist) * pp$prob_stroma[i]
-    
-    # If you want to have a constant proability for all cells to be positive, 
-    # then set pp$prob_positive_stroma[i] to a constant value
-    pp$prob_positive_label[i] = ifelse(pp$prob_stroma_label[i] == 'Stroma',
-                                       sample(c('Positive', 'Negative'), 1,
-                                              prob = c(pp$prob_positive_stroma[i], (1-pp$prob_positive_stroma[i]))),
-                                       sample(c('Positive', 'Negative'), 1,
-                                              prob = c(pp$prob_positive_tumor[i], (1-pp$prob_positive_tumor[i]))))
-    
-  }
+  # for(i in 1:nrow(pp)){
+  #   
+  #   dist <- sapply(1:nrow(center_peak), dist_function, 
+  #                  other_data = center_peak)
+  #   
+  #   pp$prob_stroma[i] = max(dist)
+  #   
+  #   pp$prob_stroma_label[i] = sample(c('Stroma', 'Tumor'), 1,
+  #                                    prob = c(pp$prob_stroma[i],
+  #                                             (1-pp$prob_stroma[i])))
+  #   
+  #   dist <- sapply(1:nrow(center_pos_cell_tumor), dist_function,
+  #                  other_data = center_pos_cell_tumor)
+  #   
+  #   pp$prob_positive_tumor[i] = max(max(dist) * (upper_lim_tumor - 
+  #                                                  pp$prob_stroma[i]), 0)
+  #   
+  #   dist <- sapply(1:nrow(center_pos_cell_stroma), dist_function,
+  #                  other_data = center_pos_cell_stroma)
+  #   
+  #   pp$prob_positive_stroma[i] = max(dist) * pp$prob_stroma[i]
+  #   
+  #   # If you want to have a constant proability for all cells to be positive, 
+  #   # then set pp$prob_positive_stroma[i] to a constant value
+  #   pp$prob_positive_label[i] = ifelse(pp$prob_stroma_label[i] == 'Stroma',
+  #                                      sample(c('Positive', 'Negative'), 1,
+  #                                             prob = c(pp$prob_positive_stroma[i], (1-pp$prob_positive_stroma[i]))),
+  #                                      sample(c('Positive', 'Negative'), 1,
+  #                                             prob = c(pp$prob_positive_tumor[i], (1-pp$prob_positive_tumor[i]))))
+  #   
+  # }
   
   return(pp)
   

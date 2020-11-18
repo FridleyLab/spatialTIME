@@ -1,13 +1,15 @@
 #' Create Multiplex Immunoflourescent object 
 #'
 #' @description Creates an MIF object for use in spatialIF functions
-#' @param spatial_lsit A named list of data frames with the spatial data from 
+#' @param spatial_list A named list of data frames with the spatial data from 
 #' each sample making up each individual data frame
 #' @param clinical_data A data frame containing patient level data. Patient ID
 #' indicated with variable `patient_id`
 #' @param sample_data A data frame containing sample level data. Sample ID 
 #' should be indicated with variable `image.tag` while patient ID should 
 #' be indicated with variable  `patient_id`. 
+#' @param clean_columns A logical value indicating if names in spatial data frames
+#' should be rewritten in a cleaner format. Default is TRUE. 
 #' 
 #' @return Returns a custom MIF
 #'    \item{spatial}{Named list of spatial data}
@@ -48,11 +50,11 @@ create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL,
                                      clinical_data[["patient_id"]])
   
   sample_data <- sample_data %>% 
-    dplyr::filter(image.tag %in% paste0(spatial_sample_names,".tif") | 
-                    patient_id %in% clinical_sample_names)
+    dplyr::filter(.data$image.tag %in% paste0(spatial_sample_names,".tif") | 
+                    .data$patient_id %in% clinical_sample_names)
   
   clinical_data <- clinical_data %>%
-    dplyr::filter(patient_id %in% clinical_sample_names)
+    dplyr::filter(.data$patient_id %in% clinical_sample_names)
   
   spatial_list <- spatial_list[spatial_sample_names]
   

@@ -11,7 +11,10 @@
 #' @param path Different path than file name or to use in conjunction with filename ???
 #' @param dark_mode Plot using dark color scheme 
 #' 
-#' @return A list of ggplots (the length of mif[["spatial]]) - one for each TMA or ROI
+#' @return A list of ggplots (the length of spatial data frames) - one for each TMA or ROI
+#' 
+#' @importFrom rlang .data
+#' @importFrom grDevices dev.off
 #'    
 #' @export
 #'
@@ -64,13 +67,13 @@ plot_immunoflo <- function(
     plot_data <- x %>% 
       janitor::clean_names() %>%
       dplyr::select(
-        !!plot_title, x_min, x_max, y_min, y_max, !!mnames, !!cell_type) %>% 
+        !!plot_title, .data$x_min, .data$x_max, .data$y_min, .data$y_max, !!mnames, !!cell_type) %>% 
       tidyr::pivot_longer(cols = !!mnames,
                           names_to = "marker", values_to = "indicator") %>% 
-      dplyr::mutate(xloc = (x_min + x_max) / 2,
-                    yloc = (y_min + y_max) / 2,
+      dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2,
+                    yloc = (.data$y_min + .data$y_max) / 2,
                     marker = factor(
-                      marker, levels = mnames, labels = mlabels)) 
+                      .data$marker, levels = mnames, labels = mlabels)) 
     
     # plot title
     plot_title <- if (length(plot_title) == 1) {
@@ -88,9 +91,9 @@ plot_immunoflo <- function(
     
     basic_plot <- plot_data %>% 
       dplyr::filter(.data$indicator == 1) %>% 
-      ggplot2::ggplot(ggplot2::aes(x = xloc, 
-                                   y = yloc, 
-                                   color = marker, 
+      ggplot2::ggplot(ggplot2::aes(x = .data$xloc, 
+                                   y = .data$yloc, 
+                                   color = .data$marker, 
                                    shape = !!as.name(cell_type))) +
       # ggplot2::geom_point(data = filter(plot_data, indicator == 0),
       #                     # aes(fill = "grey70"),
@@ -109,7 +112,7 @@ plot_immunoflo <- function(
                     panel.grid = ggplot2::element_blank())
     
     if(dark_mode == TRUE){
-      basic_plot <- basic_plot + ggdark::theme_dark_mode()
+      basic_plot <- basic_plot + theme_dark_mode()
     }
     
     return(basic_plot)
@@ -125,7 +128,7 @@ plot_immunoflo <- function(
         print(plot[[x]])
       })
     )
-    dev.off()
+    grDevices::dev.off()
   }
   
   return(plot)
