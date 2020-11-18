@@ -4,3 +4,6 @@
 ^dev$
 ^README\.*$
 ^_notes$
+^\.ccache$
+^\.github$
+^tic\.R$
