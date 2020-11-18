@@ -1,5 +1,10 @@
 
-# spatialIF <img src="man/hex_sticker/hex.png" align="right" height="139" />
+<!-- badges: start -->
+
+[![tic](https://github.com/jhcreed/spatial_ihc/workflows/tic/badge.svg?branch=master)](https://github.com/jhcreed/spatial_ihc/actions)
+<!-- badges: end -->
+
+# Introduction to R <img src="man/hex_sticker/hex.png" align="right" height="139" />
 
 The goal of `spatialIF` is to perform basic analysis and plotting of IF
 data from Vectra.
