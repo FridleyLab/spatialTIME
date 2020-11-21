@@ -18,7 +18,8 @@
 #' @param kestimation Logical value determining the type estimation performed.
 #'  TRUE estimates Ripley's reduced second moment function while FALSE 
 #'  estimates Besags's transformation of Ripley's K.
-#' @param num_permutations Numeric value indicating the number of permutations used 
+#' @param num_permutations Numeric value indicating the number of permutations used. 
+#'  Default is 50.   
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted K values
 #' 
@@ -38,7 +39,7 @@ ripleys_k <- function(mif,
                       # pick permutation vs theoretical 
                       calculation = "permutation",
                       # permutation number 
-                      num_permutations = 1000,
+                      num_permutations = 50,
                       # edge correction 
                       edge_correction = "translation",
                       # k or l 
@@ -83,36 +84,51 @@ ripleys_k <- function(mif,
     estimate_list <- purrr::map(data, univariate_ripleys_k, id, mnames, 
                                 wshape, r_range, edge_correction, kestimation) 
     
+    estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=3, byrow=T))
+    
   } else {
     
     estimate_list <- lapply(data, function(data){
-      
+
       # update progress bar
       pb$tick()$print()
-      
-      perms <- modelr::permute(data, n = num_permutations, mnames) 
-      
+
+      perms <- modelr::permute(data, n = num_permutations, mnames)
+
       perms_df <- lapply(perms$perm, as.data.frame)
-      
+
       ripleys_estimates <- lapply(perms_df, function(perm_data){
         perm_k <- univariate_ripleys_k(perm_data, id, mnames, wshape, r_range,
-                                       edge_correction, kestimation) 
-        
+                                       edge_correction, kestimation)
+
         return(perm_k)
-        
+
       })
+
+      # ripleys_estimates <- purrr::map(perms_df, univariate_ripleys_k, id, mnames,
+      #                                        wshape, r_range, edge_correction, kestimation)
+        
       
-      k_distribution <- ripleys_estimates %>% purrr::map("estimate") %>% unlist()
-      k_mean <- mean(k_distribution)
-      
-      results_list <- list(
-        `sample_id` = unique(data[[id]]), 
-        `estimate` = k_mean
-      )
+      results_list <- ripleys_estimates %>% 
+        unlist() %>% 
+        matrix(ncol = 3, byrow = TRUE) %>% 
+        as.data.frame() %>% 
+        dplyr::mutate(V3 = as.numeric(V3)) #%>% 
+        # dplyr::group_by(V1, V2) %>% 
+        # dplyr::summarise(avg = mean(V3, na.rm = TRUE))
       
       return(results_list)
       
     })
+    
+    if (keep_perm_dis == TRUE){
+      estimate_list
+    } else {
+      estimate_list <- estimate_list %>% 
+        # dplyr::bind_rows() %>%
+        dplyr::group_by(V1, V2) %>% 
+        dplyr::summarise(avg = mean(V3, na.rm = TRUE))
+    }
     
   }
   

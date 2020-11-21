@@ -83,8 +83,11 @@ univariate_ripleys_k <- function(data,
       janitor::clean_names() %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
       dplyr::mutate(yloc = (.data$y_min + .data$y_max) / 2) %>%
-      # dplyr::mutate(positive_cell = rowSums(dplyr::select(., !!mnames)) > 0) 
       dplyr::mutate(positive_cell = rowSums(dplyr::select(., !!mnames)) > 0) 
+    
+    sample_name <- X %>% 
+      dplyr::slice(1) %>% 
+      dplyr::pull(!!id)
     
     w <- spatstat::convexhull.xy(x = X$xloc, y = X$yloc)
     if (wshape == "circle") {
@@ -99,9 +102,10 @@ univariate_ripleys_k <- function(data,
       dplyr::filter(.data$positive_cell == TRUE) 
     
     if (nrow(X)==0) {
-      results_list <- list(
-        `marker` = mnames,
-        `estimate` = NA
+      results_list <- data.frame(
+        sample = sample_name,
+        marker = mnames,
+        estimate = NA
       )
     } else {
       
@@ -131,11 +135,12 @@ univariate_ripleys_k <- function(data,
       }
       
       # intensity 
-      int_est <- spatstat::intensity(p)
+      # int_est <- spatstat::intensity(p)
       
-      results_list <- list(
-        `marker` = mnames,
-        `estimate` = k_value
+      results_list <- data.frame(
+        sample = sample_name,
+        marker = mnames,
+        estimate = k_value
       )
       
     }
