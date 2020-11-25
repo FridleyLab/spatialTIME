@@ -37,3 +37,5 @@ Suggests:
     rmarkdown,
     testthat
 VignetteBuilder: knitr
+URL: https://github.com/FridleyLab/spatialIF
+BugReports: https://github.com/FridleyLab/spatialIF/issues
