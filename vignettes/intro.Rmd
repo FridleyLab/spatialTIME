@@ -12,9 +12,7 @@ knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-```
 
-```{r setup}
 library(spatialIHC)
 ```
 
@@ -22,15 +20,15 @@ library(spatialIHC)
 
 spatialIF functions use a custom mif object which can be created using `create_mif`. 
 
-```{r create}
-load("~/Documents/github/spatialIHC/_notes/example_data.RData")
+```{r, create}
+
+load("../data/example_tma.rda")
 
 names(example_tma)
-
 # grabbing image tag names to make sample and clinical file -----
 spatial_names <- lapply(example_tma, function(x) {x$image.tag[[1]]})
 spatial_names <- unlist(spatial_names)
-spatial_names <- gsub(".tif", "", spatial_names)
+spatial_names <- gsub("\\.tif", "", spatial_names)
 
 set.seed(8675309)
 example_sample <- data.frame(image.tag = spatial_names,
@@ -62,7 +60,7 @@ An empty list for *derived* is created as a place to store results from the
 An individual plot for each core (each sample) is created. 
 Plots can be assigned to an R object, such as within the empty `derived` slot and printed to a PDF if a file name is provided. 
  
-```{r plot}
+```{r, plot}
 # mnames <- c("FOXP3..Opal.620..Positive", "CD3..Opal.570..Positive", "CD8..Opal.520..Positive",
 #             "PD1..Opal.650..Positive", "PDL1..Opal.540..Positive")
 # mnames <- janitor::make_clean_names(mnames)
@@ -80,9 +78,9 @@ x[["derived"]][["spatial_plots"]][[2]]
 
 CHRIS/BROOKE can you add some summary information here on calculating univariate ripley's k and what each of the output measures are and when you would suggest to use each. 
 
-```{r ripleys}
+```{r, ripleys}
 
-x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
-                                         calculation = "theoretical", wshape = "circle")
+# x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
+#                                          calculation = "theoretical", wshape = "circle")
 
 ```
