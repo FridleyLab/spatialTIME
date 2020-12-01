@@ -126,8 +126,8 @@ ripleys_k <- function(mif,
     } else {
       estimate_list <- estimate_list %>% 
         # dplyr::bind_rows() %>%
-        dplyr::group_by(V1, V2) %>% 
-        dplyr::summarise(avg = mean(V3, na.rm = TRUE))
+        dplyr::group_by(.data$V1, .data$V2) %>% 
+        dplyr::summarise(avg = mean(.data$V3, na.rm = TRUE))
     }
     
   }
