@@ -11,7 +11,7 @@ ripleys_k(
   wshape = "circle",
   r_range = seq(0, 100, 50),
   calculation = "permutation",
-  num_permutations = 1000,
+  num_permutations = 50,
   edge_correction = "translation",
   kestimation = TRUE,
   keep_perm_dis = FALSE
@@ -32,7 +32,8 @@ circular window. Default is circle.}
 
 \item{calculation}{Character value indicating the method of calculating Ripley's K}
 
-\item{num_permutations}{Numeric value indicating the number of permutations used}
+\item{num_permutations}{Numeric value indicating the number of permutations used.
+Default is 50.}
 
 \item{edge_correction}{Character value indicating the type of edge correction
 to use. Options include "theoretical", "translation", "isotropic" or "border".
