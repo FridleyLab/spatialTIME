@@ -29,7 +29,8 @@ Imports:
     janitor,
     rlang,
     modelr,
-    plyr
+    plyr,
+    tibble
 Depends: 
     R (>= 2.10)
 Suggests: 
