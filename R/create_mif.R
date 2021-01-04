@@ -6,7 +6,7 @@
 #' @param clinical_data A data frame containing patient level data. Patient ID
 #' indicated with variable `patient_id`
 #' @param sample_data A data frame containing sample level data. Sample ID 
-#' should be indicated with variable `image.tag` while patient ID should 
+#' should be indicated with variable `image_tag` while patient ID should 
 #' be indicated with variable  `patient_id`. 
 #' @param clean_columns A logical value indicating if names in spatial data frames
 #' should be rewritten in a cleaner format. Default is TRUE. 
@@ -25,9 +25,9 @@ create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL,
   # image tag (does every file come with image.tage and is it always named
   # "image.tag")
   if(is.null(names(spatial_list))) {
-    spatial_names <- lapply(spatial_list, function(x) {x$image.tag[[1]]})
+    spatial_names <- lapply(spatial_list, function(x) {x$image_tag[[1]]})
     spatial_names <- unlist(spatial_names)
-    spatial_names <- gsub(".tif", "", spatial_names)
+    spatial_names <- gsub("\\.tiff", "", spatial_names)
     
     names(spatial_list) <- spatial_names
   }
@@ -37,20 +37,20 @@ create_mif <- function(spatial_list, clinical_data = NULL, sample_data = NULL,
     clinical_data <- data.frame(patient_id = names(spatial_list))
   }
   if(is.null(sample_data)){
-    sample_data <- data.frame(image.tag = names(spatial_list),
+    sample_data <- data.frame(image_tag = names(spatial_list),
                               patient_id = names(spatial_list))
   }
   
   # clean names in clinical and sample data? 
   # have the column name be "image.tag" ?
-  spatial_sample_names <- intersect(sample_data[["image.tag"]], 
+  spatial_sample_names <- intersect(sample_data[["image_tag"]], 
                                     names(spatial_list))
   
   clinical_sample_names <- intersect(sample_data[["patient_id"]],
                                      clinical_data[["patient_id"]])
   
   sample_data <- sample_data %>% 
-    dplyr::filter(.data$image.tag %in% paste0(spatial_sample_names,".tif") | 
+    dplyr::filter(.data$image_tag %in% paste0(spatial_sample_names,".tif") | 
                     .data$patient_id %in% clinical_sample_names)
   
   clinical_data <- clinical_data %>%
