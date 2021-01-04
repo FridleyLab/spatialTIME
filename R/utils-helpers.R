@@ -105,7 +105,8 @@ univariate_ripleys_k <- function(data,
       results_list <- data.frame(
         sample = sample_name,
         marker = mnames,
-        estimate = NA
+        theoretical_estimate = NA,
+        observed_estimate = NA 
       )
     } else {
       
@@ -120,10 +121,11 @@ univariate_ripleys_k <- function(data,
       }
       
       # need to figure out dist information from chris 
-      if(edge_correction == "theoretical") {
-        # possion process - therotical
-        k_value <- mean(est$theo) 
-      } else if (edge_correction == "isotropic") {
+      # if(edge_correction == "theoretical") {
+      #   # possion process - therotical
+      #   k_value <- mean(est$theo) 
+      # } else 
+        if (edge_correction == "isotropic") {
         # isotropic edge correction, good for small number of points
         # if stationary process, trans and iso should be similar
         k_value <- mean(est$iso)  
@@ -140,7 +142,8 @@ univariate_ripleys_k <- function(data,
       results_list <- data.frame(
         sample = sample_name,
         marker = mnames,
-        estimate = k_value
+        theoretical_estimate = mean(est$theo),
+        observed_estimate = k_value 
       )
       
     }

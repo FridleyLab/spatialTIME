@@ -84,7 +84,9 @@ ripleys_k <- function(mif,
     estimate_list <- purrr::map(data, univariate_ripleys_k, id, mnames, 
                                 wshape, r_range, edge_correction, kestimation) 
     
-    estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=3, byrow=T))
+    estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=4, byrow=T))
+    colnames(estimate_list) <- c("sample", "marker", "theoretical_estimate",
+                                 "observed_estimate")
     
   } else {
     
@@ -98,6 +100,7 @@ ripleys_k <- function(mif,
       perms_df <- lapply(perms$perm, as.data.frame)
 
       ripleys_estimates <- lapply(perms_df, function(perm_data){
+        
         perm_k <- univariate_ripleys_k(perm_data, id, mnames, wshape, r_range,
                                        edge_correction, kestimation)
 
@@ -111,26 +114,46 @@ ripleys_k <- function(mif,
       
       results_list <- ripleys_estimates %>% 
         unlist() %>% 
-        matrix(ncol = 3, byrow = TRUE) %>% 
-        as.data.frame() %>% 
-        dplyr::mutate(V3 = as.numeric(V3)) #%>% 
+        matrix(ncol = 4, byrow = TRUE) %>% 
+        # as.data.frame() %>% 
+        tibble::as_tibble() #%>%
+        # dplyr::mutate(V3 = as.numeric(V3)) %>%
+        # dplyr::mutate(V4 = as.numeric(V4)) #%>% 
         # dplyr::group_by(V1, V2) %>% 
-        # dplyr::summarise(avg = mean(V3, na.rm = TRUE))
+        # dplyr::summarise(avg_theoretical = mean(V3, na.rm = TRUE),
+        #                  avg_observed = mean(V4, na.rm = TRUE))
+      
+      if (keep_perm_dis == TRUE){
+        results_list
+      } else {
+        results_list <- results_list %>% 
+          # dplyr::bind_rows() %>%
+          # dplyr::group_by(.data$V1, .data$V2) %>% 
+          # dplyr::summarise(avg = mean(.data$V3, na.rm = TRUE))
+          dplyr::group_by(V1, V2) %>%
+          dplyr::summarise(avg_theoretical = mean(as.numeric(V3), na.rm = TRUE),
+                           avg_observed = mean(as.numeric(V4), na.rm = TRUE))
+      }
       
       return(results_list)
       
     })
     
-    if (keep_perm_dis == TRUE){
-      estimate_list
-    } else {
-      estimate_list <- estimate_list %>% 
-        # dplyr::bind_rows() %>%
-        dplyr::group_by(.data$V1, .data$V2) %>% 
-        dplyr::summarise(avg = mean(.data$V3, na.rm = TRUE))
-    }
+    # if (keep_perm_dis == TRUE){
+    #   estimate_list
+    # } else {
+    #   estimate_list <- estimate_list %>% 
+    #     # dplyr::bind_rows() %>%
+    #     dplyr::group_by(.data$V1, .data$V2) %>% 
+    #     # dplyr::summarise(avg = mean(.data$V3, na.rm = TRUE))
+    #     # dplyr::group_by(V1, V2) %>% 
+    #     dplyr::summarise(avg_theoretical = mean(as.numeric(V3), na.rm = TRUE),
+    #                      avg_observed = mean(as.numeric(V4), na.rm = TRUE))
+    # }
     
   }
+  
+  return(estimate_list)
   
 }
 
