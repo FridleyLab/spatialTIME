@@ -130,9 +130,9 @@ ripleys_k <- function(mif,
           # dplyr::bind_rows() %>%
           # dplyr::group_by(.data$V1, .data$V2) %>% 
           # dplyr::summarise(avg = mean(.data$V3, na.rm = TRUE))
-          dplyr::group_by(V1, V2) %>%
-          dplyr::summarise(avg_theoretical = mean(as.numeric(V3), na.rm = TRUE),
-                           avg_observed = mean(as.numeric(V4), na.rm = TRUE))
+          dplyr::group_by(.data$V1, .data$V2) %>%
+          dplyr::summarise(avg_theoretical = mean(as.numeric(.data$V3), na.rm = TRUE),
+                           avg_observed = mean(as.numeric(.data$V4), na.rm = TRUE))
       }
       
       return(results_list)
