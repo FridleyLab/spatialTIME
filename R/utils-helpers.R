@@ -1,4 +1,5 @@
 #' @importFrom ggplot2 %+replace%
+#' @importFrom spatstat %mark%
 #' @importFrom plyr .
 
 # Dark theme for plotting
@@ -125,7 +126,7 @@ univariate_ripleys_k <- function(data,
       #   # possion process - therotical
       #   k_value <- mean(est$theo) 
       # } else 
-        if (edge_correction == "isotropic") {
+      if (edge_correction == "isotropic") {
         # isotropic edge correction, good for small number of points
         # if stationary process, trans and iso should be similar
         k_value <- mean(est$iso)  
@@ -153,3 +154,85 @@ univariate_ripleys_k <- function(data,
   })
 }
 
+bivariate_ripleys_k <- function(data,
+                                id,
+                                mnames, 
+                                wshape = c("circle", "rectangle"),
+                                r_range = seq(0, 100, 50),
+                                # edge_correction = c("theoretical", "translation", "isotropic", "border"),
+                                kestimation = TRUE) {
+  
+  estimate_list <- lapply(mnames, function(mnames){
+    # x and y coordinates for cells
+    X <- data %>% 
+      janitor::clean_names() %>% 
+      dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
+      dplyr::mutate(yloc = (.data$y_min + .data$y_max) / 2) %>%
+      dplyr::mutate(type1_cell = rowSums(dplyr::select(., !!(test_mnames[[1]])) > 0)) %>% 
+      dplyr::mutate(type2_cell = rowSums(dplyr::select(., !!(test_mnames[[2]])) > 0)) %>% 
+      dplyr::mutate(overall_type = dplyr::case_when(
+        type1_cell == 1 ~ "type_one",
+        type2_cell == 1 ~ "type_two",
+        TRUE ~ "neither"
+      ))
+    
+    sample_name <- X %>% 
+      dplyr::slice(1) %>% 
+      dplyr::pull(!!id)
+    
+    w <- spatstat::convexhull.xy(x = X$xloc, y = X$yloc)
+    if (wshape == "circle") {
+      w <- spatstat::boundingcircle(w)
+    } 
+    if(wshape == "rectangle") {
+      w <- spatstat::boundingbox(w)
+    }
+    
+    X <- X %>% 
+      dplyr::filter(.data$overall_type != "neither") %>% 
+      dplyr::select(.data$xloc, .data$yloc, .data$overall_type)
+    
+    if (nrow(X)<=1) {
+      
+      results_list <- data.frame(
+        sample = sample_name,
+        marker = paste0(mnames[[1]], " and ", mnames[[2]]),
+        theoretical_estimate = NA,
+        observed_estimate = NA 
+      )
+      
+    } else {
+      
+      #Make a marked point process with the window from above,
+      #cell locations, and a marks as defined by cell type
+      pp_cross = spatstat::ppp(x = X$xloc, y = X$yloc, window = w) %mark%
+        factor(X$overall_type)
+      
+      if (kestimation == TRUE) {
+        est <- spatstat::Kcross(X = pp_cross, i = "type_one", j = "type_two", r = r_range)
+      } else {
+        est <- spatstat::Lcross(pp_cross, i = "type_one", j = "type_two", r = r_range)
+      }
+      
+      if (edge_correction == "isotropic") {
+        k_value <- mean(est$iso)  
+      } else if (edge_correction == "translation") {
+        k_value <- mean(est$trans)  
+      } else {
+        k_value <- mean(est$border)  
+      }
+      
+      results_list <- data.frame(
+        sample = sample_name,
+        marker = paste0(mnames[[1]], " and ", mnames[[2]]),
+        theoretical_estimate = mean(est$theo),
+        observed_estimate = k_value 
+      )
+      
+    }
+    
+    return(results_list)
+    
+  })
+  
+}
