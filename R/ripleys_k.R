@@ -115,21 +115,12 @@ ripleys_k <- function(mif,
       results_list <- ripleys_estimates %>% 
         unlist() %>% 
         matrix(ncol = 4, byrow = TRUE) %>% 
-        # as.data.frame() %>% 
-        tibble::as_tibble() #%>%
-        # dplyr::mutate(V3 = as.numeric(V3)) %>%
-        # dplyr::mutate(V4 = as.numeric(V4)) #%>% 
-        # dplyr::group_by(V1, V2) %>% 
-        # dplyr::summarise(avg_theoretical = mean(V3, na.rm = TRUE),
-        #                  avg_observed = mean(V4, na.rm = TRUE))
+        tibble::as_tibble() 
       
       if (keep_perm_dis == TRUE){
         results_list
       } else {
         results_list <- results_list %>% 
-          # dplyr::bind_rows() %>%
-          # dplyr::group_by(.data$V1, .data$V2) %>% 
-          # dplyr::summarise(avg = mean(.data$V3, na.rm = TRUE))
           dplyr::group_by(.data$V1, .data$V2) %>%
           dplyr::summarise(avg_theoretical = mean(as.numeric(.data$V3), na.rm = TRUE),
                            avg_observed = mean(as.numeric(.data$V4), na.rm = TRUE))
@@ -138,18 +129,6 @@ ripleys_k <- function(mif,
       return(results_list)
       
     })
-    
-    # if (keep_perm_dis == TRUE){
-    #   estimate_list
-    # } else {
-    #   estimate_list <- estimate_list %>% 
-    #     # dplyr::bind_rows() %>%
-    #     dplyr::group_by(.data$V1, .data$V2) %>% 
-    #     # dplyr::summarise(avg = mean(.data$V3, na.rm = TRUE))
-    #     # dplyr::group_by(V1, V2) %>% 
-    #     dplyr::summarise(avg_theoretical = mean(as.numeric(V3), na.rm = TRUE),
-    #                      avg_observed = mean(as.numeric(V4), na.rm = TRUE))
-    # }
     
   }
   
