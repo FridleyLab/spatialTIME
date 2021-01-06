@@ -1,6 +1,6 @@
 context("univariate_k")
 
-load("~/Documents/github/spatialIHC/_notes/example_data.RData")
+load("example_data.RData")
 
 test_that("returns proper number of elements ", {
   # grabbing image tag names to make sample and clinical file -----
