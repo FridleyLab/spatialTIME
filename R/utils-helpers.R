@@ -1,5 +1,4 @@
 #' @importFrom ggplot2 %+replace%
-#' @importFrom spatstat %mark%
 #' @importFrom plyr .
 
 # Dark theme for plotting
@@ -102,6 +101,7 @@ univariate_ripleys_k <- function(data,
       # data with positive marker cell only
       dplyr::filter(.data$positive_cell == TRUE) 
     
+    # double check with chris that the function should return NA 
     if (nrow(X)==0) {
       results_list <- data.frame(
         sample = sample_name,
@@ -159,7 +159,7 @@ bivariate_ripleys_k <- function(data,
                                 mnames, 
                                 wshape = c("circle", "rectangle"),
                                 r_range = seq(0, 100, 50),
-                                # edge_correction = c("theoretical", "translation", "isotropic", "border"),
+                                edge_correction = c("theoretical", "translation", "isotropic", "border"),
                                 kestimation = TRUE) {
   
   estimate_list <- lapply(mnames, function(mnames){
@@ -168,8 +168,8 @@ bivariate_ripleys_k <- function(data,
       janitor::clean_names() %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
       dplyr::mutate(yloc = (.data$y_min + .data$y_max) / 2) %>%
-      dplyr::mutate(type1_cell = rowSums(dplyr::select(., !!(test_mnames[[1]])) > 0)) %>% 
-      dplyr::mutate(type2_cell = rowSums(dplyr::select(., !!(test_mnames[[2]])) > 0)) %>% 
+      dplyr::mutate(type1_cell = rowSums(dplyr::select(., !!(mnames[[1]])) > 0)) %>% 
+      dplyr::mutate(type2_cell = rowSums(dplyr::select(., !!(mnames[[2]])) > 0)) %>% 
       dplyr::mutate(overall_type = dplyr::case_when(
         type1_cell == 1 ~ "type_one",
         type2_cell == 1 ~ "type_two",
@@ -192,7 +192,8 @@ bivariate_ripleys_k <- function(data,
       dplyr::filter(.data$overall_type != "neither") %>% 
       dplyr::select(.data$xloc, .data$yloc, .data$overall_type)
     
-    if (nrow(X)<=1) {
+    if (nrow(X) <= 1 | nrow(X[X$overall_type=="type_one",]) <=1 |
+                            nrow(X[X$overall_type=="type_two",]) <=1 ) {
       
       results_list <- data.frame(
         sample = sample_name,
@@ -205,13 +206,15 @@ bivariate_ripleys_k <- function(data,
       
       #Make a marked point process with the window from above,
       #cell locations, and a marks as defined by cell type
-      pp_cross = spatstat::ppp(x = X$xloc, y = X$yloc, window = w) %mark%
-        factor(X$overall_type)
+      pp_cross = spatstat::ppp(x = X$xloc, y = X$yloc, 
+                               window = w, marks = factor(X$overall_type)) 
+      
+      # spatstat::setmarks(pp_cross, factor(X$overall_type))
       
       if (kestimation == TRUE) {
-        est <- spatstat::Kcross(X = pp_cross, i = "type_one", j = "type_two", r = r_range)
+        suppressWarnings({est <- spatstat::Kcross(X = pp_cross, i = "type_one", j = "type_two", r = r_range)})
       } else {
-        est <- spatstat::Lcross(pp_cross, i = "type_one", j = "type_two", r = r_range)
+        suppressWarnings({est <- spatstat::Lcross(pp_cross, i = "type_one", j = "type_two", r = r_range)})
       }
       
       if (edge_correction == "isotropic") {

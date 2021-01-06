@@ -120,6 +120,8 @@ ripleys_k <- function(mif,
       } else {
         results_list <- results_list %>% 
           dplyr::group_by(.data$V1, .data$V2) %>%
+          dplyr::rename(sample = .data$V1) %>% 
+          dplyr::rename(markers = .data$V2) %>%
           dplyr::summarise(avg_theoretical = mean(as.numeric(.data$V3), na.rm = TRUE),
                            avg_observed = mean(as.numeric(.data$V4), na.rm = TRUE))
       }
@@ -127,6 +129,8 @@ ripleys_k <- function(mif,
       return(results_list)
       
     })
+    
+    estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
     
   }
   
@@ -218,7 +222,7 @@ bi_ripleys_k <- function(mif,
     #   # update progress bar
     #   pb$tick()$print()
     
-    estimate_list <- purrr::map(data, univariate_ripleys_k, id, mnames, 
+    estimate_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
                                 wshape, r_range, edge_correction, kestimation) 
     
     estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=4, byrow=T))
@@ -232,13 +236,13 @@ bi_ripleys_k <- function(mif,
       # update progress bar
       pb$tick()$print()
       
-      perms <- modelr::permute(data, n = num_permutations, mnames)
+      perms <- modelr::permute(data, n = num_permutations, unlist(mnames))
       
       perms_df <- lapply(perms$perm, as.data.frame)
       
       ripleys_estimates <- lapply(perms_df, function(perm_data){
         
-        perm_k <- univariate_ripleys_k(perm_data, id, mnames, wshape, r_range,
+        perm_k <- bivariate_ripleys_k(perm_data, id, mnames, wshape, r_range,
                                        edge_correction, kestimation)
         
         return(perm_k)
@@ -259,13 +263,21 @@ bi_ripleys_k <- function(mif,
       } else {
         results_list <- results_list %>% 
           dplyr::group_by(.data$V1, .data$V2) %>%
+          dplyr::rename(sample = .data$V1) %>% 
+          dplyr::rename(markers = .data$V2) %>%
           dplyr::summarise(avg_theoretical = mean(as.numeric(.data$V3), na.rm = TRUE),
                            avg_observed = mean(as.numeric(.data$V4), na.rm = TRUE))
       }
       
+      # results_list <- plyr::ldply(results_list, data.frame)
+      
+      # results_list <- dplyr::bind_rows(results_list, .id = "V1")
+      
       return(results_list)
       
     })
+    
+    estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
     
   }
   
