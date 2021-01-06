@@ -26,12 +26,12 @@ load("../data/example_tma.rda")
 
 names(example_tma)
 # grabbing image tag names to make sample and clinical file -----
-spatial_names <- lapply(example_tma, function(x) {x$image.tag[[1]]})
+spatial_names <- lapply(example_tma, function(x) {x$image_tag[[1]]})
 spatial_names <- unlist(spatial_names)
-spatial_names <- gsub("\\.tif", "", spatial_names)
+spatial_names <- gsub("\\.tiff", "", spatial_names)
 
 set.seed(8675309)
-example_sample <- data.frame(image.tag = spatial_names,
+example_sample <- data.frame(image_tag = spatial_names,
                              patient_id = sample(c("patient_x", "patient_y", "patient_z"),
                                                  10, replace = TRUE))
 
@@ -80,7 +80,28 @@ CHRIS/BROOKE can you add some summary information here on calculating univariate
 
 ```{r, ripleys}
 
-# x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
-#                                          calculation = "theoretical", wshape = "circle")
+x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
+                                         calculation = "theoretical", 
+                                         wshape = "circle")
+
+x[["derived"]][["ripleys2"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
+                                          calculation = "permutation", wshape = "circle",
+                                          num_permutations = 5)
+
+```
+
+## Bivariate Ripleys K/L
+
+```{r, bi_ripleys}
+
+mnames_pairs <- list(list("cd3_foxp3", "cd3_cd8"),
+                     list("cd3_foxp3", "cd8_pd1"))
+
+x[["derived"]][["bi-ripleys"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
+                                               calculation = "theoretical", wshape = "circle")
+
+x[["derived"]][["bi-ripleys2"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
+                                                calculation = "permutation", wshape = "circle",
+                                                num_permutations = 5)
 
 ```
