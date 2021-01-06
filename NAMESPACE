@@ -2,6 +2,7 @@
 
 S3method(print,mif)
 export("%>%")
+export(bi_ripleys_k)
 export(create_mif)
 export(plot_immunoflo)
 export(ripleys_k)
