@@ -24,11 +24,11 @@ spatialIF functions use a custom mif object which can be created using `create_m
 
 load("../data/example_tma.rda")
 
-names(example_tma)
+# names(example_tma)
 # grabbing image tag names to make sample and clinical file -----
 spatial_names <- lapply(example_tma, function(x) {x$image_tag[[1]]})
 spatial_names <- unlist(spatial_names)
-spatial_names <- gsub("\\.tiff", "", spatial_names)
+# spatial_names <- gsub("\\.tiff", "", spatial_names)
 
 set.seed(8675309)
 example_sample <- data.frame(image_tag = spatial_names,
@@ -39,7 +39,9 @@ example_clinical <- data.frame(patient_id = c("patient_x", "patient_y", "patient
                                covar_one = c("low", "high", "low"),
                                covar_two = rnorm(3))
 
-x <- create_mif(example_tma, clinical_data = example_clinical, sample_data = example_sample)
+x <- create_mif(clinical_data = example_clinical,
+                sample_data = example_sample,
+                spatial_list = example_tma)
 x
 
 ```
@@ -47,7 +49,7 @@ x
 Four slots are available in an `mif` object. 
 *spatial* is a list of data frames with each data frame containing the spatial 
 information for a single sample. 
-If this list is unnamed, then names with be assigned based off the `image.tag` value.
+If this list is unnamed, then names with be assigned based off the `image_tag` value.
 *clinical* is a data frame that contains relevant patient level data - at a 
 minimum this data frame should contain patient level IDs (one row per patient). 
 *sample* is a data frame containing any sample level values and contain sample 
@@ -76,16 +78,16 @@ x[["derived"]][["spatial_plots"]][[2]]
 
 # Univariate Ripleys K/L
 
-CHRIS/BROOKE can you add some summary information here on calculating univariate ripley's k and what each of the output measures are and when you would suggest to use each. 
+CHRIS can you add some summary information here on calculating univariate ripley's k and what each of the output measures are and when you would suggest to use each. 
 
 ```{r, ripleys}
 
 x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
-                                         calculation = "theoretical", 
+                                         csr_calculation = "theoretical", 
                                          wshape = "circle")
 
 x[["derived"]][["ripleys2"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
-                                          calculation = "permutation", wshape = "circle",
+                                          csr_calculation = "permutation", wshape = "circle",
                                           num_permutations = 5)
 
 ```
@@ -98,10 +100,10 @@ mnames_pairs <- list(list("cd3_foxp3", "cd3_cd8"),
                      list("cd3_foxp3", "cd8_pd1"))
 
 x[["derived"]][["bi-ripleys"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
-                                               calculation = "theoretical", wshape = "circle")
+                                               csr_calculation = "theoretical", wshape = "circle")
 
 x[["derived"]][["bi-ripleys2"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
-                                                calculation = "permutation", wshape = "circle",
+                                                csr_calculation = "permutation", wshape = "circle",
                                                 num_permutations = 5)
 
 ```

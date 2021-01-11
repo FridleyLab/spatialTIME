@@ -227,7 +227,8 @@ bivariate_ripleys_k <- function(data,
       
       results_list <- data.frame(
         sample = sample_name,
-        marker = paste0(mnames[[1]], " and ", mnames[[2]]),
+        anchor_marker = mnames[[1]],
+        comparison_marker = mnames[[2]],
         theoretical_estimate = mean(est$theo),
         observed_estimate = k_value 
       )
@@ -238,4 +239,17 @@ bivariate_ripleys_k <- function(data,
     
   })
   
+}
+
+full_list_combinations <- function(list_pairs){
+  
+  expanded_list <- list_pairs
+  
+  for (i in 1:length(list_pairs)){
+    
+    expanded_list[[length(list_pairs) + i]] <- list(list_pairs[[i]][2], list_pairs[[i]][1])
+    
+  }
+  
+  return(expanded_list)
 }

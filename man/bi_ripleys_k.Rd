@@ -10,7 +10,7 @@ bi_ripleys_k(
   mnames,
   wshape = "circle",
   r_range = seq(0, 100, 50),
-  calculation = "permutation",
+  csr_calculation = "permutation",
   num_permutations = 50,
   edge_correction = "translation",
   kestimation = TRUE,
@@ -30,7 +30,7 @@ circular window. Default is circle.}
 
 \item{r_range}{Numeric vector of potential r values to estimate K at.}
 
-\item{calculation}{Character value indicating the method of calculating Ripley's K.
+\item{csr_calculation}{Character value indicating the method of calculating Ripley's K.
 Options can be either "theoretical" or "permutation".}
 
 \item{num_permutations}{Numeric value indicating the number of permutations used.

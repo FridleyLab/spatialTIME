@@ -6,7 +6,7 @@ test_that("returns proper number of elements ", {
   # grabbing image tag names to make sample and clinical file -----
   spatial_names <- lapply(example_tma, function(x) {x$image.tag[[1]]})
   spatial_names <- unlist(spatial_names)
-  spatial_names <- gsub("\\.tif", "", spatial_names)
+  # spatial_names <- gsub("\\.tif", "", spatial_names)
   
   example_tma <- lapply(example_tma, function(x){
     x <- x %>% janitor::clean_names()
@@ -30,7 +30,7 @@ test_that("returns proper number of elements ", {
   mnames <- c("foxp3_opal_620_positive", "cd3_opal_570_positive", "cd8_opal_520_positive",
               "pd1_opal_650_positive", "pdl1_opal_540_positive")
   
-  y <- ripleys_k(x, id = "image_tag", mnames = mnames, calculation = "theoretical")
+  y <- ripleys_k(x, id = "image_tag", mnames = mnames, csr_calculation = "theoretical")
   
   expect_equal(nrow(y), length(mnames)*length(x$spatial))
 })

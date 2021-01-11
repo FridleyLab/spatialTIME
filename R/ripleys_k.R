@@ -10,7 +10,7 @@
 #'  'rectangle" for rectangular window or "circle" for
 #'  circular window. Default is circle.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
-#' @param calculation Character value indicating the method of calculating Ripley's K
+#' @param csr_calculation Character value indicating the method of calculating Ripley's K
 #' @param edge_correction Character value indicating the type of edge correction 
 #'  to use. Options include "theoretical", "translation", "isotropic" or "border". 
 #'  Various edges corrections are most appropriate in different settings. Default
@@ -35,7 +35,7 @@ ripleys_k <- function(mif,
                       wshape = "circle",
                       r_range = seq(0, 100, 50),
                       # pick permutation vs theoretical 
-                      calculation = "permutation",
+                      csr_calculation = "permutation",
                       # permutation number 
                       num_permutations = 50,
                       # edge correction 
@@ -60,7 +60,7 @@ ripleys_k <- function(mif,
     stop("invalid window shape name")
   
   # determine calc type
-  if (!calculation %in% c("permutation", "theoretical"))
+  if (!csr_calculation %in% c("permutation", "theoretical"))
     stop("invalid calculation type")
   
   # determine edge correction
@@ -68,13 +68,13 @@ ripleys_k <- function(mif,
     stop("invalid edge correction")
   
   # check if provided window shape is valid 
-  if  (calculation == "theoretical" & keep_perm_dis == TRUE)
+  if  (csr_calculation == "theoretical" & keep_perm_dis == TRUE)
     stop("Permutation distributions not available for theoretical K/L calculations")
   
   # progress bar for k estimation
   pb <- dplyr::progress_estimated(length(data))
   
-  if (calculation == "theoretical") {
+  if (csr_calculation == "theoretical") {
     
     #   # update progress bar
     #   pb$tick()$print()
@@ -149,7 +149,7 @@ ripleys_k <- function(mif,
 #'  'rectangle" for rectangular window or "circle" for
 #'  circular window. Default is circle.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
-#' @param calculation Character value indicating the method of calculating Ripley's K. 
+#' @param csr_calculation Character value indicating the method of calculating Ripley's K. 
 #'  Options can be either "theoretical" or "permutation". 
 #' @param edge_correction Character value indicating the type of edge correction 
 #'  to use. Options include "theoretical", "translation", "isotropic" or "border". 
@@ -176,7 +176,7 @@ bi_ripleys_k <- function(mif,
                          wshape = "circle",
                          r_range = seq(0, 100, 50),
                          # pick permutation vs theoretical 
-                         calculation = "permutation",
+                         csr_calculation = "permutation",
                          # permutation number 
                          num_permutations = 50,
                          # edge correction 
@@ -188,6 +188,8 @@ bi_ripleys_k <- function(mif,
   data <- mif[["spatial"]]
   
   all_mnames <- unlist(mnames)
+  
+  mnames <- full_list_combinations(mnames)
   
   # check if any/all provided marker names are not present in the data
   if (all(!all_mnames %in% colnames(data[[1]]))) {
@@ -203,7 +205,7 @@ bi_ripleys_k <- function(mif,
     stop("invalid window shape name")
   
   # determine calc type
-  if (!calculation %in% c("permutation", "theoretical"))
+  if (!csr_calculation %in% c("permutation", "theoretical"))
     stop("invalid calculation type")
   
   # determine edge correction
@@ -211,13 +213,13 @@ bi_ripleys_k <- function(mif,
     stop("invalid edge correction")
   
   # check if provided window shape is valid 
-  if  (calculation == "theoretical" & keep_perm_dis == TRUE)
+  if  (csr_calculation == "theoretical" & keep_perm_dis == TRUE)
     stop("Permutation distributions not available for theoretical K/L calculations")
   
   # progress bar for k estimation
   pb <- dplyr::progress_estimated(length(data))
   
-  if (calculation == "theoretical") {
+  if (csr_calculation == "theoretical") {
     
     #   # update progress bar
     #   pb$tick()$print()
@@ -255,7 +257,7 @@ bi_ripleys_k <- function(mif,
       
       results_list <- ripleys_estimates %>% 
         unlist() %>% 
-        matrix(ncol = 4, byrow = TRUE) %>% 
+        matrix(ncol = 5, byrow = TRUE) %>% 
         tibble::as_tibble() 
       
       if (keep_perm_dis == TRUE){
