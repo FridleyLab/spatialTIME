@@ -5,31 +5,39 @@
 \title{Create Multiplex Immunoflourescent object}
 \usage{
 create_mif(
-  spatial_list,
-  clinical_data = NULL,
-  sample_data = NULL,
+  clinical_data,
+  sample_data,
+  spatial_list = NULL,
+  patient_id = "patient_id",
+  sample_id = "image_tag",
   clean_columns = TRUE
 )
 }
 \arguments{
+\item{clinical_data}{A data frame containing patient level data with one row
+per participant.}
+
+\item{sample_data}{A data frame containing sample level data with one row per
+sample. Should at a minimum contain a 2 columns: one for sample names and
+one for the corresponding patient name.}
+
 \item{spatial_list}{A named list of data frames with the spatial data from
 each sample making up each individual data frame}
 
-\item{clinical_data}{A data frame containing patient level data. Patient ID
-indicated with variable \code{patient_id}}
+\item{patient_id}{A character string indicating the column name for patient id in
+sample and clinical data frames.}
 
-\item{sample_data}{A data frame containing sample level data. Sample ID
-should be indicated with variable \code{image.tag} while patient ID should
-be indicated with variable  \code{patient_id}.}
+\item{sample_id}{A character string indicating the column name for sample id
+in the sample data frame}
 
 \item{clean_columns}{A logical value indicating if names in spatial data frames
 should be rewritten in a cleaner format. Default is TRUE.}
 }
 \value{
 Returns a custom MIF
-\item{spatial}{Named list of spatial data}
 \item{clinical}{Data frame of clinical data}
 \item{sample}{Data frame of sample data}
+\item{spatial}{Named list of spatial data}
 \item{derived}{List of data derived using the MIF object}
 }
 \description{
