@@ -71,7 +71,7 @@ hole <- function(xmin = xmin, xmax = xmax, ymin = ymin,
 univariate_ripleys_k <- function(data,
                                  id,
                                  mnames, 
-                                 wshape = c("circle", "rectangle"),
+                                 wshape = c("circle", "rectangle", "irregular"),
                                  r_range = seq(0, 100, 50),
                                  edge_correction = c("theoretical", "translation", "isotropic", "border"),
                                  kestimation = TRUE) {
@@ -102,7 +102,7 @@ univariate_ripleys_k <- function(data,
       dplyr::filter(.data$positive_cell == TRUE) 
     
     # double check with chris that the function should return NA 
-    if (nrow(X)==0) {
+    if (nrow(X) <= 1) {
       results_list <- data.frame(
         sample = sample_name,
         marker = mnames,
@@ -157,7 +157,7 @@ univariate_ripleys_k <- function(data,
 bivariate_ripleys_k <- function(data,
                                 id,
                                 mnames, 
-                                wshape = c("circle", "rectangle"),
+                                wshape = c("circle", "rectangle", "irregular"),
                                 r_range = seq(0, 100, 50),
                                 edge_correction = c("theoretical", "translation", "isotropic", "border"),
                                 kestimation = TRUE) {
@@ -168,13 +168,31 @@ bivariate_ripleys_k <- function(data,
       janitor::clean_names() %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
       dplyr::mutate(yloc = (.data$y_min + .data$y_max) / 2) %>%
-      dplyr::mutate(type1_cell = rowSums(dplyr::select(., !!(mnames[[1]])) > 0)) %>% 
-      dplyr::mutate(type2_cell = rowSums(dplyr::select(., !!(mnames[[2]])) > 0)) %>% 
+      dplyr::mutate(type1_cell = rowSums(dplyr::select(., !!(unlist(mnames[[1]]))) > 0)) %>% 
+      dplyr::mutate(type2_cell = rowSums(dplyr::select(., !!(unlist(mnames[[2]]))) > 0)) %>% 
       dplyr::mutate(overall_type = dplyr::case_when(
-        type1_cell == 1 ~ "type_one",
-        type2_cell == 1 ~ "type_two",
+        .data$type1_cell == 1 ~ "type_one",
+        .data$type2_cell == 1 ~ "type_two",
         TRUE ~ "neither"
       ))
+    
+    if(nrow(X[X$type1_cell == 1,]) == 0){
+      warning("No cells positive for ", unlist(mnames[[1]]),
+              " were found - returning NA")
+      
+      return(NULL)
+    }
+    
+    if(nrow(X[X$type1_cell == 1 & X$type2_cell ==1,]) >= 1){
+      
+      warning(paste0(nrow(X[X$type1_cell == 1 & X$type2_cell ==1,]), 
+                     " cells removed due to being positive for both ",
+                     unlist(mnames[[1]]), " and ", unlist(mnames[[2]])))
+      
+      X <- X %>% 
+        dplyr::filter(!(.data$type1_cell == 1 & .data$type2_cell ==1))
+      
+    }
     
     sample_name <- X %>% 
       dplyr::slice(1) %>% 
@@ -188,21 +206,26 @@ bivariate_ripleys_k <- function(data,
       w <- spatstat::boundingbox(w)
     }
     
-    X <- X %>% 
-      dplyr::filter(.data$overall_type != "neither") %>% 
-      dplyr::select(.data$xloc, .data$yloc, .data$overall_type)
+    # X <- X %>% 
+    #   dplyr::filter(.data$overall_type != "neither") %>% 
+    #   dplyr::select(.data$xloc, .data$yloc, .data$overall_type)
     
     if (nrow(X) <= 1 | nrow(X[X$overall_type=="type_one",]) <=1 |
                             nrow(X[X$overall_type=="type_two",]) <=1 ) {
       
       results_list <- data.frame(
         sample = sample_name,
-        marker = paste0(mnames[[1]], " and ", mnames[[2]]),
+        anchor_marker = unlist(mnames[[1]]),
+        comparison_marker = unlist(mnames[[2]]),
         theoretical_estimate = NA,
         observed_estimate = NA 
       )
       
     } else {
+      
+      X <- X %>% 
+        dplyr::filter(.data$overall_type != "neither") %>% 
+        dplyr::select(.data$xloc, .data$yloc, .data$overall_type)
       
       #Make a marked point process with the window from above,
       #cell locations, and a marks as defined by cell type

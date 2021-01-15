@@ -8,7 +8,7 @@
 #' @param mnames Character vector of marker names to calculate Ripley's K on.
 #' @param wshape Character string of window shape. Potenital values are
 #'  'rectangle" for rectangular window or "circle" for
-#'  circular window. Default is circle.
+#'  circular window or "irregular". Default is irregular.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
 #' @param csr_calculation Character value indicating the method of calculating Ripley's K
 #' @param edge_correction Character value indicating the type of edge correction 
@@ -32,7 +32,7 @@
 ripleys_k <- function(mif,
                       id,
                       mnames, 
-                      wshape = "circle",
+                      wshape = "irregular",
                       r_range = seq(0, 100, 50),
                       # pick permutation vs theoretical 
                       csr_calculation = "permutation",
@@ -56,7 +56,7 @@ ripleys_k <- function(mif,
   }
   
   # check if provided window shape is valid 
-  if (!wshape %in% c("circle", "rectangle"))
+  if (!wshape %in% c("circle", "rectangle", "irregular"))
     stop("invalid window shape name")
   
   # determine calc type
@@ -145,9 +145,9 @@ ripleys_k <- function(mif,
 #' @param mif An MIF object
 #' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames A list of character strings containing two marker names
-#' @param wshape Character string of window shape. Potenital values are
+#' @param wshape Character string of window shape. Potential values are
 #'  'rectangle" for rectangular window or "circle" for
-#'  circular window. Default is circle.
+#'  circular window or "irregular". Default is irregular.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
 #' @param csr_calculation Character value indicating the method of calculating Ripley's K. 
 #'  Options can be either "theoretical" or "permutation". 
@@ -173,7 +173,7 @@ ripleys_k <- function(mif,
 bi_ripleys_k <- function(mif,
                          id,
                          mnames, 
-                         wshape = "circle",
+                         wshape = "irregular",
                          r_range = seq(0, 100, 50),
                          # pick permutation vs theoretical 
                          csr_calculation = "permutation",
@@ -201,7 +201,7 @@ bi_ripleys_k <- function(mif,
   }
   
   # check if provided window shape is valid 
-  if (!wshape %in% c("circle", "rectangle"))
+  if (!wshape %in% c("circle", "rectangle", "irregular"))
     stop("invalid window shape name")
   
   # determine calc type
@@ -227,8 +227,9 @@ bi_ripleys_k <- function(mif,
     estimate_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
                                 wshape, r_range, edge_correction, kestimation) 
     
-    estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=4, byrow=T))
-    colnames(estimate_list) <- c("sample", "marker", "theoretical_estimate",
+    estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=5, byrow=T))
+    colnames(estimate_list) <- c("sample", "anchor_marker", "comparison_marker",
+                                 "theoretical_estimate",
                                  "observed_estimate")
     
   } else {
@@ -266,9 +267,10 @@ bi_ripleys_k <- function(mif,
         results_list <- results_list %>% 
           dplyr::group_by(.data$V1, .data$V2) %>%
           dplyr::rename(sample = .data$V1) %>% 
-          dplyr::rename(markers = .data$V2) %>%
-          dplyr::summarise(avg_theoretical = mean(as.numeric(.data$V3), na.rm = TRUE),
-                           avg_observed = mean(as.numeric(.data$V4), na.rm = TRUE))
+          dplyr::rename(anchor_marker = .data$V2) %>%
+          dplyr::rename(comparison_marker = .data$V3) %>%
+          dplyr::summarise(avg_theoretical = mean(as.numeric(.data$V4), na.rm = TRUE),
+                           avg_observed = mean(as.numeric(.data$V5), na.rm = TRUE))
       }
       
       # results_list <- plyr::ldply(results_list, data.frame)
