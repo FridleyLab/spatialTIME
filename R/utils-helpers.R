@@ -180,7 +180,30 @@ bivariate_ripleys_k <- function(data,
       warning("No cells positive for ", unlist(mnames[[1]]),
               " were found - returning NA")
       
-      return(NULL)
+      results_list <- data.frame(
+        sample = X[[id]][1],
+        anchor_marker = unlist(mnames[[1]]),
+        comparison_marker = unlist(mnames[[2]]),
+        theoretical_estimate = NA,
+        observed_estimate = NA 
+      )
+      
+      return(results_list)
+    }
+    
+    if(nrow(X[X$type2_cell == 1,]) == 0){
+      warning("No cells positive for ", unlist(mnames[[1]]),
+              " were found - returning NA")
+      
+      results_list <- data.frame(
+        sample = X[[id]][1],
+        anchor_marker = unlist(mnames[[1]]),
+        comparison_marker = unlist(mnames[[2]]),
+        theoretical_estimate = NA,
+        observed_estimate = NA 
+      )
+      
+      return(results_list)
     }
     
     if(nrow(X[X$type1_cell == 1 & X$type2_cell ==1,]) >= 1){
