@@ -83,11 +83,10 @@ CHRIS can you add some summary information here on calculating univariate ripley
 ```{r, ripleys}
 
 x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
-                                         csr_calculation = "theoretical", 
-                                         wshape = "circle")
+                                         csr_calculation = "observed")
 
 x[["derived"]][["ripleys2"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
-                                          csr_calculation = "permutation", wshape = "circle",
+                                          csr_calculation = "permutation", 
                                           num_permutations = 5)
 
 ```
@@ -100,10 +99,10 @@ mnames_pairs <- list(list("cd3_foxp3", "cd3_cd8"),
                      list("cd3_foxp3", "cd8_pd1"))
 
 x[["derived"]][["bi-ripleys"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
-                                               csr_calculation = "theoretical", wshape = "circle")
+                                               csr_calculation = "observed")
 
 x[["derived"]][["bi-ripleys2"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
-                                                csr_calculation = "permutation", wshape = "circle",
+                                                csr_calculation = "permutation",
                                                 num_permutations = 5)
 
 ```
