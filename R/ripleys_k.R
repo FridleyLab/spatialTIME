@@ -212,10 +212,13 @@ bi_ripleys_k <- function(mif,
     estimate_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
                                 r_range, edge_correction, kestimation) 
     
-    estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=5, byrow=T))
-    colnames(estimate_list) <- c("sample", "anchor_marker", "comparison_marker",
-                                 "csr_theoretical",
-                                 "observed_estimate")
+    estimate_list <- dplyr::bind_rows(estimate_list)
+    
+    # estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=6, byrow=T))
+    # colnames(estimate_list) <- c("sample", "anchor_marker", "comparison_marker",
+    #                              "r_value",
+    #                              "csr_theoretical",
+    #                              "observed_estimate")
     
   } else {
     

@@ -135,8 +135,6 @@ univariate_ripleys_k <- function(data,
         marker = mnames,
         r_value = r_range,
         observed_estimate = k_value,
-        # csr_theoretical = mean(est$theo),
-        # degree_of_spatial_diff = k_value - mean(est$theo)
         csr_theoretical = est$theo,
         degree_of_spatial_diff = k_value - est$theo
       )
@@ -177,6 +175,7 @@ bivariate_ripleys_k <- function(data,
         sample = X[[id]][1],
         anchor_marker = unlist(mnames[[1]]),
         comparison_marker = unlist(mnames[[2]]),
+        r_value = r_range,
         csr_theoretical = NA,
         observed_estimate = NA 
       )
@@ -192,6 +191,7 @@ bivariate_ripleys_k <- function(data,
         sample = X[[id]][1],
         anchor_marker = unlist(mnames[[1]]),
         comparison_marker = unlist(mnames[[2]]),
+        r_value = r_range,
         csr_theoretical = NA,
         observed_estimate = NA 
       )
@@ -223,6 +223,7 @@ bivariate_ripleys_k <- function(data,
         sample = sample_name,
         anchor_marker = unlist(mnames[[1]]),
         comparison_marker = unlist(mnames[[2]]),
+        r_value = r_range,
         csr_theoretical = NA,
         observed_estimate = NA 
       )
@@ -247,17 +248,21 @@ bivariate_ripleys_k <- function(data,
       }
       
       if (edge_correction == "isotropic") {
-        k_value <- mean(est$iso)  
+        # k_value <- mean(est$iso)  
+        k_value <- est$iso
       } else if (edge_correction == "translation") {
-        k_value <- mean(est$trans)  
+        # k_value <- mean(est$trans)  
+        k_value <- est$trans
       } else {
-        k_value <- mean(est$border)  
+        # k_value <- mean(est$border)  
+        k_value <- est$border 
       }
       
       results_list <- data.frame(
         sample = sample_name,
         anchor_marker = mnames[[1]],
         comparison_marker = mnames[[2]],
+        r_value = r_range,
         csr_theoretical = mean(est$theo),
         observed_estimate = k_value 
       )
