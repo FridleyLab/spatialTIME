@@ -8,7 +8,6 @@ ripleys_k(
   mif,
   id,
   mnames,
-  wshape = "circle",
   r_range = seq(0, 100, 50),
   csr_calculation = "permutation",
   num_permutations = 50,
@@ -23,10 +22,6 @@ ripleys_k(
 \item{id}{Character string of variable name for subject ID in TMA data.}
 
 \item{mnames}{Character vector of marker names to calculate Ripley's K on.}
-
-\item{wshape}{Character string of window shape. Potenital values are
-'rectangle" for rectangular window or "circle" for
-circular window. Default is circle.}
 
 \item{r_range}{Numeric vector of potential r values to estimate K at.}
 

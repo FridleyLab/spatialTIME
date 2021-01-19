@@ -8,7 +8,6 @@ bi_ripleys_k(
   mif,
   id,
   mnames,
-  wshape = "circle",
   r_range = seq(0, 100, 50),
   csr_calculation = "permutation",
   num_permutations = 50,
@@ -24,14 +23,10 @@ bi_ripleys_k(
 
 \item{mnames}{A list of character strings containing two marker names}
 
-\item{wshape}{Character string of window shape. Potenital values are
-'rectangle" for rectangular window or "circle" for
-circular window. Default is circle.}
-
 \item{r_range}{Numeric vector of potential r values to estimate K at.}
 
 \item{csr_calculation}{Character value indicating the method of calculating Ripley's K.
-Options can be either "theoretical" or "permutation".}
+Options can be either "observed" or "permutation".}
 
 \item{num_permutations}{Numeric value indicating the number of permutations used.
 Default is 50.}
