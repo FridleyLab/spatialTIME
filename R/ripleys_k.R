@@ -6,9 +6,6 @@
 #' @param mif An MIF object
 #' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames Character vector of marker names to calculate Ripley's K on.
-#' @param wshape Character string of window shape. Potenital values are
-#'  'rectangle" for rectangular window or "circle" for
-#'  circular window or "irregular". Default is irregular.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
 #' @param csr_calculation Character value indicating the method of calculating Ripley's K
 #' @param edge_correction Character value indicating the type of edge correction 
@@ -32,9 +29,8 @@
 ripleys_k <- function(mif,
                       id,
                       mnames, 
-                      wshape = "irregular",
                       r_range = seq(0, 100, 50),
-                      # pick permutation vs theoretical 
+                      # pick permutation vs observed 
                       csr_calculation = "permutation",
                       # permutation number 
                       num_permutations = 50,
@@ -55,12 +51,8 @@ ripleys_k <- function(mif,
          "` are not in the data")
   }
   
-  # check if provided window shape is valid 
-  if (!wshape %in% c("circle", "rectangle", "irregular"))
-    stop("invalid window shape name")
-  
   # determine calc type
-  if (!csr_calculation %in% c("permutation", "theoretical"))
+  if (!csr_calculation %in% c("permutation", "observed"))
     stop("invalid calculation type")
   
   # determine edge correction
@@ -68,23 +60,27 @@ ripleys_k <- function(mif,
     stop("invalid edge correction")
   
   # check if provided window shape is valid 
-  if  (csr_calculation == "theoretical" & keep_perm_dis == TRUE)
-    stop("Permutation distributions not available for theoretical K/L calculations")
+  if  (csr_calculation == "observed" & keep_perm_dis == TRUE)
+    stop("Permutation distributions not available for observed K/L calculations")
   
   # progress bar for k estimation
   pb <- dplyr::progress_estimated(length(data))
   
-  if (csr_calculation == "theoretical") {
+  if (csr_calculation == "observed") {
     
     #   # update progress bar
     #   pb$tick()$print()
       
     estimate_list <- purrr::map(data, univariate_ripleys_k, id, mnames, 
-                                wshape, r_range, edge_correction, kestimation) 
+                                r_range, edge_correction, kestimation) 
     
-    estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=4, byrow=T))
-    colnames(estimate_list) <- c("sample", "marker", "theoretical_estimate",
-                                 "observed_estimate")
+    estimate_list <- dplyr::bind_rows(estimate_list)
+    
+    # estimate_list <- data.frame(matrix(unlist(estimate_list), ncol = 6, 
+    #                                    byrow = T))
+    # 
+    # colnames(estimate_list) <- c("sample", "marker", "observed_estimate", "r_value",
+    #                              "csr_theoretical", "degree_of_spatial_diff")
     
   } else {
     
@@ -99,20 +95,16 @@ ripleys_k <- function(mif,
 
       ripleys_estimates <- lapply(perms_df, function(perm_data){
         
-        perm_k <- univariate_ripleys_k(perm_data, id, mnames, wshape, r_range,
+        perm_k <- univariate_ripleys_k(perm_data, id, mnames, r_range,
                                        edge_correction, kestimation)
 
         return(perm_k)
 
       })
 
-      # ripleys_estimates <- purrr::map(perms_df, univariate_ripleys_k, id, mnames,
-      #                                        wshape, r_range, edge_correction, kestimation)
-        
-      
       results_list <- ripleys_estimates %>% 
         unlist() %>% 
-        matrix(ncol = 4, byrow = TRUE) %>% 
+        matrix(ncol = 6, byrow = TRUE) %>% 
         tibble::as_tibble() 
       
       if (keep_perm_dis == TRUE){
@@ -122,8 +114,9 @@ ripleys_k <- function(mif,
           dplyr::group_by(.data$V1, .data$V2) %>%
           dplyr::rename(sample = .data$V1) %>% 
           dplyr::rename(markers = .data$V2) %>%
-          dplyr::summarise(avg_theoretical = mean(as.numeric(.data$V3), na.rm = TRUE),
-                           avg_observed = mean(as.numeric(.data$V4), na.rm = TRUE))
+          dplyr::summarise(avg_observed = mean(as.numeric(.data$V3), na.rm = TRUE),
+                           avg_csr_theoretical = mean(as.numeric(.data$V4), na.rm = TRUE),
+                           avg_difference = mean(as.numeric(.data$V5), na.rm = TRUE))
       }
       
       return(results_list)
@@ -145,12 +138,9 @@ ripleys_k <- function(mif,
 #' @param mif An MIF object
 #' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames A list of character strings containing two marker names
-#' @param wshape Character string of window shape. Potential values are
-#'  'rectangle" for rectangular window or "circle" for
-#'  circular window or "irregular". Default is irregular.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
 #' @param csr_calculation Character value indicating the method of calculating Ripley's K. 
-#'  Options can be either "theoretical" or "permutation". 
+#'  Options can be either "observed" or "permutation". 
 #' @param edge_correction Character value indicating the type of edge correction 
 #'  to use. Options include "theoretical", "translation", "isotropic" or "border". 
 #'  Various edges corrections are most appropriate in different settings. Default
@@ -173,9 +163,8 @@ ripleys_k <- function(mif,
 bi_ripleys_k <- function(mif,
                          id,
                          mnames, 
-                         wshape = "irregular",
                          r_range = seq(0, 100, 50),
-                         # pick permutation vs theoretical 
+                         # pick permutation vs observed 
                          csr_calculation = "permutation",
                          # permutation number 
                          num_permutations = 50,
@@ -200,12 +189,8 @@ bi_ripleys_k <- function(mif,
          "` are not in the data")
   }
   
-  # check if provided window shape is valid 
-  if (!wshape %in% c("circle", "rectangle", "irregular"))
-    stop("invalid window shape name")
-  
   # determine calc type
-  if (!csr_calculation %in% c("permutation", "theoretical"))
+  if (!csr_calculation %in% c("permutation", "observed"))
     stop("invalid calculation type")
   
   # determine edge correction
@@ -213,23 +198,23 @@ bi_ripleys_k <- function(mif,
     stop("invalid edge correction")
   
   # check if provided window shape is valid 
-  if  (csr_calculation == "theoretical" & keep_perm_dis == TRUE)
-    stop("Permutation distributions not available for theoretical K/L calculations")
+  if  (csr_calculation == "observed" & keep_perm_dis == TRUE)
+    stop("Permutation distributions not available for observed K/L calculations")
   
   # progress bar for k estimation
   pb <- dplyr::progress_estimated(length(data))
   
-  if (csr_calculation == "theoretical") {
+  if (csr_calculation == "observed") {
     
     #   # update progress bar
     #   pb$tick()$print()
     
     estimate_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
-                                wshape, r_range, edge_correction, kestimation) 
+                                r_range, edge_correction, kestimation) 
     
     estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=5, byrow=T))
     colnames(estimate_list) <- c("sample", "anchor_marker", "comparison_marker",
-                                 "theoretical_estimate",
+                                 "csr_theoretical",
                                  "observed_estimate")
     
   } else {
@@ -245,7 +230,7 @@ bi_ripleys_k <- function(mif,
       
       ripleys_estimates <- lapply(perms_df, function(perm_data){
         
-        perm_k <- bivariate_ripleys_k(perm_data, id, mnames, wshape, r_range,
+        perm_k <- bivariate_ripleys_k(perm_data, id, mnames, r_range,
                                        edge_correction, kestimation)
         
         return(perm_k)
@@ -269,7 +254,7 @@ bi_ripleys_k <- function(mif,
           dplyr::rename(sample = .data$V1) %>% 
           dplyr::rename(anchor_marker = .data$V2) %>%
           dplyr::rename(comparison_marker = .data$V3) %>%
-          dplyr::summarise(avg_theoretical = mean(as.numeric(.data$V4), na.rm = TRUE),
+          dplyr::summarise(avg_csr_theoretical = mean(as.numeric(.data$V4), na.rm = TRUE),
                            avg_observed = mean(as.numeric(.data$V5), na.rm = TRUE))
       }
       
