@@ -73,7 +73,7 @@ mlabels <- c("FOXP3", "CD3", "CD8", "PD1", "PDL1")
 
 x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "image_tag", mnames = mnames, mlabels = mlabels, cell_type = "classifier_label")
 
-x[["derived"]][["spatial_plots"]][[2]]
+x[["derived"]][["spatial_plots"]][[8]]
 ```
 
 # Univariate Ripleys K/L
