@@ -281,7 +281,9 @@ full_list_combinations <- function(list_pairs){
   
   for (i in 1:length(list_pairs)){
     
-    expanded_list[[length(list_pairs) + i]] <- list(list_pairs[[i]][2], list_pairs[[i]][1])
+    expanded_list[[length(list_pairs) + i]] <- list(unlist(list_pairs[[i]][2]),
+                                                    unlist(list_pairs[[i]][1]))
+    # expanded_list[length(list_pairs) + i] <- list(list_pairs[[i]][2], list_pairs[[i]][1])
     
   }
   
