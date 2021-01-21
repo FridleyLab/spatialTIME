@@ -76,12 +76,6 @@ ripleys_k <- function(mif,
     
     estimate_list <- dplyr::bind_rows(estimate_list)
     
-    # estimate_list <- data.frame(matrix(unlist(estimate_list), ncol = 6, 
-    #                                    byrow = T))
-    # 
-    # colnames(estimate_list) <- c("sample", "marker", "observed_estimate", "r_value",
-    #                              "csr_theoretical", "degree_of_spatial_diff")
-    
   } else {
     
     estimate_list <- lapply(data, function(data){
@@ -97,26 +91,29 @@ ripleys_k <- function(mif,
         
         perm_k <- univariate_ripleys_k(perm_data, id, mnames, r_range,
                                        edge_correction, kestimation)
+        
+        perm_k <- dplyr::bind_rows(perm_k)
 
         return(perm_k)
 
       })
-
-      results_list <- ripleys_estimates %>% 
-        unlist() %>% 
-        matrix(ncol = 6, byrow = TRUE) %>% 
-        tibble::as_tibble() 
+      
+      results_list <- dplyr::bind_rows(ripleys_estimates)
       
       if (keep_perm_dis == TRUE){
-        results_list
+        results_list %>% 
+          dplyr::rename(csr_permuted = .data$observed_estimate) 
+        
       } else {
         results_list <- results_list %>% 
-          dplyr::group_by(.data$V1, .data$V2) %>%
-          dplyr::rename(sample = .data$V1) %>% 
-          dplyr::rename(markers = .data$V2) %>%
-          dplyr::summarise(avg_observed = mean(as.numeric(.data$V3), na.rm = TRUE),
-                           avg_csr_theoretical = mean(as.numeric(.data$V4), na.rm = TRUE),
-                           avg_difference = mean(as.numeric(.data$V5), na.rm = TRUE))
+          dplyr::rename(csr_permuted = .data$observed_estimate) %>%
+          dplyr::group_by(.data$sample, .data$marker, .data$r_value) %>%
+          dplyr::summarise(avg_csr_permuted = mean(as.numeric(.data$csr_permuted),
+                                                   na.rm = TRUE),
+                           avg_csr_theoretical = mean(as.numeric(.data$csr_theoretical),
+                                                      na.rm = TRUE),
+                           avg_difference = mean(as.numeric(.data$degree_of_spatial_diff),
+                                                 na.rm = TRUE)) 
       }
       
       return(results_list)
@@ -124,6 +121,17 @@ ripleys_k <- function(mif,
     })
     
     estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
+    
+    observed_list <- purrr::map(data, univariate_ripleys_k, id, mnames,
+                                r_range, edge_correction, kestimation)
+    observed_list <- dplyr::bind_rows(observed_list)
+    
+    estimate_list <- estimate_list %>%
+      dplyr::left_join(observed_list %>%
+                         dplyr::select(.data$sample, .data$marker,
+                                       .data$r_value, .data$observed_estimate) %>%
+                         dplyr::rename(csr_observed = .data$observed_estimate),
+                       by = c("sample", "marker", "r_value"))
     
   }
   
@@ -206,19 +214,11 @@ bi_ripleys_k <- function(mif,
   
   if (csr_calculation == "observed") {
     
-    #   # update progress bar
-    #   pb$tick()$print()
-    
     estimate_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
                                 r_range, edge_correction, kestimation) 
     
     estimate_list <- dplyr::bind_rows(estimate_list)
     
-    # estimate_list <- data.frame(matrix(unlist(estimate_list), ncol=6, byrow=T))
-    # colnames(estimate_list) <- c("sample", "anchor_marker", "comparison_marker",
-    #                              "r_value",
-    #                              "csr_theoretical",
-    #                              "observed_estimate")
     
   } else {
     
@@ -236,6 +236,8 @@ bi_ripleys_k <- function(mif,
         perm_k <- bivariate_ripleys_k(perm_data, id, mnames, r_range,
                                        edge_correction, kestimation)
         
+        perm_k <- dplyr::bind_rows(perm_k)
+        
         return(perm_k)
         
       })
@@ -244,21 +246,24 @@ bi_ripleys_k <- function(mif,
       #                                        wshape, r_range, edge_correction, kestimation)
       
       
-      results_list <- ripleys_estimates %>% 
-        unlist() %>% 
-        matrix(ncol = 5, byrow = TRUE) %>% 
-        tibble::as_tibble() 
+      # results_list <- ripleys_estimates %>% 
+      #   unlist() %>% 
+      #   matrix(ncol = 5, byrow = TRUE) %>% 
+      #   tibble::as_tibble() 
+      results_list <- dplyr::bind_rows(ripleys_estimates)
       
       if (keep_perm_dis == TRUE){
-        results_list
+        results_list <- results_list %>% 
+          dplyr::rename(csr_permuted = .data$observed_estimate) 
       } else {
         results_list <- results_list %>% 
-          dplyr::group_by(.data$V1, .data$V2) %>%
-          dplyr::rename(sample = .data$V1) %>% 
-          dplyr::rename(anchor_marker = .data$V2) %>%
-          dplyr::rename(comparison_marker = .data$V3) %>%
-          dplyr::summarise(avg_csr_theoretical = mean(as.numeric(.data$V4), na.rm = TRUE),
-                           avg_observed = mean(as.numeric(.data$V5), na.rm = TRUE))
+          dplyr::rename(csr_permuted = .data$observed_estimate) %>%
+          dplyr::group_by(.data$sample, .data$anchor_marker, .data$comparison_marker,
+                          .data$r_value) %>%
+          dplyr::summarise(avg_csr_theoretical = mean(as.numeric(.data$csr_theoretical),
+                                                      na.rm = TRUE),
+                           avg_csr_permuted = mean(as.numeric(.data$csr_permuted),
+                                                   na.rm = TRUE))
       }
       
       # results_list <- plyr::ldply(results_list, data.frame)
@@ -270,6 +275,18 @@ bi_ripleys_k <- function(mif,
     })
     
     estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
+    
+    observed_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
+                                r_range, edge_correction, kestimation) 
+    observed_list <- dplyr::bind_rows(observed_list)
+    
+    estimate_list <- estimate_list %>%
+      dplyr::left_join(observed_list %>% 
+                         dplyr::select(.data$sample, .data$anchor_marker,
+                                       .data$comparison_marker, .data$r_value,
+                                       .data$observed_estimate) %>% 
+                         dplyr::rename(csr_observed = .data$observed_estimate),
+                       by = c("sample", "anchor_marker", "comparison_marker", "r_value"))
     
   }
   
