@@ -9,9 +9,9 @@
 #' @param r_range Numeric vector of potential r values to estimate K at. 
 #' @param csr_calculation Character value indicating the method of calculating Ripley's K
 #' @param edge_correction Character value indicating the type of edge correction 
-#'  to use. Options include "theoretical", "translation", "isotropic" or "border". 
+#'  to use. Options include "translation", "isotropic" or "border". 
 #'  Various edges corrections are most appropriate in different settings. Default
-#'  is "none". 
+#'  is "translation". 
 #' @param kestimation Logical value determining the type estimation performed.
 #'  TRUE estimates Ripley's reduced second moment function while FALSE 
 #'  estimates Besags's transformation of Ripley's K.
@@ -131,7 +131,8 @@ ripleys_k <- function(mif,
                          dplyr::select(.data$sample, .data$marker,
                                        .data$r_value, .data$observed_estimate) %>%
                          dplyr::rename(csr_observed = .data$observed_estimate),
-                       by = c("sample", "marker", "r_value"))
+                       by = c("sample", "marker", "r_value")) %>%
+      dplyr::mutate(avg_difference = avg_csr_permuted - csr_observed)
     
   }
   
@@ -286,7 +287,7 @@ bi_ripleys_k <- function(mif,
                                        .data$comparison_marker, .data$r_value,
                                        .data$observed_estimate) %>% 
                          dplyr::rename(csr_observed = .data$observed_estimate),
-                       by = c("sample", "anchor_marker", "comparison_marker", "r_value"))
+                       by = c("sample", "anchor_marker", "comparison_marker", "r_value")) 
     
   }
   
