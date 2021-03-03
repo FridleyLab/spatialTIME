@@ -287,7 +287,8 @@ bi_ripleys_k <- function(mif,
                                        .data$comparison_marker, .data$r_value,
                                        .data$observed_estimate) %>% 
                          dplyr::rename(csr_observed = .data$observed_estimate),
-                       by = c("sample", "anchor_marker", "comparison_marker", "r_value")) 
+                       by = c("sample", "anchor_marker", "comparison_marker", "r_value")) %>%
+      dplyr::mutate(avg_diff = avg_csr_permuted - csr_observed)
     
   }
   
