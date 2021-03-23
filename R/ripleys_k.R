@@ -101,7 +101,7 @@ ripleys_k <- function(mif,
       results_list <- dplyr::bind_rows(ripleys_estimates)
       
       if (keep_perm_dis == TRUE){
-        results_list %>% 
+        results_list<- results_list %>% 
           dplyr::rename(csr_permuted = .data$observed_estimate) 
         
       } else {
@@ -120,8 +120,9 @@ ripleys_k <- function(mif,
       
     })
     
-    estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
-    
+    #The commented version replaced the sample column with 1,2,3,....
+    #estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
+    estimate_list <- dplyr::bind_rows(estimate_list)
     observed_list <- purrr::map(data, univariate_ripleys_k, id, mnames,
                                 r_range, edge_correction, kestimation)
     observed_list <- dplyr::bind_rows(observed_list)
@@ -131,8 +132,7 @@ ripleys_k <- function(mif,
                          dplyr::select(.data$sample, .data$marker,
                                        .data$r_value, .data$observed_estimate) %>%
                          dplyr::rename(csr_observed = .data$observed_estimate),
-                       by = c("sample", "marker", "r_value")) %>%
-      dplyr::mutate(avg_difference = avg_csr_permuted - csr_observed)
+                       by = c("sample", "marker", "r_value"))
     
   }
   
