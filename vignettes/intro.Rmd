@@ -41,7 +41,8 @@ example_clinical <- data.frame(patient_id = c("patient_x", "patient_y", "patient
 
 x <- create_mif(clinical_data = example_clinical,
                 sample_data = example_sample,
-                spatial_list = example_tma,clean_columns = FALSE)
+                spatial_list = example_tma,
+                clean_columns = FALSE)
 x
 
 ```
@@ -71,7 +72,8 @@ mnames <- c("foxp3_opal_620_positive", "cd3_opal_570_positive", "cd8_opal_520_po
 
 mlabels <- c("FOXP3", "CD3", "CD8", "PD1", "PDL1")
 
-x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "image_tag", mnames = mnames, mlabels = mlabels, cell_type = "classifier_label")
+x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "image_tag", mnames = mnames, 
+                                                    mlabels = mlabels, cell_type = "classifier_label")
 
 x[["derived"]][["spatial_plots"]][[8]]
 ```
