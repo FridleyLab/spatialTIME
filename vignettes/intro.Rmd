@@ -41,7 +41,7 @@ example_clinical <- data.frame(patient_id = c("patient_x", "patient_y", "patient
 
 x <- create_mif(clinical_data = example_clinical,
                 sample_data = example_sample,
-                spatial_list = example_tma)
+                spatial_list = example_tma,clean_columns = FALSE)
 x
 
 ```
@@ -100,9 +100,4 @@ mnames_pairs <- list(list("cd3_foxp3", "cd3_cd8"),
 
 x[["derived"]][["bi-ripleys"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
                                                csr_calculation = "observed")
-
-x[["derived"]][["bi-ripleys2"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
-                                                csr_calculation = "permutation",
-                                                num_permutations = 5)
-
 ```

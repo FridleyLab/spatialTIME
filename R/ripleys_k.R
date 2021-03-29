@@ -7,7 +7,6 @@
 #' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames Character vector of marker names to calculate Ripley's K on.
 #' @param r_range Numeric vector of potential r values to estimate K at. 
-#' @param csr_calculation Character value indicating the method of calculating Ripley's K
 #' @param edge_correction Character value indicating the type of edge correction 
 #'  to use. Options include "translation", "isotropic" or "border". 
 #'  Various edges corrections are most appropriate in different settings. Default
@@ -19,6 +18,7 @@
 #'  Default is 50.   
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted K values
+#' @param mlabels Character vector of label for marker names to display in the marker column.
 #' 
 #' @return Returns a list
 #'    \item{r}{Subject ID in TMA data}
@@ -31,14 +31,15 @@ ripleys_k <- function(mif,
                       mnames, 
                       r_range = seq(0, 100, 50),
                       # pick permutation vs observed 
-                      csr_calculation = "permutation",
+                      #csr_calculation = "permutation",
                       # permutation number 
                       num_permutations = 50,
                       # edge correction 
                       edge_correction = "translation",
                       # k or l 
                       kestimation = TRUE,
-                      keep_perm_dis = FALSE) {
+                      keep_perm_dis = FALSE,
+                      mlabels = NULL) {
   
   data <- mif[["spatial"]]
   
@@ -52,31 +53,34 @@ ripleys_k <- function(mif,
   }
   
   # determine calc type
-  if (!csr_calculation %in% c("permutation", "observed"))
-    stop("invalid calculation type")
+  # if (!csr_calculation %in% c("permutation", "observed"))
+  #   stop("invalid calculation type")
   
   # determine edge correction
   if (!edge_correction %in% c("none", "translation", "isotropic", "border"))
     stop("invalid edge correction")
   
-  # check if provided window shape is valid 
-  if  (csr_calculation == "observed" & keep_perm_dis == TRUE)
-    stop("Permutation distributions not available for observed K/L calculations")
-  
+  # # check if provided window shape is valid 
+  # if  (csr_calculation == "observed" & keep_perm_dis == TRUE)
+  #   stop("Permutation distributions not available for observed K/L calculations")
+  # 
   # progress bar for k estimation
   pb <- dplyr::progress_estimated(length(data))
   
-  if (csr_calculation == "observed") {
-    
-    #   # update progress bar
-    #   pb$tick()$print()
-      
-    estimate_list <- purrr::map(data, univariate_ripleys_k, id, mnames, 
-                                r_range, edge_correction, kestimation) 
-    
-    estimate_list <- dplyr::bind_rows(estimate_list)
-    
-  } else {
+  # if (csr_calculation == "observed") {
+  #   
+  #   #   # update progress bar
+  #   #   pb$tick()$print()
+  #     
+  #   estimate_list <- purrr::map(data, univariate_ripleys_k, id, mnames, 
+  #                               r_range, edge_correction, kestimation, mlabels) 
+  #   
+  #   estimate_list <- dplyr::bind_rows(estimate_list)  %>% 
+  #     dplyr::rename('Theoretical CSR' = .data$csr_theoretical,
+  #                    'Observed K' = .data$observed_estimate) %>%
+  #     mutate('Degree of Clustering' = `Observed K` - `Theoretical CSR`)
+  #   
+  # } else {
     
     estimate_list <- lapply(data, function(data){
 
@@ -90,7 +94,7 @@ ripleys_k <- function(mif,
       ripleys_estimates <- lapply(perms_df, function(perm_data){
         
         perm_k <- univariate_ripleys_k(perm_data, id, mnames, r_range,
-                                       edge_correction, kestimation)
+                                       edge_correction, kestimation, mlabels)
         
         perm_k <- dplyr::bind_rows(perm_k)
 
@@ -102,18 +106,17 @@ ripleys_k <- function(mif,
       
       if (keep_perm_dis == TRUE){
         results_list<- results_list %>% 
-          dplyr::rename(csr_permuted = .data$observed_estimate) 
+          dplyr::rename('Permuted CSR' = .data$observed_estimate,
+                        'Theoretical CSR' = .data$csr_theoretical) 
         
       } else {
         results_list <- results_list %>% 
           dplyr::rename(csr_permuted = .data$observed_estimate) %>%
-          dplyr::group_by(.data$sample, .data$marker, .data$r_value) %>%
-          dplyr::summarise(avg_csr_permuted = mean(as.numeric(.data$csr_permuted),
+          dplyr::group_by(.data[[id]], .data$marker, .data$r_value) %>%
+          dplyr::summarise("Permuted CSR" = mean(as.numeric(.data$csr_permuted),
                                                    na.rm = TRUE),
-                           avg_csr_theoretical = mean(as.numeric(.data$csr_theoretical),
-                                                      na.rm = TRUE),
-                           avg_difference = mean(as.numeric(.data$degree_of_spatial_diff),
-                                                 na.rm = TRUE)) 
+                           "Theoretical CSR" = mean(as.numeric(.data$csr_theoretical),
+                                                      na.rm = TRUE)) 
       }
       
       return(results_list)
@@ -124,17 +127,18 @@ ripleys_k <- function(mif,
     #estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
     estimate_list <- dplyr::bind_rows(estimate_list)
     observed_list <- purrr::map(data, univariate_ripleys_k, id, mnames,
-                                r_range, edge_correction, kestimation)
+                                r_range, edge_correction, kestimation, mlabels)
     observed_list <- dplyr::bind_rows(observed_list)
     
     estimate_list <- estimate_list %>%
       dplyr::left_join(observed_list %>%
-                         dplyr::select(.data$sample, .data$marker,
+                         dplyr::select(.data[[id]], .data$marker,
                                        .data$r_value, .data$observed_estimate) %>%
-                         dplyr::rename(csr_observed = .data$observed_estimate),
-                       by = c("sample", "marker", "r_value"))
+                         dplyr::rename("Observed K" = .data$observed_estimate),
+                       by = c(id, "marker", "r_value")) %>%
+      mutate('Degree of Clustering' = `Observed K` - `Permuted CSR`)
     
-  }
+  #}
   
   return(estimate_list)
   

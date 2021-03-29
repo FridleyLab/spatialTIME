@@ -13,7 +13,7 @@
 #' @param sample_id A character string indicating the column name for sample id
 #'  in the sample data frame
 #' @param clean_columns A logical value indicating if names in spatial data frames
-#'  should be rewritten in a cleaner format. Default is TRUE. 
+#'  should be rewritten in a cleaner format. Default is FALSE. 
 #' 
 #' @return Returns a custom MIF
 #'    \item{clinical}{Data frame of clinical data}
@@ -24,7 +24,7 @@
 #' @export
 create_mif <- function(clinical_data, sample_data, spatial_list = NULL,
                        patient_id = "patient_id", sample_id = "image_tag",
-                       clean_columns = TRUE){
+                       clean_columns = FALSE){
   
   sample_data_clean <- sample_data %>% 
     dplyr::full_join(clinical_data %>% 

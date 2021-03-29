@@ -73,18 +73,24 @@ univariate_ripleys_k <- function(data,
                                  mnames, 
                                  r_range = seq(0, 100, 50),
                                  edge_correction = c("theoretical", "translation", "isotropic", "border"),
-                                 kestimation = TRUE) {
-  
-  estimate_list <- lapply(mnames, function(mnames){
-  
+                                 kestimation = TRUE,  mlabels=NULL) {
+  if(is.null(mlabels)){
+    mlabels = mnames
+    }
+  mlabels = setNames(object = mlabels, nm = mnames)
+    estimate_list <- lapply(mnames, function(mnames){
+      mnames_clean = janitor::make_clean_names(mnames)
+      mlabels = mlabels[mnames]
     # x and y coordinates for cells
+    ## Jordan why do the names need to be cleaned? I see
+    ## Is there away to only change a couple of columns (i.e. leave out mnames)
     X <- data %>% 
       janitor::clean_names() %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
       dplyr::mutate(yloc = (.data$y_min + .data$y_max) / 2) %>%
-      dplyr::mutate(positive_cell = rowSums(dplyr::select(., !!mnames)) > 0) 
+      dplyr::mutate(positive_cell = rowSums(dplyr::select(., !!mnames_clean)) > 0) 
     
-    sample_name <- X %>% 
+    sample_name <- data %>% 
       dplyr::slice(1) %>% 
       dplyr::pull(!!id)
     
@@ -97,10 +103,13 @@ univariate_ripleys_k <- function(data,
       dplyr::filter(.data$positive_cell == TRUE) 
     
     # double check with chris that the function should return NA 
+    ## How do you find the column that the sample and spatial columns will be 
+    ## merged by? sample should have the same column name as that merge variable
+    ## To do any downstream analysis this obj will be merged with clinical and summary data
     if (nrow(X) <= 1) {
       results_list <- data.frame(
-        sample = sample_name,
-        marker = mnames,
+        id = sample_name,
+        marker = unname(mlabels),
         r_value = r_range,
         observed_estimate = NA,
         csr_theoretical = NA,
@@ -115,10 +124,10 @@ univariate_ripleys_k <- function(data,
       # we need the function to eventually return K and L estimates 
       if (kestimation == TRUE) {
         #est <- spatstat::Kest(p, r = r_range)
-        est <- spatstat.core::Kest(p, r = r_range)
+        est <- spatstat.core::Kest(p, r = r_range, correction="all")
       } else {
         #est <- spatstat::Lest(p, r = r_range)
-        est <- spatstat.core::Lest(p, r = r_range)
+        est <- spatstat.core::Lest(p, r = r_range, correction="all")
       }
       
       if (edge_correction == "isotropic") {
@@ -136,16 +145,15 @@ univariate_ripleys_k <- function(data,
       }
       
       results_list <- data.frame(
-        sample = sample_name,
-        marker = mnames,
+        id = sample_name,
+        marker = unname(mlabels),
         r_value = r_range,
         observed_estimate = k_value,
-        csr_theoretical = est$theo,
-        degree_of_spatial_diff = k_value - est$theo
+        csr_theoretical = est$theo
       )
       
     }
-    
+    colnames(results_list)[1] = id 
     return(results_list)
     
   })

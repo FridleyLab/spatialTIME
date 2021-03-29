@@ -61,19 +61,22 @@ plot_immunoflo <- function(
   
   # plots
   plot <- lapply(mif[["spatial"]], function(x){
+    mnames_clean = janitor::make_clean_names(mnames)
     # update progress bar
     pb$tick()$print()
     # data to generate plot
     plot_data <- x %>% 
       janitor::clean_names() %>%
       dplyr::select(
-        !!plot_title, .data$x_min, .data$x_max, .data$y_min, .data$y_max, !!mnames, !!cell_type) %>% 
-      tidyr::pivot_longer(cols = !!mnames,
+        janitor::make_clean_names(plot_title), .data$x_min, .data$x_max, 
+        .data$y_min, .data$y_max, !!mnames_clean, 
+        janitor::make_clean_names(cell_type)) %>% 
+      tidyr::pivot_longer(cols = !!mnames_clean,
                           names_to = "marker", values_to = "indicator") %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2,
                     yloc = (.data$y_min + .data$y_max) / 2,
                     marker = factor(
-                      .data$marker, levels = mnames, labels = mlabels)) 
+                      .data$marker, levels = mnames_clean, labels = mlabels)) 
     
     # plot title
     plot_title <- if (length(plot_title) == 1) {
@@ -94,7 +97,7 @@ plot_immunoflo <- function(
       ggplot2::ggplot(ggplot2::aes(x = .data$xloc, 
                                    y = .data$yloc, 
                                    color = .data$marker, 
-                                   shape = !!as.name(cell_type))) +
+                                   shape = .data[[janitor::make_clean_names(cell_type)]])) +
       # ggplot2::geom_point(data = filter(plot_data, indicator == 0),
       #                     # aes(fill = "grey70"),
       #                     color = "gray70") +
