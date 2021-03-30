@@ -165,6 +165,7 @@ ripleys_k <- function(mif,
 #'  Default is 50.   
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted K values
+#' @param mlabels A list of character strings containing two marker labels
 #' 
 #' @return Returns a list of data frames 
 #'    \item{sample}{Subject ID in TMA data}
@@ -252,14 +253,6 @@ bi_ripleys_k <- function(mif,
         
       })
       
-      # ripleys_estimates <- purrr::map(perms_df, univariate_ripleys_k, id, mnames,
-      #                                        wshape, r_range, edge_correction, kestimation)
-      
-      
-      # results_list <- ripleys_estimates %>% 
-      #   unlist() %>% 
-      #   matrix(ncol = 5, byrow = TRUE) %>% 
-      #   tibble::as_tibble() 
       results_list <- dplyr::bind_rows(ripleys_estimates)
       
       if (keep_perm_dis == TRUE){

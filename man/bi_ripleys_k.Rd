@@ -9,11 +9,11 @@ bi_ripleys_k(
   id,
   mnames,
   r_range = seq(0, 100, 50),
-  csr_calculation = "permutation",
   num_permutations = 50,
   edge_correction = "translation",
   kestimation = TRUE,
-  keep_perm_dis = FALSE
+  keep_perm_dis = FALSE,
+  mlabels = NULL
 )
 }
 \arguments{
@@ -24,9 +24,6 @@ bi_ripleys_k(
 \item{mnames}{A list of character strings containing two marker names}
 
 \item{r_range}{Numeric vector of potential r values to estimate K at.}
-
-\item{csr_calculation}{Character value indicating the method of calculating Ripley's K.
-Options can be either "observed" or "permutation".}
 
 \item{num_permutations}{Numeric value indicating the number of permutations used.
 Default is 50.}
@@ -42,6 +39,11 @@ estimates Besags's transformation of Ripley's K.}
 
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted K values}
+
+\item{mlabels}{A list of character strings containing two marker labels}
+
+\item{csr_calculation}{Character value indicating the method of calculating Ripley's K.
+Options can be either "observed" or "permutation".}
 }
 \value{
 Returns a list of data frames

@@ -197,7 +197,7 @@ bivariate_ripleys_k <- function(data,
         csr_theoretical = NA,
         observed_estimate = NA 
       )
-      
+      colnames(results_list)[1] = id
       return(results_list)
     }
     
@@ -213,7 +213,7 @@ bivariate_ripleys_k <- function(data,
         csr_theoretical = NA,
         observed_estimate = NA 
       )
-      
+      colnames(results_list)[1] = id
       return(results_list)
     }
     
@@ -288,8 +288,8 @@ bivariate_ripleys_k <- function(data,
         csr_theoretical = mean(est$theo),
         observed_estimate = k_value 
       )
-      
     }
+    
     colnames(results_list)[1] = id
     return(results_list)
     
