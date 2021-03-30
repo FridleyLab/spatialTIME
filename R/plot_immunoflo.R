@@ -88,8 +88,12 @@ plot_immunoflo <- function(
     # color palette
     if (is.null(mcolors)) {
       # viridis prints better (BW) and easily read (colorblindness)
-      mcolors = viridisLite::viridis(length(mnames), option = "viridis")
-      # mcolors = RColorBrewer::brewer.pal(length(mnames), "Paired")
+      #mcolors = viridisLite::viridis(length(mnames), option = "viridis")
+      
+      #Set2 is not particularly pretty, but it is colorblind friendly
+      #Ram had used 'Paired' which is also colorblind friendly.
+      
+      mcolors = RColorBrewer::brewer.pal(length(mnames), "Paired")
     }
     
     basic_plot <- plot_data %>% 
