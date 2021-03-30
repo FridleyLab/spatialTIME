@@ -56,7 +56,7 @@ If this list is unnamed, then names with be assigned based off the `image_tag` v
 *clinical* is a data frame that contains relevant patient level data - at a 
 minimum this data frame should contain patient level IDs (one row per patient). 
 *sample* is a data frame containing any sample level values and contain sample 
-names and pateint IDs at a minimum (one row per sample). 
+names and patient IDs at a minimum (one row per sample). 
 An empty list for *derived* is created as a place to store results from the 
 `spatialIF` package within the object (*this it the temporary usage - need to implement R6 classes to automatically update the argument supplied to the function*).
 
@@ -89,9 +89,9 @@ There are several edge correction, our studies has included a small number of ce
 
 There are several methods for normalization with help improve the interpretation of Ripley's $K$. We include Besag's L which is computed by $L(r) = \sqrt{\frac{K(r)}{\pi}}$, and the expect value of $r$. Hence, $L$ is expected to grow proportionally with $r$. The expected value $K$ and $L$ both hinge on the assumption that the underlying point process follows the so called complete spatial randomness assumption which asserts that the locations of cells can neither form a regular patterns nor clusters.
 
-Damage can occur to TMAs, due to how they are collect. This damage can lead to rips and tears in the TMA which results in regions where it appears that cells cannot be locations, which is not actually the case. Thus the theoretical estimate for CSR may not be accurate, to address this the cell locations can be permuted and the permutation distribution of $K$ or $L$ is a TMA specific measure of CSR. The ```r ripleys_k``` function reports a permuted and theoretical estimate of CSR, the observed value for $K$ (```r kestimation = TRUE```) or $L$ (```r kestimation = FALSE```), and the full perumtation distribution of $K$ or $L$ if ```keep_perm_dis = TRUE```.
+Damage can occur to TMAs, due to how they are collect. This damage can lead to rips and tears in the TMA which results in regions where it appears that cells cannot be locations, which is not actually the case. Thus the theoretical estimate for CSR may not be accurate, to address this the cell locations can be permuted and the permutation distribution of $K$ or $L$ is a TMA specific measure of CSR. The `ripleys_k` function reports a permuted and theoretical estimate of CSR, the observed value for $K$ (` kestimation = TRUE`) or $L$ (`kestimation = FALSE`), and the full permutation distribution of $K$ or $L$ if `keep_perm_dis = TRUE`.
 
-```{r, ripleys}
+```{r, ripleys, warning = FALSE}
 
 x[["derived"]][["ripleys"]] <- ripleys_k(mif = x, id = "image_tag", mnames = mnames[1], num_permutations = 1,
                                          edge_correction = 'translation', kestimation = TRUE,keep_perm_dis = FALSE)
@@ -100,7 +100,7 @@ x[["derived"]][["ripleys"]] <- ripleys_k(mif = x, id = "image_tag", mnames = mna
 # Estimating the colocalization of cell types
 These examples have nothing interesting in them. CHRIS look for different cell combinations that have non NA for Observed K
 
-```{r, bi_ripleys}
+```{r, bi_ripleys, warning=FALSE}
 
 mnames_pairs <- list(list("cd3_foxp3", "cd3_cd8"),
                      list("cd3_foxp3", "cd8_pd1"))
