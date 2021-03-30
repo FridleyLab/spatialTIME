@@ -72,7 +72,7 @@ univariate_ripleys_k <- function(data,
                                  id,
                                  mnames, 
                                  r_range = seq(0, 100, 50),
-                                 edge_correction = c("theoretical", "translation", "isotropic", "border"),
+                                 edge_correction = c("translation", "isotropic", "border"),
                                  kestimation = TRUE,  mlabels=NULL) {
   if(is.null(mlabels)){
     mlabels = mnames
@@ -163,17 +163,22 @@ bivariate_ripleys_k <- function(data,
                                 id,
                                 mnames, 
                                 r_range = seq(0, 100, 50),
-                                edge_correction = c("theoretical", "translation", "isotropic", "border"),
-                                kestimation = TRUE) {
-  
+                                edge_correction = c("translation", "isotropic", "border"),
+                                kestimation = TRUE, mlabels = NULL) {
+  if(is.null(mlabels)){
+    mlabels = mnames
+  }
+  counter = 0
   estimate_list <- lapply(mnames, function(mnames){
+    counter <<- counter + 1
+    mnames_clean = lapply(mnames,janitor::make_clean_names)
     # x and y coordinates for cells
     X <- data %>% 
       janitor::clean_names() %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
       dplyr::mutate(yloc = (.data$y_min + .data$y_max) / 2) %>%
-      dplyr::mutate(type1_cell = rowSums(dplyr::select(., !!(unlist(mnames[[1]]))) > 0)) %>% 
-      dplyr::mutate(type2_cell = rowSums(dplyr::select(., !!(unlist(mnames[[2]]))) > 0)) %>% 
+      dplyr::mutate(type1_cell = rowSums(dplyr::select(., .[[mnames_clean[[1]]]]) > 0)) %>% 
+      dplyr::mutate(type2_cell = rowSums(dplyr::select(., .data[[mnames_clean[[2]]]]) > 0)) %>% 
       dplyr::mutate(overall_type = dplyr::case_when(
         .data$type1_cell == 1 ~ "type_one",
         .data$type2_cell == 1 ~ "type_two",
@@ -181,13 +186,13 @@ bivariate_ripleys_k <- function(data,
       ))
     
     if(nrow(X[X$type1_cell == 1,]) == 0){
-      warning("No cells positive for ", unlist(mnames[[1]]),
+      warning("No cells positive for ", mlabels[[counter]][[1]],
               " were found - returning NA")
       
       results_list <- data.frame(
         sample = X[[id]][1],
-        anchor_marker = unlist(mnames[[1]]),
-        comparison_marker = unlist(mnames[[2]]),
+        anchor_marker = mlabels[[counter]][[1]],
+        comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
         csr_theoretical = NA,
         observed_estimate = NA 
@@ -197,13 +202,13 @@ bivariate_ripleys_k <- function(data,
     }
     
     if(nrow(X[X$type2_cell == 1,]) == 0){
-      warning("No cells positive for ", unlist(mnames[[1]]),
+      warning("No cells positive for ", mlabels[[counter]][[2]],
               " were found - returning NA")
       
       results_list <- data.frame(
         sample = X[[id]][1],
-        anchor_marker = unlist(mnames[[1]]),
-        comparison_marker = unlist(mnames[[2]]),
+        anchor_marker = mlabels[[counter]][[1]],
+        comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
         csr_theoretical = NA,
         observed_estimate = NA 
@@ -216,7 +221,7 @@ bivariate_ripleys_k <- function(data,
       
       warning(paste0(nrow(X[X$type1_cell == 1 & X$type2_cell ==1,]), 
                      " cells removed due to being positive for both ",
-                     unlist(mnames[[1]]), " and ", unlist(mnames[[2]])))
+                     mlabels[[counter]][[1]], " and ", mlabels[[counter]][[2]]))
       
       X <- X %>% 
         dplyr::filter(!(.data$type1_cell == 1 & .data$type2_cell ==1))
@@ -234,8 +239,8 @@ bivariate_ripleys_k <- function(data,
       
       results_list <- data.frame(
         sample = sample_name,
-        anchor_marker = unlist(mnames[[1]]),
-        comparison_marker = unlist(mnames[[2]]),
+        anchor_marker = mlabels[[counter]][[1]],
+        comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
         csr_theoretical = NA,
         observed_estimate = NA 
@@ -277,15 +282,15 @@ bivariate_ripleys_k <- function(data,
       
       results_list <- data.frame(
         sample = sample_name,
-        anchor_marker = mnames[[1]],
-        comparison_marker = mnames[[2]],
+        anchor_marker = mlabels[[counter]][[1]],
+        comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
         csr_theoretical = mean(est$theo),
         observed_estimate = k_value 
       )
       
     }
-    
+    colnames(results_list)[1] = id
     return(results_list)
     
   })

@@ -1,5 +1,7 @@
 ---
 title: "Introduction to spatialIF"
+header-includes:
+  - usepackage{mathbbm}
 output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Introduction to spatialIF}
@@ -42,7 +44,7 @@ example_clinical <- data.frame(patient_id = c("patient_x", "patient_y", "patient
 x <- create_mif(clinical_data = example_clinical,
                 sample_data = example_sample,
                 spatial_list = example_tma,
-                clean_columns = FALSE)
+                clean_columns = TRUE)
 x
 
 ```
@@ -78,23 +80,41 @@ x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "image_tag",
 x[["derived"]][["spatial_plots"]][[8]]
 ```
 
-# Univariate Ripleys K/L
+# Estimating the degree of spatial clustering
 
-CHRIS can you add some summary information here on calculating univariate ripley's k and what each of the output measures are and when you would suggest to use each. 
+Ripley's $K$ measures the average number of neighboring cells across each cell, that is the average number of cells within a specified radius of a cell. Ripley's $K$ is computed as follows:
+
+$$K(r) = \frac{1}{n}\sum_{i=1}^{n}w_{ij}\mathbbm{1}(d(x_i,x_j)\le r)$$,
+
+where $r$ is the specified radius, $d(x_i,x_j)$ is the distance between the $i^{th}$ and $j^{th}$ cell, and $w_{ij}$ is the weights that are assigned for border corrections. The expected value of $K(r)$ is $\pi r^2$, thus $K$ is expected to grow quadratically with $r$.
+
+There are several edge correction, our studies has included a small number of cells and we recommend using the isotropic or translational edge correction, as opposed to the 'border' edge correction. The main goal of the edge correction is to account for the fact that there are unobserved points outside of the region, and the assumption is that the location of these cells has the same distribution as the study region. 
+
+There are several methods for normalization with help improve the interpretation of Ripley's $K$. We include Besag's L which is computed by $L(r) = \sqrt{\frac{K(r)}{\pi}}$, and the expect value of $r$. Hence, $L$ is expected to grow proportionally with $r$. The expected value $K$ and $L$ both hinge on the assumption that the underlying point process follows the so called complete spatial randomness assumption which asserts that the locations of cells can neither form a regular patterns nor clusters.
+
+Damage can occur to TMAs, due to how they are collect. This damage can lead to rips and tears in the TMA which results in regions where it appears that cells cannot be locations, which is not actually the case. Thus the theoretical estimate for CSR may not be accurate, to address this the cell locations can be permuted and the permutation distribution of $K$ or $L$ is a TMA specific measure of CSR. The `r ripleys_k` function reports a permuted and theoretical estimate of CSR, the observed value for $K$ (`r kestimation = TRUE`) or $L$ (`r kestimation = FALSE`), and the full perumtation distribution of $K$ or $L$ if `keep_perm_dis = TRUE`.   
 
 ```{r, ripleys}
 
-x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames, 
-                                          num_permutations = 5)
+x[["derived"]][["ripleys"]] <- ripleys_k(mif = x, id = "image_tag", mnames = mnames, num_permutations = 5,
+                                         edge_correction = 'translation', kestimation = TRUE,keep_perm_dis = FALSE)
 ```
 
-## Bivariate Ripleys K/L
+# Estimating the colocalization of cell types
+These examples have nothing interesting in them. CHRIS look for different cell combinations that have non NA for Observed K
 
 ```{r, bi_ripleys}
 
 mnames_pairs <- list(list("cd3_foxp3", "cd3_cd8"),
                      list("cd3_foxp3", "cd8_pd1"))
 
-x[["derived"]][["bi-ripleys"]] <- bi_ripleys_k(x, id = "image_tag", mnames = mnames_pairs,
-                                               csr_calculation = "observed")
+
+mlabels_pairs <- list(list("CD3+ FOXP3+", "CD3+ CD8+"),
+                     list("CD3+ FOXP3+", "CD8+ PD1+"))
+
+x[["derived"]][["bi-ripleys"]] <- bi_ripleys_k(mif = x, id = "image_tag", mnames = mnames_pairs,num_permutations = 5,
+                                               edge_correction = "translation",kestimation = TRUE,keep_perm_dis = FALSE,
+                                                mlabels = mlabels_pairs)
+
+x[["derived"]][["bi-ripleys"]] %>% dplyr::filter(r_value == 50, is.na(csr_observed) == FALSE)
 ```
