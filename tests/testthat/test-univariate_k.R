@@ -31,7 +31,7 @@ test_that("returns proper number of elements ", {
   mnames <- c("foxp3_opal_620_positive", "cd3_opal_570_positive", "cd8_opal_520_positive",
               "pd1_opal_650_positive", "pdl1_opal_540_positive")
   
-  y <- ripleys_k(x, id = "image_tag", mnames = mnames)
+  y <- ripleys_k(x, id = "image_tag", mnames = mnames, num_permutations = 5)
   
   expect_equal(nrow(y), length(mnames)*length(x$spatial)*3)
 })

@@ -10,7 +10,7 @@ create_mif(
   spatial_list = NULL,
   patient_id = "patient_id",
   sample_id = "image_tag",
-  clean_columns = TRUE
+  clean_columns = FALSE
 )
 }
 \arguments{
@@ -31,7 +31,7 @@ sample and clinical data frames.}
 in the sample data frame}
 
 \item{clean_columns}{A logical value indicating if names in spatial data frames
-should be rewritten in a cleaner format. Default is TRUE.}
+should be rewritten in a cleaner format. Default is FALSE.}
 }
 \value{
 Returns a custom MIF

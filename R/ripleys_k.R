@@ -136,7 +136,7 @@ ripleys_k <- function(mif,
                                        .data$r_value, .data$observed_estimate) %>%
                          dplyr::rename("Observed K" = .data$observed_estimate),
                        by = c(id, "marker", "r_value")) %>%
-      mutate('Degree of Clustering' = `Observed K` - `Permuted CSR`)
+      dplyr::mutate('Degree of Clustering' = `Observed K` - `Permuted CSR`)
     
   #}
   

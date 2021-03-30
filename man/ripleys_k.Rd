@@ -9,11 +9,11 @@ ripleys_k(
   id,
   mnames,
   r_range = seq(0, 100, 50),
-  csr_calculation = "permutation",
   num_permutations = 50,
   edge_correction = "translation",
   kestimation = TRUE,
-  keep_perm_dis = FALSE
+  keep_perm_dis = FALSE,
+  mlabels = NULL
 )
 }
 \arguments{
@@ -25,15 +25,13 @@ ripleys_k(
 
 \item{r_range}{Numeric vector of potential r values to estimate K at.}
 
-\item{csr_calculation}{Character value indicating the method of calculating Ripley's K}
-
 \item{num_permutations}{Numeric value indicating the number of permutations used.
 Default is 50.}
 
 \item{edge_correction}{Character value indicating the type of edge correction
-to use. Options include "theoretical", "translation", "isotropic" or "border".
+to use. Options include "translation", "isotropic" or "border".
 Various edges corrections are most appropriate in different settings. Default
-is "none".}
+is "translation".}
 
 \item{kestimation}{Logical value determining the type estimation performed.
 TRUE estimates Ripley's reduced second moment function while FALSE
@@ -41,6 +39,8 @@ estimates Besags's transformation of Ripley's K.}
 
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted K values}
+
+\item{mlabels}{Character vector of label for marker names to display in the marker column.}
 }
 \value{
 Returns a list

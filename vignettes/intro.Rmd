@@ -84,13 +84,8 @@ CHRIS can you add some summary information here on calculating univariate ripley
 
 ```{r, ripleys}
 
-x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
-                                         csr_calculation = "observed")
-
-x[["derived"]][["ripleys2"]] <- ripleys_k(x, id = "image_tag", mnames = mnames,
-                                          csr_calculation = "permutation", 
+x[["derived"]][["ripleys"]] <- ripleys_k(x, id = "image_tag", mnames = mnames, 
                                           num_permutations = 5)
-
 ```
 
 ## Bivariate Ripleys K/L
