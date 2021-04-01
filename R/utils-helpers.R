@@ -77,7 +77,7 @@ univariate_ripleys_k <- function(data,
   if(is.null(mlabels)){
     mlabels = mnames
     }
-  #mlabels = setNames(object = mlabels, nm = mnames)
+  mlabels = setNames(object = mlabels, nm = mnames)
     estimate_list <- lapply(mnames, function(mnames){
       mnames_clean = janitor::make_clean_names(mnames)
       mlabels = mlabels[mnames]
