@@ -24,13 +24,15 @@ Imports:
     crayon,
     grDevices,
     Surrogate,
-    spatstat,
     purrr,
     janitor,
     rlang,
     modelr,
     plyr,
-    tibble
+    tibble,
+    spatstat.geom,
+    spatstat.core,
+    RColorBrewer
 Depends: 
     R (>= 2.10)
 Suggests: 
