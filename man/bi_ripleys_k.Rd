@@ -41,9 +41,6 @@ estimates Besags's transformation of Ripley's K.}
 distribution of permuted K values}
 
 \item{mlabels}{A list of character strings containing two marker labels}
-
-\item{csr_calculation}{Character value indicating the method of calculating Ripley's K.
-Options can be either "observed" or "permutation".}
 }
 \value{
 Returns a list of data frames

@@ -34,7 +34,7 @@ simulate_mif <- function(k = 10,
                                          xmax = xmax, ymin = ymin, 
                                          ymax = ymax, sdmin = 2, sdmax = 3)
   
-  pp <- spatstat::rpoispp(25, win = spatstat::owin(c(0,10),c(0,10))) %>% 
+  pp <- spatstat.core::rpoispp(25, win = spatstat.geom::owin(c(0,10),c(0,10))) %>% 
     data.frame() 
   
   # for(i in 1:nrow(pp)){

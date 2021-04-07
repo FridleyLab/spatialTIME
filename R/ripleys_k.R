@@ -30,8 +30,6 @@ ripleys_k <- function(mif,
                       id,
                       mnames, 
                       r_range = seq(0, 100, 50),
-                      # pick permutation vs observed 
-                      #csr_calculation = "permutation",
                       # permutation number 
                       num_permutations = 50,
                       # edge correction 
@@ -152,8 +150,6 @@ ripleys_k <- function(mif,
 #' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames A list of character strings containing two marker names
 #' @param r_range Numeric vector of potential r values to estimate K at. 
-#' @param csr_calculation Character value indicating the method of calculating Ripley's K. 
-#'  Options can be either "observed" or "permutation". 
 #' @param edge_correction Character value indicating the type of edge correction 
 #'  to use. Options include "theoretical", "translation", "isotropic" or "border". 
 #'  Various edges corrections are most appropriate in different settings. Default
@@ -178,8 +174,6 @@ bi_ripleys_k <- function(mif,
                          id,
                          mnames, 
                          r_range = seq(0, 100, 50),
-                         # pick permutation vs observed 
-                         #csr_calculation = "permutation",
                          # permutation number 
                          num_permutations = 50,
                          # edge correction 

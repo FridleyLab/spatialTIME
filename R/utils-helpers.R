@@ -95,7 +95,6 @@ univariate_ripleys_k <- function(data,
       dplyr::pull(!!id)
     
     #Something changed this function is no longer the spatstat namespace
-    #w <- spatstat::convexhull.xy(x = X$xloc, y = X$yloc)
     w <- spatstat.geom::convexhull.xy(x = X$xloc, y = X$yloc) 
     
     X <- X %>%
@@ -118,15 +117,12 @@ univariate_ripleys_k <- function(data,
     } else {
       
       # point pattern object
-      #p <- spatstat::ppp(x = X$xloc, y = X$yloc, window = w)
       p <- spatstat.geom::ppp(x = X$xloc, y = X$yloc, window = w)
 
       # we need the function to eventually return K and L estimates 
       if (kestimation == TRUE) {
-        #est <- spatstat::Kest(p, r = r_range)
         est <- spatstat.core::Kest(p, r = r_range, correction="all")
       } else {
-        #est <- spatstat::Lest(p, r = r_range)
         est <- spatstat.core::Lest(p, r = r_range, correction="all")
       }
       
@@ -232,7 +228,6 @@ bivariate_ripleys_k <- function(data,
       dplyr::slice(1) %>% 
       dplyr::pull(!!id)
     
-    #w <- spatstat::convexhull.xy(x = X$xloc, y = X$yloc)
     w <- spatstat.geom::convexhull.xy(x = X$xloc, y = X$yloc)
     if (nrow(X) <= 1 | nrow(X[X$overall_type=="type_one",]) <=1 |
                             nrow(X[X$overall_type=="type_two",]) <=1 ) {
@@ -254,18 +249,13 @@ bivariate_ripleys_k <- function(data,
       
       #Make a marked point process with the window from above,
       #cell locations, and a marks as defined by cell type
-      #pp_cross = spatstat::ppp(x = X$xloc, y = X$yloc, 
-      #                         window = w, marks = factor(X$overall_type)) 
       pp_cross = spatstat.geom::ppp(x = X$xloc, y = X$yloc, 
                                window = w, marks = factor(X$overall_type)) 
       
-      # spatstat::setmarks(pp_cross, factor(X$overall_type))
       
       if (kestimation == TRUE) {
-        #suppressWarnings({est <- spatstat::Kcross(X = pp_cross, i = "type_one", j = "type_two", r = r_range)})
         suppressWarnings({est <- spatstat.core::Kcross(X = pp_cross, i = "type_one", j = "type_two", r = r_range)})
       } else {
-        #suppressWarnings({est <- spatstat::Lcross(pp_cross, i = "type_one", j = "type_two", r = r_range)})
         suppressWarnings({est <- spatstat.core::Lcross(pp_cross, i = "type_one", j = "type_two", r = r_range)})
       }
       
