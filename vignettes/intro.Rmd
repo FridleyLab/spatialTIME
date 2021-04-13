@@ -1,10 +1,10 @@
 ---
-title: "Introduction to spatialIF"
+title: "Introduction to spatialTIME"
 header-includes:
   - usepackage{mathbbm}
 output: rmarkdown::html_vignette
 vignette: >
-  %\VignetteIndexEntry{Introduction to spatialIF}
+  %\VignetteIndexEntry{Introduction to spatialTIME}
   %\VignetteEngine{knitr::rmarkdown}
   \usepackage[utf8]{inputenc}
 ---
@@ -20,7 +20,7 @@ library(spatialTIME)
 
 # Create Multiplex ImmunoFlourescent (mif) object 
 
-spatialIF functions use a custom mif object which can be created using `create_mif`. 
+spatialTIME functions use a custom mif object which can be created using `create_mif`. 
 
 ```{r, create}
 
@@ -42,12 +42,13 @@ minimum this data frame should contain patient level IDs (one row per patient).
 *sample* is a data frame containing any sample level values and contain sample 
 names and patient IDs at a minimum (one row per sample). 
 An empty list for *derived* is created as a place to store results from the 
-`spatialIF` package within the object (*this it the temporary usage - need to implement R6 classes to automatically update the argument supplied to the function*).
+`spatialTIME` package within the object (*this it the temporary usage - need to implement R6 classes to automatically update the argument supplied to the function*).
 
 # Plotting Cores
 
 An individual plot for each core (each sample) is created. 
-Plots can be assigned to an R object, such as within the empty `derived` slot and printed to a PDF if a file name is provided. 
+Plots can be assigned to an R object, such as within the empty `derived` 
+slot and printed to a PDF if a file name is provided. 
 
 ```{r, plot}
 mnames <- c("foxp3_opal_620_positive", "cd3_opal_570_positive", "cd8_opal_520_positive",
@@ -85,7 +86,7 @@ x[["derived"]][["ripleys"]] <- ripleys_k(mif = x, id = "deidentified_sample",
 ```
 
 # Estimating the colocalization of cell types
-These examples have nothing interesting in them. CHRIS look for different cell combinations that have non NA for Observed K
+
 
 ```{r, bi_ripleys, warning=FALSE}
 
