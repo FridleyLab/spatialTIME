@@ -1,4 +1,4 @@
 library(testthat)
-library(spatialIHC)
+library(spatialTIME)
 
-test_check("spatialIHC")
+test_check("spatialTIME")
