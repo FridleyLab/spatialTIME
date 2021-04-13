@@ -40,10 +40,10 @@ create_mif <- function(clinical_data, sample_data, spatial_list = NULL,
     dplyr::select(!!patient_id, .data$sample_string, dplyr::everything())
   
   if(clean_columns== TRUE){
-    sample_data <- sample_data %>% 
+    sample_data <- sample_data_clean %>% 
       janitor::clean_names()
     
-    clinical_data <- clinical_data %>% 
+    clinical_data <- clinical_data_clean %>% 
       janitor::clean_names()
     
     if(!is.null(spatial_list)){
@@ -68,8 +68,8 @@ create_mif <- function(clinical_data, sample_data, spatial_list = NULL,
     spatial_list <- list(NA)
   }
 
-  mif <- list(clinical = clinical_data_clean,
-              sample = sample_data_clean,
+  mif <- list(clinical = clinical_data,
+              sample = sample_data,
               spatial = spatial_list,
               derived = list())
   

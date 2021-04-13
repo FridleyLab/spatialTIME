@@ -77,7 +77,7 @@ univariate_ripleys_k <- function(data,
   if(is.null(mlabels)){
     mlabels = mnames
     }
-  mlabels = setNames(object = mlabels, nm = mnames)
+  mlabels = stats::setNames(object = mlabels, nm = mnames)
     estimate_list <- lapply(mnames, function(mnames){
       mnames_clean = janitor::make_clean_names(mnames)
       mlabels = mlabels[mnames]
@@ -95,7 +95,7 @@ univariate_ripleys_k <- function(data,
       dplyr::pull(!!id)
     
     #Something changed this function is no longer the spatstat namespace
-    w <- spatstat.geom::convexhull.xy(x = X$xloc, y = X$yloc) 
+    w <- spatstat.geom::convexhull.xy(x = X$xloc, y = X$yloc)
     
     X <- X %>%
       # data with positive marker cell only
@@ -117,7 +117,7 @@ univariate_ripleys_k <- function(data,
     } else {
       
       # point pattern object
-      p <- spatstat.geom::ppp(x = X$xloc, y = X$yloc, window = w)
+      p <- suppressWarnings(spatstat.geom::ppp(x = X$xloc, y = X$yloc, window = w))
 
       # we need the function to eventually return K and L estimates 
       if (kestimation == TRUE) {

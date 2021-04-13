@@ -132,9 +132,9 @@ ripleys_k <- function(mif,
       dplyr::left_join(observed_list %>%
                          dplyr::select(.data[[id]], .data$marker,
                                        .data$r_value, .data$observed_estimate) %>%
-                         dplyr::rename("Observed K" = .data$observed_estimate),
+                         dplyr::rename(`Observed K` = .data$observed_estimate),
                        by = c(id, "marker", "r_value")) %>%
-      dplyr::mutate('Degree of Clustering' = `Observed K` - `Permuted CSR`)
+      dplyr::mutate(`Degree of Clustering` = .data$`Observed K` - .data$`Permuted CSR`)
     
   #}
   
@@ -251,16 +251,16 @@ bi_ripleys_k <- function(mif,
       
       if (keep_perm_dis == TRUE){
         results_list <- results_list %>% 
-          dplyr::rename('Permuted CSR' = .data$observed_estimate,
-                        'Theoretical CSR' = .data$csr_theoretical) 
+          dplyr::rename(`Permuted CSR` = .data$observed_estimate,
+                        `Theoretical CSR` = .data$csr_theoretical) 
       } else {
         results_list <- results_list %>% 
           dplyr::rename(csr_permuted = .data$observed_estimate) %>%
           dplyr::group_by(.data[[id]], .data$anchor_marker, .data$comparison_marker,
                           .data$r_value) %>%
-          dplyr::summarise("Permuted CSR" = mean(as.numeric(.data$csr_permuted),
+          dplyr::summarise(`Permuted CSR` = mean(as.numeric(.data$csr_permuted),
                                                  na.rm = TRUE),
-                           "Theoretical CSR" = mean(as.numeric(.data$csr_theoretical),
+                           `Theoretical CSR` = mean(as.numeric(.data$csr_theoretical),
                                                     na.rm = TRUE))
       }
       # results_list <- plyr::ldply(results_list, data.frame)
@@ -284,7 +284,7 @@ bi_ripleys_k <- function(mif,
                                        .data$observed_estimate) %>% 
                          dplyr::rename(`Observed K` = .data$observed_estimate),
                        by = c(id, "anchor_marker", "comparison_marker", "r_value") )%>%
-      dplyr::mutate('Degree of Clustering' = `Observed K` - `Permuted CSR`)
+      dplyr::mutate(`Degree of Clustering` = .data$`Observed K` - .data$`Permuted CSR`)
     
   #}
   
