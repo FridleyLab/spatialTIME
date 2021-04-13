@@ -8,3 +8,6 @@ docs/
 dev/
 data/example_tma.rda
 man/example_tma.Rd
+man/simulate_mif.Rd
+R/merge_for_jordan.R
+R/simulate_mif.R

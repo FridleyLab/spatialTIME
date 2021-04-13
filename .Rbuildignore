@@ -10,3 +10,6 @@
 ^README\.Rmd$
 ^data/example_tma\.rda$
 ^man/example_tma\.Rd$
+^R/merge_for_jordan\.R$
+^R/simulate_mif\.R$
+^man/simulate_mif\.Rd$
