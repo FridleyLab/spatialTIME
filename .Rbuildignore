@@ -8,3 +8,5 @@
 ^\.github$
 ^tic\.R$
 ^README\.Rmd$
+^data/example_tma\.rda$
+^man/example_tma\.Rd$
