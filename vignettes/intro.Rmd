@@ -6,7 +6,7 @@ output: rmarkdown::html_vignette
 vignette: >
   %\VignetteIndexEntry{Introduction to spatialIF}
   %\VignetteEngine{knitr::rmarkdown}
-  %\VignetteEncoding{UTF-8}
+  \usepackage[utf8]{inputenc}
 ---
 
 ```{r, include = FALSE}
@@ -15,7 +15,7 @@ knitr::opts_chunk$set(
   comment = "#>"
 )
 
-library(spatialIHC)
+library(spatialTIME)
 ```
 
 # Create Multiplex ImmunoFlourescent (mif) object 
@@ -24,26 +24,10 @@ spatialIF functions use a custom mif object which can be created using `create_m
 
 ```{r, create}
 
-load("../data/example_tma.rda")
-
-# names(example_tma)
-# grabbing image tag names to make sample and clinical file -----
-spatial_names <- lapply(example_tma, function(x) {x$image_tag[[1]]})
-spatial_names <- unlist(spatial_names)
-# spatial_names <- gsub("\\.tiff", "", spatial_names)
-
-set.seed(8675309)
-example_sample <- data.frame(image_tag = spatial_names,
-                             patient_id = sample(c("patient_x", "patient_y", "patient_z"),
-                                                 10, replace = TRUE))
-
-example_clinical <- data.frame(patient_id = c("patient_x", "patient_y", "patient_z"),
-                               covar_one = c("low", "high", "low"),
-                               covar_two = rnorm(3))
-
 x <- create_mif(clinical_data = example_clinical,
-                sample_data = example_sample,
-                spatial_list = example_tma,
+                sample_data = example_summary,
+                spatial_list = example_spatial,
+                patient_id = "deidentified_id", sample_id = "deidentified_sample",
                 clean_columns = TRUE)
 x
 
@@ -71,10 +55,11 @@ mnames <- c("foxp3_opal_620_positive", "cd3_opal_570_positive", "cd8_opal_520_po
 
 mlabels <- c("FOXP3", "CD3", "CD8", "PD1", "PDL1")
 
-x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "image_tag", mnames = mnames,
-                                                    mlabels = mlabels, cell_type = "classifier_label")
+x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "deidentified_sample", 
+                                                    mnames = mnames, mlabels = mlabels, 
+                                                    cell_type = "classifier_label")
 
-x[["derived"]][["spatial_plots"]][[8]]
+x[["derived"]][["spatial_plots"]][[4]]
 ```
 
 # Estimating the degree of spatial clustering
@@ -93,8 +78,10 @@ Damage can occur to TMAs, due to how they are collect. This damage can lead to r
 
 ```{r, ripleys, warning = FALSE}
 
-x[["derived"]][["ripleys"]] <- ripleys_k(mif = x, id = "image_tag", mnames = mnames[1], num_permutations = 1,
-                                         edge_correction = 'translation', kestimation = TRUE,keep_perm_dis = FALSE)
+x[["derived"]][["ripleys"]] <- ripleys_k(mif = x, id = "deidentified_sample", 
+                                         mnames = mnames[1], num_permutations = 1,
+                                         edge_correction = 'translation', 
+                                         kestimation = TRUE, keep_perm_dis = FALSE)
 ```
 
 # Estimating the colocalization of cell types
@@ -109,7 +96,8 @@ mnames_pairs <- list(list("cd3_foxp3", "cd3_cd8"),
 mlabels_pairs <- list(list("CD3+ FOXP3+", "CD3+ CD8+"),
                      list("CD3+ FOXP3+", "CD8+ PD1+"))
 
-x[["derived"]][["bi-ripleys"]] <- bi_ripleys_k(mif = x, id = "image_tag", mnames = mnames_pairs, num_permutations = 1,
+x[["derived"]][["bi-ripleys"]] <- bi_ripleys_k(mif = x, id = "deidentified_sample", 
+                                               mnames = mnames_pairs, num_permutations = 1,
                                                r_range = seq(0, 100, 50), edge_correction = "translation", 
                                                kestimation = TRUE, keep_perm_dis = FALSE,
                                                mlabels = mlabels_pairs)
