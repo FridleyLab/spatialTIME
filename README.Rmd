@@ -20,8 +20,6 @@ library(spatialTIME)
 # spatialTIME <img src="man/hex_sticker/hex.png" align="right" height="139" />
 
 <!-- badges: start -->
-[![Lifecycle:
-maturing](https://img.shields.io/badge/lifecycle-maturing-blue.svg)](https://www.tidyverse.org/lifecycle/#maturing)
 <!-- badges: end -->
 
 The goal of `spatialTIME` is to perform basic analysis and plotting of IF data from Vectra.
@@ -43,7 +41,7 @@ devtools::install_github("fridleylab/spatialTIME")
 analyses. The basis of the `spatialTIME` functions is the creation of the 
 `mif` object. 
 
-```{r, create_example_mif}
+```{r, create_example_mif, echo = TRUE}
 
 x <- create_mif(clinical_data = example_clinical,
                 sample_data = example_summary,
@@ -59,4 +57,4 @@ x
 For a more in-depth description of the methods used, please see the included vignette.  
 
 For a point-and-click resource that performs related analyses please check out
-[iTIME](). 
+[iTIME](https://fridleylab.shinyapps.io/iTIME/). 
