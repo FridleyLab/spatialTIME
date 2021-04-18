@@ -212,7 +212,8 @@ hist_data = x[["derived"]][["ripleys"]] %>%
 ggplot(data = hist_data, aes(x = `Permuted CSR`, y=..count../3)) + 
   geom_histogram(col = 'white') + facet_grid(r_value~deidentified_sample, 
                                              scale = 'fixed') + 
-  geom_vline(aes(xintercept = vert_line, color = Estimate))
+  geom_vline(aes(xintercept = vert_line, color = Estimate)) +
+  ylab('Count')
 
 ```
 
