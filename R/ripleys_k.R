@@ -274,7 +274,8 @@ bi_ripleys_k <- function(mif,
     estimate_list <- dplyr::bind_rows(estimate_list)
     
     observed_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
-                                r_range, edge_correction, kestimation) 
+                                r_range, edge_correction, kestimation,
+                                mlabels) 
     observed_list <- dplyr::bind_rows(observed_list)
     
     estimate_list <- estimate_list %>%

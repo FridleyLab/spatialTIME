@@ -173,7 +173,7 @@ bivariate_ripleys_k <- function(data,
       janitor::clean_names() %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
       dplyr::mutate(yloc = (.data$y_min + .data$y_max) / 2) %>%
-      dplyr::mutate(type1_cell = rowSums(dplyr::select(., .[[mnames_clean[[1]]]]) > 0)) %>% 
+      dplyr::mutate(type1_cell = rowSums(dplyr::select(., .data[[mnames_clean[[1]]]]) > 0)) %>% 
       dplyr::mutate(type2_cell = rowSums(dplyr::select(., .data[[mnames_clean[[2]]]]) > 0)) %>% 
       dplyr::mutate(overall_type = dplyr::case_when(
         .data$type1_cell == 1 ~ "type_one",
@@ -275,7 +275,7 @@ bivariate_ripleys_k <- function(data,
         anchor_marker = mlabels[[counter]][[1]],
         comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
-        csr_theoretical = mean(est$theo),
+        csr_theoretical = est$theo,
         observed_estimate = k_value 
       )
     }
