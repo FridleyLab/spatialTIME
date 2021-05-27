@@ -189,6 +189,10 @@ bi_ripleys_k <- function(mif,
   
   mnames <- full_list_combinations(mnames)
   
+  if(is.null(mlabels)){
+    mlabels = mnames
+  }
+  
   all_mlabels <- unlist(mlabels)
   
   mlabels <- full_list_combinations(mlabels)
