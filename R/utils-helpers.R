@@ -161,9 +161,11 @@ bivariate_ripleys_k <- function(data,
                                 r_range = seq(0, 100, 50),
                                 edge_correction = c("translation", "isotropic", "border"),
                                 kestimation = TRUE, mlabels = NULL) {
+  
   if(is.null(mlabels)){
     mlabels = mnames
   }
+  
   counter = 0
   estimate_list <- lapply(mnames, function(mnames){
     counter <<- counter + 1
@@ -268,6 +270,7 @@ bivariate_ripleys_k <- function(data,
       }
       
       results_list <- data.frame(
+        sample = data[[id]][1],
         anchor_marker = mlabels[[counter]][[1]],
         comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,

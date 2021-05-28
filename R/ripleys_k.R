@@ -231,8 +231,9 @@ bi_ripleys_k <- function(mif,
   #   
   # } else {
   #   
+  count = 0
     estimate_list <- lapply(data, function(data){
-      
+      count <<- count +  1
       # update progress bar
       pb$tick()$print()
       
