@@ -268,7 +268,6 @@ bivariate_ripleys_k <- function(data,
       }
       
       results_list <- data.frame(
-        sample = sample_name,
         anchor_marker = mlabels[[counter]][[1]],
         comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
