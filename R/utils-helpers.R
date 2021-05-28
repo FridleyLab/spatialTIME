@@ -186,7 +186,7 @@ bivariate_ripleys_k <- function(data,
               " were found - returning NA")
       
       results_list <- data.frame(
-        sample = X[[id]][1],
+        sample = data[[id]][1],
         anchor_marker = mlabels[[counter]][[1]],
         comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
@@ -202,7 +202,7 @@ bivariate_ripleys_k <- function(data,
               " were found - returning NA")
       
       results_list <- data.frame(
-        sample = X[[id]][1],
+        sample = data[[id]][1],
         anchor_marker = mlabels[[counter]][[1]],
         comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
@@ -224,16 +224,13 @@ bivariate_ripleys_k <- function(data,
       
     }
     
-    sample_name <- X %>% 
-      dplyr::slice(1) %>% 
-      dplyr::pull(!!id)
-    
+       
     w <- spatstat.geom::convexhull.xy(x = X$xloc, y = X$yloc)
     if (nrow(X) <= 1 | nrow(X[X$overall_type=="type_one",]) <=1 |
                             nrow(X[X$overall_type=="type_two",]) <=1 ) {
       
       results_list <- data.frame(
-        sample = sample_name,
+        sample = data[[id]][1],
         anchor_marker = mlabels[[counter]][[1]],
         comparison_marker = mlabels[[counter]][[2]],
         r_value = r_range,
