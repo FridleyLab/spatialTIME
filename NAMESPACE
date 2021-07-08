@@ -2,10 +2,13 @@
 
 S3method(print,mif)
 export("%>%")
+export(NN_G)
 export(bi_ripleys_k)
+export(bi_ripleys_k_v2)
 export(create_mif)
 export(plot_immunoflo)
 export(ripleys_k)
+export(ripleys_k_v2)
 importFrom(ggplot2,"%+replace%")
 importFrom(grDevices,dev.off)
 importFrom(magrittr,"%>%")

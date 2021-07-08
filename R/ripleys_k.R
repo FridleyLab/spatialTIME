@@ -298,4 +298,145 @@ bi_ripleys_k <- function(mif,
   
 }
 
+################################################################################
+#New functions
+#' Calculate Count Based Measures of Spatial Clustering for IF data
+#'
+#' @description This function calculates count based Measures (Ripley's K, Besag 
+#'   L, and Marcon's M) of IF data to characterize correlation of spatial point
+#'   process.
+#' @param mif An MIF object
+#' @param id Character string of variable name for subject ID in TMA data.
+#' @param mnames Character vector of marker names to estimate degree of 
+#' spatial clustering.
+#' @param r_range Numeric vector of potential r values this range must include 0. 
+#' @param edge_correction Character value indicating the type of edge correction 
+#'  to use. Options include "translation" or "isotropic". 
+#' @param method Character value indicating which measure (K, L, M) used to 
+#' estimate the degree of spatial clustering. Description of the methods can be 
+#' found in Details section.
+#' @param num_permutations Numeric value indicating the number of permutations used. 
+#'  Default is 50.   
+#' @param keep_perm_dis Logical value determining whether or not to keep the full 
+#'  distribution of permuted K values
+#'  
+#' @return Returns a data.frame
+#'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
+#'    \item{Permuted CSR}{Average observed K, L, or M for the permuted point 
+#'    process}
+#'    \item{Observed}{Observed valuefor the observed point process}
+#'    \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
+#'    reference is the permutated estimate of CSR}
+#'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
+#'    reference is the theoretical estimate of CSR}
+#' @export
+#'
+
+ripleys_k_v2 = function(mif, id, mnames, r_range = seq(0, 100, 50),
+                        num_permutations = 50, edge_correction = "translation",
+                        method = 'M',keep_perm_dis = FALSE){
+  data = mif$spatial
+  K = map_df(.x = 1:length(data), ~ 
+           uni_Rip_K(data = data[[.x]], num_iters = num_permutations, 
+                     markers = mnames, id  = id, correction = edge_correction, 
+                     method = method, perm_dist = keep_perm_dis))
+  return(K)
+}
+
+
+
+#' Calculate Bivariate Count Based Measures of Spatial Clustering function for IF data
+#'
+#' @description This function calculates count based Measures (Ripley's K, Besag 
+#'   L, and Marcon's M) of IF data to characterize correlation of spatial point
+#'   process for two markers.
+#' @param mif An MIF object
+#' @param id Character string of variable name for subject ID in TMA data.
+#' @param mnames Character vector of marker names to estimate degree of 
+#' spatial clustering. Spatial clustering will be computed between each 
+#' combination of markers in this list.
+#' @param r_range Numeric vector of potential r values this range must include 0
+#' @param edge_correction Character value indicating the type of edge correction 
+#'  to use. Options include "theoretical", "translation", "isotropic" or "border". 
+#'  Various edges corrections are most appropriate in different settings. Default
+#'  is "translation". 
+#' @param method Character value indicating which measure (K, L, M) used to 
+#' estimate the degree of spatial clustering. Description of the methods can be 
+#' found in Details section.
+#' @param num_permutations Numeric value indicating the number of permutations used. 
+#'  Default is 50.   
+#' @param keep_perm_dis Logical value determining whether or not to keep the full 
+#'  distribution of permuted K values
+#' 
+#' @return Returns a data frame 
+#'    \item{anchor}{Marker for which the distances are measured from}
+#'    \item{counted}{Marker for which the distances are measured to}
+#'    \item{Theoretical CSR}{Expected value assuming complete spatial randomness}
+#'    \item{Permuted CSR}{Average observed K, L, or M for the permuted point 
+#'    process}
+#'    \item{Observed}{Observed value for the observed point process}
+#'    \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
+#'    reference is the permutated estimate of CSR}
+#'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
+#'    reference is the theoretical estimate of CSR}
+#' @export
+#' 
+bi_ripleys_k_v2 <- function(mif,
+                         id,
+                         mnames, 
+                         r_range = seq(0, 100, 50),
+                         num_permutations = 50,
+                         edge_correction = "translation",
+                         method = 'K',
+                         keep_perm_dis = FALSE){
+  data = mif$spatial
+  K = map_df(.x = 1:length(data),
+                   ~ bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
+                              markers = mnames, id  = 'image.tag', 
+                              correction = edge_correction, method = method, 
+                              perm_dist = keep_perm_dis))
+  return(K)
+
+  }
+
+#' Calculate Nearest Neighbor Based Measures of Spatial Clustering for IF data
+#'
+#' @description This function computes the nearest neighbor distribution for a 
+#' particular marker.
+#' @param mif An MIF object
+#' @param id Character string of variable name for subject ID in TMA data.
+#' @param mnames Character vector of marker names to estimate degree of 
+#' nearest neighbor distribution
+#' @param r_range Numeric vector of potential r values this range must include 0.
+#' Note that the range selected is very different than count based measures. 
+#' See details. 
+#' @param edge_correction Character value indicating the type of edge correction 
+#'  to use. Options include "rs" or "hans". 
+#' @param num_permutations Numeric value indicating the number of permutations used. 
+#'  Default is 50.   
+#' @param keep_perm_dis Logical value determining whether or not to keep the full 
+#'  distribution of permuted G values
+
+#' @return Returns a data.frame
+#'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
+#'    \item{Permuted CSR}{Average observed G for the permuted point 
+#'    process}
+#'    \item{Observed}{Observed valuefor the observed point process}
+#'    \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
+#'    reference is the permuted estimate of CSR}
+#'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
+#'    reference is the theoretical estimate of CSR}
+#' @export
+#'
+NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
+                        num_permutations = 50, edge_correction = "translation",
+                        method = 'rs',keep_perm_dis = FALSE){
+  data = mif$spatial
+  G = map_df(.x = 1:length(data),
+             ~ uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
+                        markers = markers,  id  = 'image.tag', 
+                        correction = 'rs', r = r_range,
+                        perm_dist = keep_perm_dis))
+  return(G)
+}
 
