@@ -440,3 +440,45 @@ NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
   return(G)
 }
 
+
+#' Calculate Bivariate Nearest Neighbor Based Measures of Spatial Clustering for IF data
+#'
+#' @description This function computes the nearest neighbor distribution for a 
+#' particular marker relative to another marker.
+#' @param mif An MIF object
+#' @param id Character string of variable name for subject ID in TMA data.
+#' @param mnames Character vector of marker names to estimate degree of 
+#' nearest neighbor distribution
+#' @param r_range Numeric vector of potential r values this range must include 0.
+#' Note that the range selected is very different than count based measures. 
+#' See details. 
+#' @param edge_correction Character value indicating the type of edge correction 
+#'  to use. Options include "rs" or "hans". 
+#' @param num_permutations Numeric value indicating the number of permutations used. 
+#'  Default is 50.   
+#' @param keep_perm_dis Logical value determining whether or not to keep the full 
+#'  distribution of permuted G values
+
+#' @return Returns a data frame 
+#'    \item{anchor}{Marker for which the distances are measured from}
+#'    \item{counted}{Marker for which the distances are measured to}
+#'    \item{Theoretical CSR}{Expected value assuming complete spatial randomness}
+#'    \item{Permuted CSR}{Average observed G for the permuted point 
+#'    process}
+#'    \item{Observed}{Observed value for the observed point process}
+#'    \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
+#'    reference is the permutated estimate of CSR}
+#'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
+#'    reference is the theoretical estimate of CSR}
+#'@export
+#'
+bi_NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
+                num_permutations = 50, edge_correction = "rs",
+                method = 'rs',keep_perm_dis = FALSE){
+  data = mif$spatial
+bi_G = map_df(.x = 1:length(data),
+                 ~ bi_NN_G_sample(data = tma.data[[.x]], num_iters = num_permutations, markers = markers, 
+                           r = r_range, id  = id, correction = edge_correction,
+                           perm_dist = keep_perm_dis))
+return(bi_G)
+}

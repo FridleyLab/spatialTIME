@@ -84,6 +84,8 @@ univariate_ripleys_k <- function(data,
     # x and y coordinates for cells
     ## Jordan why do the names need to be cleaned? I see
     ## Is there away to only change a couple of columns (i.e. leave out mnames)
+      
+    if(nrow(data) > 0){s
     X <- data %>% 
       janitor::clean_names() %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
@@ -152,7 +154,19 @@ univariate_ripleys_k <- function(data,
     colnames(results_list)[1] = id 
     return(results_list)
     
+  }else{
+    results_list <- data.frame(
+      id = NA,
+      marker = unname(mlabels),
+      r_value = r_range,
+      observed_estimate = NA,
+      csr_theoretical = NA,
+      degree_of_spatial_diff = NA 
+    )
+    return(results_list)
+  }
   })
+    return(estimate_list)
 }
 
 bivariate_ripleys_k <- function(data,
@@ -440,10 +454,11 @@ uni_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans', me
       dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`, na.rm = TRUE),
                 `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]], na.rm = TRUE),
                 `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]], na.rm = TRUE),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, 
-                                                           na.rm = TRUE),
                 `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`, 
-                                                          na.rm = TRUE))
+                                                          na.rm = TRUE),
+                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, 
+                                                           na.rm = TRUE)
+                )
   }
   final = cbind(id = data[[id]][1], final %>% ungroup())
   colnames(final)[1] = id
@@ -585,10 +600,10 @@ bi_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans',
       dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`, na.rm = TRUE),
                 `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]], na.rm = TRUE),
                 `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]], na.rm = TRUE),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, 
-                                                           na.rm = TRUE),
                 `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`, 
-                                                          na.rm = TRUE))
+                                                          na.rm = TRUE),
+                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, 
+                                                           na.rm = TRUE))
   }
   final = cbind(id = data[[id]][1],final)
   colnames(final)[1] = id
@@ -663,7 +678,7 @@ uni_NN_G = function(data, markers, id, num_iters = 50, correction = 'rs',
     return(uni_G(data = data_new, iter = grid[.x,2], 
                  marker = grid[.x,1], id = 'image.tag', r_value = r,
                  correction = correction, win = win))})
-  colnames(perms)[c(2,5,6)] = c(id, 'Theoretical CSR','Permuted G')
+  colnames(perms)[c(2,5,6)] = c(id, 'Theoretical CSR','Permuted CSR')
   
   obs = purrr::map_df(.x = markers, ~uni_G(data = data, iter = 'Observed', 
                                     marker = .x, correction = correction,
@@ -671,13 +686,118 @@ uni_NN_G = function(data, markers, id, num_iters = 50, correction = 'rs',
                                     win = win)) %>%
     select(-iter) 
   
-  colnames(obs)[c(1,4,5)] = c(id, 'Theoretical CSR', 'Observed G')
+  colnames(obs)[c(1,4,5)] = c(id, 'Theoretical CSR', 'Observed')
   
   final = left_join(perms, obs) %>%
-    dplyr::mutate(`Degree of Clustering Theoretical` = `Observed G`/`Theoretical CSR`,
-           `Degree of Clustering Permutation` = `Observed G`/`Permuted G`) %>%
+    dplyr::mutate(
+      `Degree of Clustering Theoretical` = `Observed` / `Theoretical CSR`,
+      `Degree of Clustering Permutation` = `Observed` / `Permuted CSR`) %>%
     dplyr::select(-iter)
   return(final) 
 }
 
 
+bi_G = function(data, mark_pair, r, correction, id, iter, win){
+  mark_pair = unname(mark_pair)
+  #Keeps all positive cell for either marker, and then discards the repeated locations
+  data_new = data %>% 
+    dplyr::filter(Marker %in% c(mark_pair[1], mark_pair[2]),
+           Positive == 1) %>%
+    dplyr::group_by(xloc, yloc) %>%
+    dplyr::filter(n() == 1) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(Marker = factor(Marker, levels = c(mark_pair[1], mark_pair[2])))
+  
+  
+  if(any(table(data_new$Marker) == 0)){
+    #weird error here :row names were found from a short variable and have been discarded
+    G = data.frame(r = r, theo = NA, trans = NA, 
+                   anchor = levels(data_new$Marker)[1], 
+                   counted = levels(data_new$Marker)[2],
+                   label = data[[id]][1], 
+                   iter = iter,
+                   theo = NA,
+                   correction = NA)  %>% 
+      dplyr::select(iter, label, anchor, counted,  r, theo, correction) %>% 
+      dplyr::filter(r>0)
+    colnames(G)[7] = correction
+  }else{
+    X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win, marks = data_new$Marker)
+    G = spatstat.core::Gcross(r = seq(0,50,10), X = X, i = levels(data_new$Marker)[1], 
+               j = levels(data_new$Marker)[2], correction = correction) %>% 
+      data.frame() %>%
+      dplyr::filter(r!=0) %>%
+      dplyr::mutate(anchor = levels(data_new$Marker)[1],
+             counted = levels(data_new$Marker)[2],
+             iter = iter,
+             label = data[[id]][1]) %>% 
+      dplyr::select(iter, label, anchor, counted, r, theo, correction) 
+  }
+  return(G)
+}
+
+bi_NN_G_sample = function(data, markers, id, num_iters = 50, correction = 'rs', 
+                   perm_dist = FALSE, r = seq(0,50,10)){
+  #Main function
+  #Notice that this follows spatstat's notation and argument name
+  if(!(correction %in% c('rs', 'hans'))){
+    stop("Did not provide a valid edge correcion method.")
+  }
+  
+  #Use set the cell location as the center of the cell
+  data = data %>% 
+    dplyr::mutate(xloc = (XMin + XMax)/2,
+           yloc = (YMin + YMax)/2
+    )
+  
+  #Create the region that the point process exists. This only needs to be done
+  #once per image
+  win = spatstat.geom::convexhull.xy(x = data$xloc, y = data$yloc)
+  
+  #Make the data a long format
+  data = data %>%
+    tidyr::pivot_longer(cols = markers, names_to = 'Marker', values_to = 'Positive')
+  
+  #Enumerates all possible combination of markers, and removes the ones where
+  #marker 1 and marker 2 are the samw
+  grid = expand.grid(markers, markers, 1:num_iters) %>%
+    dplyr::mutate(Var1 = as.character(Var1),
+           Var2 = as.character(Var2)) %>%
+    dplyr::filter(Var1 != Var2)
+  
+  perm = purrr::map_df(.x = 1:nrow(grid), 
+                ~{
+                  data_new = perm_data(data, markers)
+                  return(bi_G(data = data_new, mark_pair = grid[.x,1:2], r = seq(0,50,10), 
+                              correction = correction, id = 'image.tag', iter = grid[.x,3], win = win))
+                }
+  )
+  colnames(perm)[c(2,6,7)] = c(id, 'Theoretical CSR', 'Permuted G')
+  
+  obs = purrr::map_df(.x = 1:nrow(grid[!duplicated(grid[,1:2]),]), 
+               ~bi_G(data = data, mark_pair = grid[.x,1:2], r = seq(0,50,10), 
+                     correction = correction, id = 'image.tag', iter = 1, win = win)) %>%
+    dplyr::select(-iter)
+  colnames(obs)[c(1,5,6)] = c(id, 'Theoretical CSR', 'Observed G')
+  
+  final = dplyr::left_join(perm, obs) %>%
+    dplyr::mutate(`Degree of Clustering Permutation` = ifelse(`Permuted G` == 0, NA, `Observed G`/`Permuted G`),
+           `Degree of Clustering Theoretical` = ifelse(`Theoretical CSR` == 0, NA, `Observed G`/`Theoretical CSR`))
+  
+  if(!perm_dist){
+    final = final %>% 
+      dplyr::mutate(id = .data[[id]]) %>%
+      dplyr::group_by(id, anchor, counted, r) %>%
+      dplyr::summarize(id,`Theoretical CSR` = mean(`Theoretical CSR`, na.rm = TRUE),
+                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]], na.rm = TRUE),
+                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]], na.rm = TRUE),
+                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`, 
+                                                          na.rm = TRUE),
+                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, 
+                                                           na.rm = TRUE))
+    colnames(final)[1] = id
+  }
+  
+  
+  return(final)
+}
