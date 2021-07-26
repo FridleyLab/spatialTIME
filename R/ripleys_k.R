@@ -334,12 +334,12 @@ bi_ripleys_k <- function(mif,
 
 ripleys_k_v2 = function(mif, id, mnames, r_range = seq(0, 100, 50),
                         num_permutations = 50, edge_correction = "translation",
-                        method = 'M',keep_perm_dis = FALSE){
+                        method = 'K',keep_perm_dis = FALSE){
   data = mif$spatial
-  mif$derived$univariate_Count = map_df(.x = 1:length(data), ~ 
+  mif$derived$univariate_Count = map_df(.x = 1:length(data), ~{
            uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
                      markers = mnames, id  = id, correction = edge_correction, 
-                     method = method, perm_dist = keep_perm_dis))
+                     method = method, perm_dist = keep_perm_dis)})
   return(mif)
 }
 
@@ -391,12 +391,13 @@ bi_ripleys_k_v2 <- function(mif,
                          keep_perm_dis = FALSE){
   data = mif$spatial
   mif$derived$bivariate_Count = map_df(.x = 1:length(data),
-                   ~ bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
-                              markers = mnames, id  = 'image.tag', r = r_range,
+                   ~{
+                     bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
+                              markers = mnames, id  = id, r = r_range,
                               correction = edge_correction, method = method, 
-                              perm_dist = keep_perm_dis))
+                              perm_dist = keep_perm_dis) %>%
+                       data.frame(check.names = FALSE)})
   return(mif)
-
   }
 
 #' Calculate Nearest Neighbor Based Measures of Spatial Clustering for IF data
@@ -433,10 +434,11 @@ NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
                         method = 'rs',keep_perm_dis = FALSE){
   data = mif$spatial
   mif$derived$univariate_NN = map_df(.x = 1:length(data),
-             ~ uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
-                        markers = markers,  id  = 'image.tag', 
+             ~{
+               uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
+                        markers = markers,  id  = id, 
                         correction = 'rs', r = r_range,
-                        perm_dist = keep_perm_dis))
+                        perm_dist = keep_perm_dis)})
   return(mif)
 }
 
@@ -473,12 +475,14 @@ NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
 #'@export
 #'
 bi_NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
-                num_permutations = 50, edge_correction = "rs",
-                method = 'rs',keep_perm_dis = FALSE){
+                num_permutations = 50, edge_correction = "rs",keep_perm_dis = FALSE){
   data = mif$spatial
 mif$derived$bivariate_NN = map_df(.x = 1:length(data),
-                 ~ bi_NN_G_sample(data = tma.data[[.x]], num_iters = num_permutations, markers = markers, 
-                           r = r_range, id  = id, correction = edge_correction,
-                           perm_dist = keep_perm_dis))
+                 ~{
+                   bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 
+                                  markers = mnames, r = r_range, id  = id, 
+                                  correction = edge_correction,
+                                  perm_dist = keep_perm_dis) %>%
+                     data.frame(check.names = FALSE)})
 return(mif)
 }

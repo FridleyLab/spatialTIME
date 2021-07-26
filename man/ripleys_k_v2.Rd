@@ -11,7 +11,7 @@ ripleys_k_v2(
   r_range = seq(0, 100, 50),
   num_permutations = 50,
   edge_correction = "translation",
-  method = "M",
+  method = "K",
   keep_perm_dis = FALSE
 )
 }

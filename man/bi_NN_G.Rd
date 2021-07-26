@@ -11,7 +11,6 @@ bi_NN_G(
   r_range = seq(0, 100, 50),
   num_permutations = 50,
   edge_correction = "rs",
-  method = "rs",
   keep_perm_dis = FALSE
 )
 }

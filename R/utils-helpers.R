@@ -363,8 +363,8 @@ uni_K = function(data = data, iter, marker, id, correction, r_value, win){
 }
 
 
-uni_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans', method = 'K', 
-                     perm_dist = FALSE, r = seq(0,50,10)){
+uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method = 'K', 
+                     perm_dist, r){
   #Main function
   #Check if the method is selected from K, L, M
   if(!(method %in% c('K',"L","M"))){
@@ -399,7 +399,7 @@ uni_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans', me
   
   #Make the data a long format
   data = data %>%
-    tidyr::pivot_longer(cols = markers, names_to = 'Marker', values_to = 'Positive')
+    tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
   
   grid = expand.grid(markers, 1:num_iters) %>%
     dplyr::mutate(Var1 = as.character(Var1))
@@ -407,18 +407,18 @@ uni_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans', me
   perms = purrr::map_df(.x = 1:nrow(grid),~{
     data_new = perm_data(data, markers)
     return(uni_K(data = data_new, iter = grid[.x,2], 
-                 marker = grid[.x,1], id = 'image.tag', r_value = r,
+                 marker = grid[.x,1], id = id, r_value = r,
                  correction = correction, win = win))})
   colnames(perms)[c(2,5,6)] = c(id, 'Theoretical CSR','Permuted K')
   
   obs = purrr::map_df(.x = markers, ~uni_K(data = data, iter = 'Observed', 
                                     marker = .x, correction = correction,
-                                    id = 'image.tag', r_value = r,
+                                    id = id, r_value = r,
                                     win = win)) %>%
     dplyr::select(-iter) 
   colnames(obs)[c(1,4,5)] = c(id, 'Theoretical CSR', 'Observed K')
   
-  final = dplyr::left_join(perms, obs)
+  final = suppressMessages(dplyr::left_join(perms, obs))
   
   if(method == 'M'){
     final = final %>% dplyr::mutate_at(c("Theoretical CSR","Permuted K","Observed K"),
@@ -487,7 +487,7 @@ bi_K = function(data, mark_pair, r, correction, id, iter, win){
       dplyr::filter(r>0)
   }else{
     X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win, marks = data_new$Marker)
-    K = spatstat.core::Kcross(r = seq(0,50,10), X = X, i = levels(data_new$Marker)[1], 
+    K = spatstat.core::Kcross(r =r, X = X, i = levels(data_new$Marker)[1], 
                j = levels(data_new$Marker)[2], correction = 'translation') %>% #Hard coded
       data.frame() %>%
       dplyr::filter(r!=0) %>%
@@ -500,8 +500,8 @@ bi_K = function(data, mark_pair, r, correction, id, iter, win){
   return(K)
 }
 
-bi_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans', 
-                    method = 'K', perm_dist = FALSE, r = seq(0,50,10)){
+bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans', 
+                    method, perm_dist, r){
   #Main function
   #Check if the method is selected from K, L, M
   if(!(method %in% c('K',"L","M"))){
@@ -536,7 +536,7 @@ bi_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans',
   
   #Make the data a long format
   data = data %>%
-    tidyr::pivot_longer(cols = markers, names_to = 'Marker', values_to = 'Positive')
+    tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
   
   #Enumerates all possible combination of markers, and removes the ones where
   #marker 1 and marker 2 are the samw
@@ -550,18 +550,18 @@ bi_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans',
                 ~{
                   data_new = perm_data(data, markers)
                   return(bi_K(data = data_new, mark_pair = grid[.x,1:2], r = r, 
-                              correction = 'trans', id = 'image.tag', iter = grid[.x,3], win = win))
+                              correction = 'trans', id = id, iter = grid[.x,3], win = win))
                 }
   )
   colnames(perm)[c(2,6,7)] = c(id, 'Theoretical CSR', 'Permuted K')
   
   obs = purrr::map_df(.x = 1:nrow(grid[!duplicated(grid[,1:2]),]), 
                ~bi_K(data = data, mark_pair = grid[.x,1:2], r = r, 
-                     correction = 'trans', id = 'image.tag', iter = 1, win = win)) %>%
+                     correction = 'trans', id = id, iter = 1, win = win)) %>%
     dplyr::select(-iter)
   colnames(obs)[c(1,5,6)] = c(id, 'Theoretical CSR', 'Observed K')
   
-  final = dplyr::left_join(perm, obs) 
+  final = suppressMessages(dplyr::left_join(perm, obs)) 
   
   if(method == 'M'){
     final = final %>% dplyr::mutate_at(c("Theoretical CSR","Permuted K","Observed K"),
@@ -595,10 +595,14 @@ bi_Rip_K = function(data, markers, id, num_iters = 50, correction = 'trans',
     final = final %>% 
       dplyr::group_by(anchor, counted, r) %>%
       dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`),
-                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]]),
-                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]]),
-                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`))
+                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
+                                      na.rm = TRUE),
+                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
+                                  na.rm = TRUE),
+                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
+                                                          na.rm = TRUE),
+                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`),
+                na.rm = TRUE)
   }
   final = cbind(id = data[[id]][1],final)
   colnames(final)[1] = id
@@ -642,8 +646,8 @@ uni_G = function(data = data, iter, marker, id, correction, r_value, win){
 }
 
 
-uni_NN_G = function(data, markers, id, num_iters = 50, correction = 'rs',
-                    perm_dist = FALSE, r = seq(0,10,1)){
+uni_NN_G = function(data, markers, id, num_iters, correction,
+                    perm_dist, r){
   #Main function
   
   #Notice that this follows spatstat's notation and argument name
@@ -663,7 +667,7 @@ uni_NN_G = function(data, markers, id, num_iters = 50, correction = 'rs',
   
   #Make the data a long format
   data = data %>%
-    tidyr::pivot_longer(cols = markers, names_to = 'Marker', values_to = 'Positive')
+    tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
   
   grid = expand.grid(markers, 1:num_iters) %>%
     mutate(Var1 = as.character(Var1))
@@ -671,19 +675,19 @@ uni_NN_G = function(data, markers, id, num_iters = 50, correction = 'rs',
   perms = purrr::map_df(.x = 1:nrow(grid),~{
     data_new = perm_data(data, markers)
     return(uni_G(data = data_new, iter = grid[.x,2], 
-                 marker = grid[.x,1], id = 'image.tag', r_value = r,
+                 marker = grid[.x,1], id = id, r_value = r,
                  correction = correction, win = win))})
   colnames(perms)[c(2,5,6)] = c(id, 'Theoretical CSR','Permuted CSR')
   
   obs = purrr::map_df(.x = markers, ~uni_G(data = data, iter = 'Observed', 
                                     marker = .x, correction = correction,
-                                    id = 'image.tag', r_value = r,
+                                    id = id, r_value = r,
                                     win = win)) %>%
     select(-iter) 
   
   colnames(obs)[c(1,4,5)] = c(id, 'Theoretical CSR', 'Observed')
   
-  final = left_join(perms, obs) %>%
+  final = suppressMessages(left_join(perms, obs)) %>%
     dplyr::mutate(
       `Degree of Clustering Theoretical` = `Observed` / `Theoretical CSR`,
       `Degree of Clustering Permutation` = `Observed` / `Permuted CSR`) %>%
@@ -717,8 +721,9 @@ bi_G = function(data, mark_pair, r, correction, id, iter, win){
       dplyr::filter(r>0)
     colnames(G)[7] = correction
   }else{
-    X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win, marks = data_new$Marker)
-    G = spatstat.core::Gcross(r = seq(0,50,10), X = X, i = levels(data_new$Marker)[1], 
+    X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win,
+                           marks = data_new$Marker)
+    G = spatstat.core::Gcross(r = r, X = X, i = levels(data_new$Marker)[1], 
                j = levels(data_new$Marker)[2], correction = correction) %>% 
       data.frame() %>%
       dplyr::filter(r!=0) %>%
@@ -731,8 +736,8 @@ bi_G = function(data, mark_pair, r, correction, id, iter, win){
   return(G)
 }
 
-bi_NN_G_sample = function(data, markers, id, num_iters = 50, correction = 'rs', 
-                   perm_dist = FALSE, r = seq(0,50,10)){
+bi_NN_G_sample = function(data, markers, id, num_iters, correction, 
+                   perm_dist, r){
   #Main function
   #Notice that this follows spatstat's notation and argument name
   if(!(correction %in% c('rs', 'hans'))){
@@ -751,7 +756,7 @@ bi_NN_G_sample = function(data, markers, id, num_iters = 50, correction = 'rs',
   
   #Make the data a long format
   data = data %>%
-    tidyr::pivot_longer(cols = markers, names_to = 'Marker', values_to = 'Positive')
+    tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
   
   #Enumerates all possible combination of markers, and removes the ones where
   #marker 1 and marker 2 are the samw
@@ -764,18 +769,18 @@ bi_NN_G_sample = function(data, markers, id, num_iters = 50, correction = 'rs',
                 ~{
                   data_new = perm_data(data, markers)
                   return(bi_G(data = data_new, mark_pair = grid[.x,1:2], r = r, 
-                              correction = correction, id = 'image.tag', iter = grid[.x,3], win = win))
+                              correction = correction, id = id, iter = grid[.x,3], win = win))
                 }
   )
   colnames(perm)[c(2,6,7)] = c(id, 'Theoretical CSR', 'Permuted G')
   
   obs = purrr::map_df(.x = 1:nrow(grid[!duplicated(grid[,1:2]),]), 
                ~bi_G(data = data, mark_pair = grid[.x,1:2], r = r, 
-                     correction = correction, id = 'image.tag', iter = 1, win = win)) %>%
+                     correction = correction, id = id, iter = 1, win = win)) %>%
     dplyr::select(-iter)
   colnames(obs)[c(1,5,6)] = c(id, 'Theoretical CSR', 'Observed G')
   
-  final = dplyr::left_join(perm, obs) %>%
+  final = suppressMessages(dplyr::left_join(perm, obs)) %>%
     dplyr::mutate(`Degree of Clustering Permutation` = ifelse(`Permuted G` == 0, NA, `Observed G`/`Permuted G`),
            `Degree of Clustering Theoretical` = ifelse(`Theoretical CSR` == 0, NA, `Observed G`/`Theoretical CSR`))
   
@@ -783,11 +788,15 @@ bi_NN_G_sample = function(data, markers, id, num_iters = 50, correction = 'rs',
     final = final %>% 
       dplyr::mutate(id = .data[[id]]) %>%
       dplyr::group_by(id, anchor, counted, r) %>%
-      dplyr::summarize(id,`Theoretical CSR` = mean(`Theoretical CSR`),
-                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]]),
-                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]]),
-                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`))
+      dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`,na.rm = TRUE),
+                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
+                                      na.rm = TRUE),
+                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
+                                  na.rm = TRUE),
+                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
+                                                          na.rm = TRUE),
+                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
+                                                           na.rm = TRUE))
     colnames(final)[1] = id
   }
   
