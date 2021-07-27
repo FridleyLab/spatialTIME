@@ -501,11 +501,19 @@ bi_K = function(data, mark_pair, r, correction, id, iter, win){
 }
 
 bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans', 
-                    method, perm_dist, r){
+                    method, perm_dist, r, exhaustive){
   #Main function
   #Check if the method is selected from K, L, M
   if(!(method %in% c('K',"L","M"))){
     stop("Did not provide a valid method.")
+  }
+  
+  #Check if exhaustive is FALSE, then markers must be a data.frame
+  if(exhaustive == FALSE & class(markers) != 'data.frame'){
+    stop("If exhaustive == FALSE, then markers must be a data.frame.")
+  }
+  if(exhaustive == TRUE & class(markers) != 'character'){
+    stop("If exhaustive == TRUE, then markers must be a character vector")
   }
   
   #Notice that this follows spatstat's notation and argument name
@@ -535,16 +543,29 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
   win = spatstat.geom::convexhull.xy(x = data$xloc, y = data$yloc)
   
   #Make the data a long format
-  data = data %>%
-    tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
   
   #Enumerates all possible combination of markers, and removes the ones where
-  #marker 1 and marker 2 are the samw
-  grid = expand.grid(markers, markers, 1:num_iters) %>%
-    dplyr::mutate(Var1 = as.character(Var1),
+  #marker 1 and marker 2 are the same
+  if(exhaustive){
+    data = data %>%
+      tidyr::pivot_longer(cols = all_of(markers), 
+                          names_to = 'Marker', values_to = 'Positive')
+    grid = expand.grid(markers, markers, 1:num_iters) %>%
+      dplyr::mutate(Var1 = as.character(Var1),
            Var2 = as.character(Var2)) %>%
-    dplyr::filter(Var1 != Var2)
-
+      dplyr::filter(Var1 != Var2)
+  }else{
+    grid = expand_grid(markers, 1:num_iters) %>%
+      data.frame() %>%
+      dplyr::mutate(Var1 = as.character(Var1),
+             Var2 = as.character(Var2)) %>%
+      dplyr::filter(Var1 != Var2)
+    markers = grid %>% dplyr::select(Var1, Var2) %>%
+      unlist() %>% unique()
+    data = data %>%
+      tidyr::pivot_longer(cols = all_of(markers), 
+                          names_to = 'Marker', values_to = 'Positive')
+  }
   
   perm = purrr::map_df(.x = 1:nrow(grid), 
                 ~{
@@ -601,8 +622,8 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
                                   na.rm = TRUE),
                 `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
                                                           na.rm = TRUE),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`),
-                na.rm = TRUE)
+                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
+                na.rm = TRUE))
   }
   final = cbind(id = data[[id]][1],final)
   colnames(final)[1] = id
@@ -737,12 +758,21 @@ bi_G = function(data, mark_pair, r, correction, id, iter, win){
 }
 
 bi_NN_G_sample = function(data, markers, id, num_iters, correction, 
-                   perm_dist, r){
+                   perm_dist, r, exhaustive){
   #Main function
   #Notice that this follows spatstat's notation and argument name
   if(!(correction %in% c('rs', 'hans'))){
     stop("Did not provide a valid edge correcion method.")
   }
+  
+  #Check if exhaustive is FALSE, then markers must be a data.frame
+  if(exhaustive == FALSE & class(markers) != 'data.frame'){
+    stop("If exhaustive == FALSE, then markers must be a data.frame.")
+  }
+  if(exhaustive == TRUE & class(markers) != 'character'){
+    stop("If exhaustive == TRUE, then markers must be a character vector")
+  }
+  
   
   #Use set the cell location as the center of the cell
   data = data %>% 
@@ -753,17 +783,30 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   #Create the region that the point process exists. This only needs to be done
   #once per image
   win = spatstat.geom::convexhull.xy(x = data$xloc, y = data$yloc)
-  
-  #Make the data a long format
-  data = data %>%
-    tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
-  
+
   #Enumerates all possible combination of markers, and removes the ones where
-  #marker 1 and marker 2 are the samw
-  grid = expand.grid(markers, markers, 1:num_iters) %>%
-    dplyr::mutate(Var1 = as.character(Var1),
-           Var2 = as.character(Var2)) %>%
-    dplyr::filter(Var1 != Var2)
+  #marker 1 and marker 2 are the same
+  if(exhaustive){
+    data = data %>%
+      tidyr::pivot_longer(cols = all_of(markers), 
+                          names_to = 'Marker', values_to = 'Positive')
+    grid = expand.grid(markers, markers, 1:num_iters) %>%
+      dplyr::mutate(Var1 = as.character(Var1),
+                    Var2 = as.character(Var2)) %>%
+      dplyr::filter(Var1 != Var2)
+  }else{
+    grid = expand_grid(markers, 1:num_iters) %>%
+      data.frame() %>%
+      dplyr::mutate(Var1 = as.character(Var1),
+                    Var2 = as.character(Var2)) %>%
+      dplyr::filter(Var1 != Var2)
+    markers = grid %>% dplyr::select(Var1, Var2) %>%
+      unlist() %>% unique()
+    data = data %>%
+      tidyr::pivot_longer(cols = all_of(markers), 
+                          names_to = 'Marker', values_to = 'Positive')
+  }
+  
   
   perm = purrr::map_df(.x = 1:nrow(grid), 
                 ~{

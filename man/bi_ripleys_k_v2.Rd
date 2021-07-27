@@ -11,7 +11,8 @@ bi_ripleys_k_v2(
   num_permutations = 50,
   edge_correction = "translation",
   method = "K",
-  keep_perm_dis = FALSE
+  keep_perm_dis = FALSE,
+  exhaustive = TRUE
 )
 }
 \arguments{
@@ -37,6 +38,10 @@ found in Details section.}
 
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted K values}
+
+\item{exhaustive}{Logical. If TRUE then markers must be a vector and spatial
+measures will be computed all pairs of unique markers. If FALSE then markers must
+be a data.frame with the desired combinations.}
 
 \item{id}{Character string of variable name for subject ID in TMA data.}
 }

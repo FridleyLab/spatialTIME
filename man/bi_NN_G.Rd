@@ -10,7 +10,8 @@ bi_NN_G(
   r_range = seq(0, 100, 50),
   num_permutations = 50,
   edge_correction = "rs",
-  keep_perm_dis = FALSE
+  keep_perm_dis = FALSE,
+  exhaustive = TRUE
 )
 }
 \arguments{
@@ -32,6 +33,10 @@ to use. Options include "rs" or "hans".}
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted G values}
 
+\item{exhaustive}{Logical. If TRUE then markers must be a vector and spatial
+measures will be computed all pairs of unique markers. If FALSE then markers must
+be a data.frame with the desired combinations.}
+
 \item{id}{Character string of variable name for subject ID in TMA data.}
 }
 \value{
@@ -43,7 +48,7 @@ Returns a data frame
 process}
 \item{Observed}{Observed value for the observed point process}
 \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
-reference is the permutated estimate of CSR}
+reference is the permuted estimate of CSR}
 \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
 reference is the theoretical estimate of CSR}
 }

@@ -337,10 +337,11 @@ ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
                         method = 'K',keep_perm_dis = FALSE){
   data = mif$spatial
   id = mif$sample_id
-  mif$derived$univariate_Count = map_df(.x = 1:length(data), ~{
+  mif$derived$univariate_Count = rbind(mif$derived$univariate_Count,
+                                       map_df(.x = 1:length(data), ~{
            uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
                      markers = mnames, id  = id, correction = edge_correction, 
-                     method = method, perm_dist = keep_perm_dis)})
+                     method = method, perm_dist = keep_perm_dis)}))
   return(mif)
 }
 
@@ -368,6 +369,9 @@ ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
 #'  Default is 50.   
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted K values
+#' @param exhaustive Logical. If TRUE then markers must be a vector and spatial 
+#' measures will be computed all pairs of unique markers. If FALSE then markers must
+#' be a data.frame with the desired combinations.
 #' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
@@ -388,16 +392,19 @@ bi_ripleys_k_v2 <- function(mif,
                          num_permutations = 50,
                          edge_correction = "translation",
                          method = 'K',
-                         keep_perm_dis = FALSE){
+                         keep_perm_dis = FALSE,
+                         exhaustive = TRUE){
   data = mif$spatial
   id = mif$sample_id
-  mif$derived$bivariate_Count = map_df(.x = 1:length(data),
+  mif$derived$bivariate_Count = rbind( mif$derived$bivariate_Count,
+                                       map_df(.x = 1:length(data),
                    ~{
                      bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
                               markers = mnames, id  = id, r = r_range,
                               correction = edge_correction, method = method, 
-                              perm_dist = keep_perm_dis) %>%
-                       data.frame(check.names = FALSE)})
+                              perm_dist = keep_perm_dis,
+                              exhaustive = exhaustive) %>%
+                       data.frame(check.names = FALSE)}))
   return(mif)
   }
 
@@ -435,12 +442,13 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                         method = 'rs',keep_perm_dis = FALSE){
   data = mif$spatial
   id = mif$sample_id
-  mif$derived$univariate_NN = map_df(.x = 1:length(data),
+  mif$derived$univariate_NN = rbind(mif$derived$univariate_NN ,
+                                    map_df(.x = 1:length(data),
              ~{
                uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
-                        markers = markers,  id  = id, 
+                        markers = mnames,  id  = id, 
                         correction = 'rs', r = r_range,
-                        perm_dist = keep_perm_dis)})
+                        perm_dist = keep_perm_dis)}))
   return(mif)
 }
 
@@ -462,7 +470,9 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #'  Default is 50.   
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted G values
-
+#' @param exhaustive Logical. If TRUE then markers must be a vector and spatial 
+#' measures will be computed all pairs of unique markers. If FALSE then markers must
+#' be a data.frame with the desired combinations.
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
 #'    \item{counted}{Marker for which the distances are measured to}
@@ -471,21 +481,24 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #'    process}
 #'    \item{Observed}{Observed value for the observed point process}
 #'    \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
-#'    reference is the permutated estimate of CSR}
+#'    reference is the permuted estimate of CSR}
 #'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
 #'    reference is the theoretical estimate of CSR}
 #'@export
 #'
 bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
-                num_permutations = 50, edge_correction = "rs",keep_perm_dis = FALSE){
+                   num_permutations = 50, edge_correction = "rs",
+                   keep_perm_dis = FALSE, exhaustive = TRUE){
   data = mif$spatial
   id = mif$sample_id
-mif$derived$bivariate_NN = map_df(.x = 1:length(data),
-                 ~{
+mif$derived$bivariate_NN = rbind(mif$derived$bivariate_NN,
+                                 map_df(.x = 1:length(data),
+                                        ~{
                    bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 
                                   markers = mnames, r = r_range, id  = id, 
                                   correction = edge_correction,
-                                  perm_dist = keep_perm_dis) %>%
-                     data.frame(check.names = FALSE)})
+                                  perm_dist = keep_perm_dis,
+                                  exhaustive) %>%
+                     data.frame(check.names = FALSE)}))
 return(mif)
 }
