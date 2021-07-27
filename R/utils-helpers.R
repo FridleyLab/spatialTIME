@@ -803,3 +803,4 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   
   return(final)
 }
+

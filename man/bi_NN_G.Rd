@@ -6,7 +6,6 @@
 \usage{
 bi_NN_G(
   mif,
-  id,
   mnames,
   r_range = seq(0, 100, 50),
   num_permutations = 50,
@@ -16,8 +15,6 @@ bi_NN_G(
 }
 \arguments{
 \item{mif}{An MIF object}
-
-\item{id}{Character string of variable name for subject ID in TMA data.}
 
 \item{mnames}{Character vector of marker names to estimate degree of
 nearest neighbor distribution}
@@ -34,6 +31,8 @@ to use. Options include "rs" or "hans".}
 
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted G values}
+
+\item{id}{Character string of variable name for subject ID in TMA data.}
 }
 \value{
 Returns a data frame

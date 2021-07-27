@@ -332,10 +332,11 @@ bi_ripleys_k <- function(mif,
 #' @export
 #'
 
-ripleys_k_v2 = function(mif, id, mnames, r_range = seq(0, 100, 50),
+ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
                         num_permutations = 50, edge_correction = "translation",
                         method = 'K',keep_perm_dis = FALSE){
   data = mif$spatial
+  id = mif$sample_id
   mif$derived$univariate_Count = map_df(.x = 1:length(data), ~{
            uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
                      markers = mnames, id  = id, correction = edge_correction, 
@@ -382,7 +383,6 @@ ripleys_k_v2 = function(mif, id, mnames, r_range = seq(0, 100, 50),
 #' @export
 #' 
 bi_ripleys_k_v2 <- function(mif,
-                         id,
                          mnames, 
                          r_range = seq(0, 100, 50),
                          num_permutations = 50,
@@ -390,6 +390,7 @@ bi_ripleys_k_v2 <- function(mif,
                          method = 'K',
                          keep_perm_dis = FALSE){
   data = mif$spatial
+  id = mif$sample_id
   mif$derived$bivariate_Count = map_df(.x = 1:length(data),
                    ~{
                      bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
@@ -429,10 +430,11 @@ bi_ripleys_k_v2 <- function(mif,
 #'    reference is the theoretical estimate of CSR}
 #' @export
 #'
-NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
+NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                         num_permutations = 50, edge_correction = "translation",
                         method = 'rs',keep_perm_dis = FALSE){
   data = mif$spatial
+  id = mif$sample_id
   mif$derived$univariate_NN = map_df(.x = 1:length(data),
              ~{
                uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
@@ -474,9 +476,10 @@ NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
 #'    reference is the theoretical estimate of CSR}
 #'@export
 #'
-bi_NN_G = function(mif, id, mnames, r_range = seq(0, 100, 50),
+bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                 num_permutations = 50, edge_correction = "rs",keep_perm_dis = FALSE){
   data = mif$spatial
+  id = mif$sample_id
 mif$derived$bivariate_NN = map_df(.x = 1:length(data),
                  ~{
                    bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 

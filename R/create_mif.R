@@ -71,7 +71,9 @@ create_mif <- function(clinical_data, sample_data, spatial_list = NULL,
   mif <- list(clinical = clinical_data,
               sample = sample_data,
               spatial = spatial_list,
-              derived = list())
+              derived = list(),
+              patient_id = patient_id,
+              sample_id = sample_id)
   
   structure(mif, class="mif")
   
