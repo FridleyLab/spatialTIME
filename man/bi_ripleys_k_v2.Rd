@@ -54,7 +54,7 @@ Returns a data frame
 process}
 \item{Observed}{Observed value for the observed point process}
 \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
-reference is the permutated estimate of CSR}
+reference is the permuted estimate of CSR}
 \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
 reference is the theoretical estimate of CSR}
 }
