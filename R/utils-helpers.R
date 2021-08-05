@@ -458,7 +458,7 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
                 `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`)
                 )
   }
-  final = cbind(id = data[[id]][1], final %>% ungroup())
+  final = cbind(id = data[[id]][1], final %>% dplyr::ungroup())
   colnames(final)[1] = id
   return(final)
 }
@@ -471,7 +471,7 @@ bi_K = function(data, mark_pair, r, correction, id, iter, win){
     dplyr::filter(Marker %in% c(mark_pair[1], mark_pair[2]),
            Positive == 1) %>%
     dplyr::group_by(xloc, yloc) %>%
-    dplyr::filter(n() == 1) %>%
+    dplyr::filter(dplyr::n() == 1) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(Marker = factor(Marker, levels = c(mark_pair[1], mark_pair[2])))
   
@@ -691,7 +691,7 @@ uni_NN_G = function(data, markers, id, num_iters, correction,
     tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
   
   grid = expand.grid(markers, 1:num_iters) %>%
-    mutate(Var1 = as.character(Var1))
+    dplyr::mutate(Var1 = as.character(Var1))
   
   perms = purrr::map_df(.x = 1:nrow(grid),~{
     data_new = perm_data(data, markers)
@@ -704,11 +704,11 @@ uni_NN_G = function(data, markers, id, num_iters, correction,
                                     marker = .x, correction = correction,
                                     id = id, r_value = r,
                                     win = win)) %>%
-    select(-iter) 
+   dplyr::select(-iter) 
   
   colnames(obs)[c(1,4,5)] = c(id, 'Theoretical CSR', 'Observed')
   
-  final = suppressMessages(left_join(perms, obs)) %>%
+  final = suppressMessages(dplyr::left_join(perms, obs)) %>%
     dplyr::mutate(
       `Degree of Clustering Theoretical` = `Observed` / `Theoretical CSR`,
       `Degree of Clustering Permutation` = `Observed` / `Permuted CSR`) %>%
@@ -724,7 +724,7 @@ bi_G = function(data, mark_pair, r, correction, id, iter, win){
     dplyr::filter(Marker %in% c(mark_pair[1], mark_pair[2]),
            Positive == 1) %>%
     dplyr::group_by(xloc, yloc) %>%
-    dplyr::filter(n() == 1) %>%
+    dplyr::filter(dplyr::n() == 1) %>%
     dplyr::ungroup() %>%
     dplyr::mutate(Marker = factor(Marker, levels = c(mark_pair[1], mark_pair[2])))
   

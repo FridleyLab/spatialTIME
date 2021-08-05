@@ -34,8 +34,6 @@ found in Details section.}
 
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted K values}
-
-\item{id}{Character string of variable name for subject ID in TMA data.}
 }
 \value{
 Returns a data.frame

@@ -42,8 +42,6 @@ distribution of permuted K values}
 \item{exhaustive}{Logical. If TRUE then markers must be a vector and spatial
 measures will be computed all pairs of unique markers. If FALSE then markers must
 be a data.frame with the desired combinations.}
-
-\item{id}{Character string of variable name for subject ID in TMA data.}
 }
 \value{
 Returns a data frame

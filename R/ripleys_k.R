@@ -306,7 +306,6 @@ bi_ripleys_k <- function(mif,
 #'   L, and Marcon's M) of IF data to characterize correlation of spatial point
 #'   process.
 #' @param mif An MIF object
-#' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames Character vector of marker names to estimate degree of 
 #' spatial clustering.
 #' @param r_range Numeric vector of potential r values this range must include 0. 
@@ -319,6 +318,7 @@ bi_ripleys_k <- function(mif,
 #'  Default is 50.   
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted K values
+#' @param workers Integer value for the number of workers to spawn
 #'  
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
@@ -334,14 +334,20 @@ bi_ripleys_k <- function(mif,
 
 ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
                         num_permutations = 50, edge_correction = "translation",
-                        method = 'K',keep_perm_dis = FALSE){
+                        method = 'K',keep_perm_dis = FALSE, workers = 1){
+  require(furrr)
+  require(magrittr)
+  plan(multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
   mif$derived$univariate_Count = rbind(mif$derived$univariate_Count,
-                                       map_df(.x = 1:length(data), ~{
+                                       future_map(.x = 1:length(data), ~{
            uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
                      markers = mnames, id  = id, correction = edge_correction, 
-                     method = method, perm_dist = keep_perm_dis)}))
+                     method = method, perm_dist = keep_perm_dis)}, .options = furrr_options(seed=TRUE), .progress = T) %>%
+             plyr::ldply()
+           
+           )
   return(mif)
 }
 
@@ -353,7 +359,6 @@ ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
 #'   L, and Marcon's M) of IF data to characterize correlation of spatial point
 #'   process for two markers.
 #' @param mif An MIF object
-#' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames Character vector of marker names to estimate degree of 
 #' spatial clustering. Spatial clustering will be computed between each 
 #' combination of markers in this list.
@@ -372,6 +377,7 @@ ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
 #' @param exhaustive Logical. If TRUE then markers must be a vector and spatial 
 #' measures will be computed all pairs of unique markers. If FALSE then markers must
 #' be a data.frame with the desired combinations.
+#' @param workers Integer value for the number of workers to spawn
 #' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
@@ -393,18 +399,26 @@ bi_ripleys_k_v2 <- function(mif,
                          edge_correction = "translation",
                          method = 'K',
                          keep_perm_dis = FALSE,
-                         exhaustive = TRUE){
+                         exhaustive = TRUE,
+                         workers = 1){
+  require(furrr)
+  require(magrittr)
+  plan(multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
   mif$derived$bivariate_Count = rbind( mif$derived$bivariate_Count,
-                                       map_df(.x = 1:length(data),
+                                       furrr::future_map(.x = 1:length(data),
                    ~{
                      bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
                               markers = mnames, id  = id, r = r_range,
                               correction = edge_correction, method = method, 
                               perm_dist = keep_perm_dis,
                               exhaustive = exhaustive) %>%
-                       data.frame(check.names = FALSE)}))
+                       data.frame(check.names = FALSE)
+                     }, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                     plyr::ldply()
+                   
+  )
   return(mif)
   }
 
@@ -425,6 +439,7 @@ bi_ripleys_k_v2 <- function(mif,
 #'  Default is 50.   
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted G values
+#' @param workers Integer value for the number of workers to spawn
 
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
@@ -439,16 +454,22 @@ bi_ripleys_k_v2 <- function(mif,
 #'
 NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                         num_permutations = 50, edge_correction = "translation",
-                        method = 'rs',keep_perm_dis = FALSE){
+                        method = 'rs',keep_perm_dis = FALSE,
+                workers = 1){
+  require(furrr)
+  require(magrittr)
+  plan(multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
   mif$derived$univariate_NN = rbind(mif$derived$univariate_NN ,
-                                    map_df(.x = 1:length(data),
+                                    future_map(.x = 1:length(data),
              ~{
                uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
                         markers = mnames,  id  = id, 
                         correction = 'rs', r = r_range,
-                        perm_dist = keep_perm_dis)}))
+                        perm_dist = keep_perm_dis)}, .options = furrr_options(seed=TRUE), .progress = T) %>%
+               plyr::ldply()
+  )
   return(mif)
 }
 
@@ -473,6 +494,8 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' @param exhaustive Logical. If TRUE then markers must be a vector and spatial 
 #' measures will be computed all pairs of unique markers. If FALSE then markers must
 #' be a data.frame with the desired combinations.
+#' @param workers Integer value for the number of workers to spawn
+#' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
 #'    \item{counted}{Marker for which the distances are measured to}
@@ -488,17 +511,23 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #'
 bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                    num_permutations = 50, edge_correction = "rs",
-                   keep_perm_dis = FALSE, exhaustive = TRUE){
+                   keep_perm_dis = FALSE, exhaustive = TRUE,
+                   workers = 1){
+  require(furrr)
+  require(magrittr)
+  plan(multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
 mif$derived$bivariate_NN = rbind(mif$derived$bivariate_NN,
-                                 map_df(.x = 1:length(data),
+                                 future_map(.x = 1:length(data),
                                         ~{
                    bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 
                                   markers = mnames, r = r_range, id  = id, 
                                   correction = edge_correction,
                                   perm_dist = keep_perm_dis,
                                   exhaustive) %>%
-                     data.frame(check.names = FALSE)}))
+                     data.frame(check.names = FALSE)}, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                     plyr::ldply()
+                   )
 return(mif)
 }
