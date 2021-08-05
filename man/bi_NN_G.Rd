@@ -11,7 +11,8 @@ bi_NN_G(
   num_permutations = 50,
   edge_correction = "rs",
   keep_perm_dis = FALSE,
-  exhaustive = TRUE
+  exhaustive = TRUE,
+  workers = 1
 )
 }
 \arguments{
@@ -36,6 +37,8 @@ distribution of permuted G values}
 \item{exhaustive}{Logical. If TRUE then markers must be a vector and spatial
 measures will be computed all pairs of unique markers. If FALSE then markers must
 be a data.frame with the desired combinations.}
+
+\item{workers}{Integer value for the number of workers to spawn}
 
 \item{id}{Character string of variable name for subject ID in TMA data.}
 }

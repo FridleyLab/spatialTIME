@@ -11,7 +11,8 @@ ripleys_k_v2(
   num_permutations = 50,
   edge_correction = "translation",
   method = "K",
-  keep_perm_dis = FALSE
+  keep_perm_dis = FALSE,
+  workers = 1
 )
 }
 \arguments{
@@ -34,6 +35,8 @@ found in Details section.}
 
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted K values}
+
+\item{workers}{Integer value for the number of workers to spawn}
 }
 \value{
 Returns a data.frame

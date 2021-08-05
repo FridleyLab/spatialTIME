@@ -12,7 +12,8 @@ bi_ripleys_k_v2(
   edge_correction = "translation",
   method = "K",
   keep_perm_dis = FALSE,
-  exhaustive = TRUE
+  exhaustive = TRUE,
+  workers = 1
 )
 }
 \arguments{
@@ -42,6 +43,8 @@ distribution of permuted K values}
 \item{exhaustive}{Logical. If TRUE then markers must be a vector and spatial
 measures will be computed all pairs of unique markers. If FALSE then markers must
 be a data.frame with the desired combinations.}
+
+\item{workers}{Integer value for the number of workers to spawn}
 }
 \value{
 Returns a data frame

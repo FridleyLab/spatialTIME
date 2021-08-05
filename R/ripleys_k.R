@@ -344,7 +344,9 @@ ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
                                        future_map(.x = 1:length(data), ~{
            uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
                      markers = mnames, id  = id, correction = edge_correction, 
-                     method = method, perm_dist = keep_perm_dis)}, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                     method = method, perm_dist = keep_perm_dis)}, 
+           .options = furrr_options(seed=TRUE), .progress = T,
+           future.globals.maxSize = 10000*1024^2 ) %>%
              plyr::ldply()
            
            )
@@ -415,7 +417,8 @@ bi_ripleys_k_v2 <- function(mif,
                               perm_dist = keep_perm_dis,
                               exhaustive = exhaustive) %>%
                        data.frame(check.names = FALSE)
-                     }, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                     }, .options = furrr_options(seed=TRUE), .progress = T,
+                   future.globals.maxSize = 10000*1024^2 ) %>%
                      plyr::ldply()
                    
   )
@@ -467,7 +470,9 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
                         markers = mnames,  id  = id, 
                         correction = 'rs', r = r_range,
-                        perm_dist = keep_perm_dis)}, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                        perm_dist = keep_perm_dis)}, 
+             .options = furrr_options(seed=TRUE), .progress = T,
+             future.globals.maxSize = 10000*1024^2 ) %>%
                plyr::ldply()
   )
   return(mif)
@@ -526,7 +531,11 @@ mif$derived$bivariate_NN = rbind(mif$derived$bivariate_NN,
                                   correction = edge_correction,
                                   perm_dist = keep_perm_dis,
                                   exhaustive) %>%
-                     data.frame(check.names = FALSE)}, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                     data.frame(check.names = FALSE)}, 
+                   .options = furrr_options(seed=TRUE), 
+                   .progress = T, 
+                   future.globals.maxSize = 10000*1024^2 
+                  ) %>%
                      plyr::ldply()
                    )
 return(mif)

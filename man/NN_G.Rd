@@ -11,7 +11,8 @@ NN_G(
   num_permutations = 50,
   edge_correction = "translation",
   method = "rs",
-  keep_perm_dis = FALSE
+  keep_perm_dis = FALSE,
+  workers = 1
 )
 }
 \arguments{
@@ -32,6 +33,8 @@ to use. Options include "rs" or "hans".}
 
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted G values}
+
+\item{workers}{Integer value for the number of workers to spawn}
 
 \item{id}{Character string of variable name for subject ID in TMA data.}
 }

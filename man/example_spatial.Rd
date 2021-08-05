@@ -3,7 +3,7 @@
 \docType{data}
 \name{example_spatial}
 \alias{example_spatial}
-\title{Example list of spatial TMA data}
+\title{Example list of 5 spatial TMA data}
 \format{
 A list of 5 data frames:
 \itemize{

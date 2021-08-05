@@ -451,11 +451,11 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
   if(!perm_dist){
     final = final %>% 
       dplyr::group_by(Marker, r) %>%
-      dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`),
-                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]]),
-                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]]),
-                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`)
+      dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`, na.rm = TRUE),
+                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]], na.rm = TRUE),
+                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]], na.rm = TRUE),
+                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`, na.rm = TRUE),
+                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, na.rm = TRUE)
                 )
   }
   final = cbind(id = data[[id]][1], final %>% dplyr::ungroup())
