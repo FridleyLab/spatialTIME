@@ -18,7 +18,7 @@ subset_mif = function(mif, classifier, level){
   
   for(a in 1:length(mif$spatial)){
     tmp = mif$spatial[[a]] %>% filter(get(classifier) == level)
-    if(nrow(tmp)>0){
+    if(nrow(tmp)>2){
       split_spatial = rlist::list.append(split_spatial, tmp)
       names(split_spatial)[length(split_spatial)] = tmp[[mif$sample_id]][1]
     }
