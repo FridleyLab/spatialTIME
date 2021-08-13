@@ -8,7 +8,6 @@ plot_immunoflo(
   mif,
   plot_title,
   mnames,
-  mlabels = NULL,
   mcolors = NULL,
   dark_mode = FALSE,
   cell_type = NULL,
@@ -23,20 +22,18 @@ plot_immunoflo(
 
 \item{mnames}{Character vector containing marker names.}
 
-\item{mlabels}{Character vector of label for marker names to display in plot legend.}
-
 \item{mcolors}{Character vector of color names to display markers in the plot.}
 
 \item{dark_mode}{Plot using dark color scheme}
 
-\item{cell_type}{Character vector of cell type ???}
+\item{cell_type}{Character vector of cell type}
 
 \item{filename}{Character string of file name to store plots. Plots are generated as single .pdf file.}
 
 \item{path}{Different path than file name or to use in conjunction with filename ???}
 }
 \value{
-A list of ggplots (the length of spatial data frames) - one for each TMA or ROI
+mif object and the ggplot objects can be viewed form the derived slot of the mif object
 }
 \description{
 This function generates plot of point process in rectangular or circular window.

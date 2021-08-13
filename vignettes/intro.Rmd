@@ -77,36 +77,30 @@ mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
                 "CD8..Opal.520..Positive","FOXP3..Opal.620..Positive", 
                 "PDL1..Opal.540..Positive", "PD1..Opal.650..Positive")
 
-mlabels_bad <- c("CD3+ CD8+", "CD3+ FOXP3+", "CD3+",
-                 "CD8+", "FOXP3+", "PDL1+", "PD1+")
-
 # Used to make the legends in both plots below be in same order and use the 
 # same coloring scheme for the purpose making a common legend
 
-values = turbo(length(mlabels_bad))
-names(values) = mlabels_bad
+values = turbo(length(mnames_bad))
+names(values) = mnames_bad
 
 x<- plot_immunoflo(x, plot_title = "deidentified_sample",  mnames = mnames_bad,
-                   mlabels = mlabels_bad, cell_type = "classifier_label")
+                   cell_type = "Classifier.Label")
 
 bad_names <- x[["derived"]][["spatial_plots"]][[4]] + 
   theme(legend.position = 'bottom') + 
-  scale_color_manual(breaks = mlabels_bad, values = values)
+  scale_color_manual(breaks = mnames_bad, values = values)
 
 mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
 
-mlabels_good <- c("CD3+", "CD8+", "FOXP3+","PDL1+", 
-                  "PD1+", "CD3+ CD8+", "CD3+ FOXP3+")
-
 x <- plot_immunoflo(x, plot_title = "deidentified_sample", mnames = mnames_good, 
-                    mlabels = mlabels_good, cell_type = "classifier_label")
+                    cell_type = "Classifier.Label")
 
 good_names <- x[["derived"]][["spatial_plots"]][[4]] + 
   theme(legend.position = 'bottom') + 
-  scale_color_manual(breaks = mlabels_good, 
-                     values = values[match(mlabels_good, names(values))])
+  scale_color_manual(breaks = mnames_good, 
+                     values = values[match(mnames_good, names(values))])
 
 x$sample %>% filter(deidentified_sample == 'TMA3_[9,K].tif') %>% select(c(2, 4:15)) %>%
   pivot_longer(cols = 2:13, names_to = 'Marker', values_to = 'Count')

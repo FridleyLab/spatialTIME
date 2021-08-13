@@ -2,7 +2,7 @@
 % Please edit documentation in R/ripleys_k.R
 \name{bi_ripleys_k_v2}
 \alias{bi_ripleys_k_v2}
-\title{Calculate Bivariate Count Based Measures of Spatial Clustering function for IF data}
+\title{Bivariate Count Based Measures of Spatial Clustering function for IF data}
 \usage{
 bi_ripleys_k_v2(
   mif,
@@ -65,6 +65,6 @@ reference is the theoretical estimate of CSR}
 }
 \description{
 This function calculates count based Measures (Ripley's K, Besag
-L, and Marcon's M) of IF data to characterize correlation of spatial point
-process for two markers.
+L, and Marcon's M) of IF data to characterize correlation of the observed and permyted spatial point
+processes for two markers.
 }

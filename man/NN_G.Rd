@@ -2,7 +2,7 @@
 % Please edit documentation in R/ripleys_k.R
 \name{NN_G}
 \alias{NN_G}
-\title{Calculate Nearest Neighbor Based Measures of Spatial Clustering for IF data}
+\title{Nearest Neighbor Based Measures of Spatial Clustering for IF data}
 \usage{
 NN_G(
   mif,
@@ -21,9 +21,7 @@ NN_G(
 \item{mnames}{Character vector of marker names to estimate degree of
 nearest neighbor distribution}
 
-\item{r_range}{Numeric vector of potential r values this range must include 0.
-Note that the range selected is very different than count based measures.
-See details.}
+\item{r_range}{Numeric vector of potential r values this range must include 0.}
 
 \item{num_permutations}{Numeric value indicating the number of permutations used.
 Default is 50.}
@@ -38,8 +36,6 @@ distribution of permuted G values}
 
 \item{overwrite}{Logical value determining if you want the results to replace the
 current output (TRUE) or be to be appended (FALSE).}
-
-\item{id}{Character string of variable name for subject ID in TMA data.}
 }
 \value{
 Returns a data.frame
@@ -53,6 +49,6 @@ reference is the permuted estimate of CSR}
 reference is the theoretical estimate of CSR}
 }
 \description{
-This function computes the nearest neighbor distribution for a
-particular marker.
+For a given cell type, this function computes proportion of cells
+that have nearest neighbor less than r for the observed and permuted point processes.
 }

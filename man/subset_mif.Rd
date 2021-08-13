@@ -14,7 +14,7 @@ subset_mif(mif, classifier, level)
 \item{level}{Determines which level of the classifier to keep.}
 }
 \value{
-mif object
+mif object where the spatial list only as the cell that are the specified level.
 }
 \description{
 This function allows to subset the mif object into compartments.

@@ -364,12 +364,11 @@ ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
 }
 
 
-
-#' Calculate Bivariate Count Based Measures of Spatial Clustering function for IF data
+#' Bivariate Count Based Measures of Spatial Clustering function for IF data
 #'
 #' @description This function calculates count based Measures (Ripley's K, Besag 
-#'   L, and Marcon's M) of IF data to characterize correlation of spatial point
-#'   process for two markers.
+#'   L, and Marcon's M) of IF data to characterize correlation of the observed and permyted spatial point
+#'   processes for two markers.
 #' @param mif An MIF object
 #' @param mnames Character vector of marker names to estimate degree of 
 #' spatial clustering. Spatial clustering will be computed between each 
@@ -450,17 +449,14 @@ bi_ripleys_k_v2 <- function(mif,
   return(mif)
 }
 
-#' Calculate Nearest Neighbor Based Measures of Spatial Clustering for IF data
+#' Nearest Neighbor Based Measures of Spatial Clustering for IF data
 #'
-#' @description This function computes the nearest neighbor distribution for a 
-#' particular marker.
+#' @description For a given cell type, this function computes proportion of cells 
+#' that have nearest neighbor less than r for the observed and permuted point processes.
 #' @param mif An MIF object
-#' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames Character vector of marker names to estimate degree of 
 #' nearest neighbor distribution
 #' @param r_range Numeric vector of potential r values this range must include 0.
-#' Note that the range selected is very different than count based measures. 
-#' See details. 
 #' @param edge_correction Character value indicating the type of edge correction 
 #'  to use. Options include "rs" or "hans". 
 #' @param num_permutations Numeric value indicating the number of permutations used. 
@@ -515,12 +511,12 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 }
 
 
-#' Calculate Bivariate Nearest Neighbor Based Measures of Spatial Clustering for IF data
+#' Bivariate Nearest Neighbor Based Measures of Spatial Clustering for IF data
 #'
 #' @description This function computes the nearest neighbor distribution for a 
-#' particular marker relative to another marker.
+#' particular marker relative to another marker for the observed and permuted point
+#' processes.
 #' @param mif An MIF object
-#' @param id Character string of variable name for subject ID in TMA data.
 #' @param mnames Character vector of marker names to estimate degree of 
 #' nearest neighbor distribution
 #' @param r_range Numeric vector of potential r values this range must include 0.

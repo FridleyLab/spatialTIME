@@ -2,7 +2,7 @@
 % Please edit documentation in R/ripleys_k.R
 \name{bi_NN_G}
 \alias{bi_NN_G}
-\title{Calculate Bivariate Nearest Neighbor Based Measures of Spatial Clustering for IF data}
+\title{Bivariate Nearest Neighbor Based Measures of Spatial Clustering for IF data}
 \usage{
 bi_NN_G(
   mif,
@@ -43,8 +43,6 @@ be a data.frame with the desired combinations.}
 
 \item{overwrite}{Logical value determining if you want the results to replace the
 current output (TRUE) or be to be appended (FALSE).}
-
-\item{id}{Character string of variable name for subject ID in TMA data.}
 }
 \value{
 Returns a data frame
@@ -61,5 +59,6 @@ reference is the theoretical estimate of CSR}
 }
 \description{
 This function computes the nearest neighbor distribution for a
-particular marker relative to another marker.
+particular marker relative to another marker for the observed and permuted point
+processes.
 }

@@ -8,7 +8,7 @@
 #' @param classifier Column name for spatial dataframe to subset
 #' @param level Determines which level of the classifier to keep.
 #' 
-#' @return mif object
+#' @return mif object where the spatial list only as the cell that are the specified level.
 #'    
 #' @export
 #'
