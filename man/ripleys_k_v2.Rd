@@ -12,7 +12,8 @@ ripleys_k_v2(
   edge_correction = "translation",
   method = "K",
   keep_perm_dis = FALSE,
-  workers = 1
+  workers = 1,
+  overwrite = FALSE
 )
 }
 \arguments{
@@ -37,6 +38,9 @@ found in Details section.}
 distribution of permuted K values}
 
 \item{workers}{Integer value for the number of workers to spawn}
+
+\item{overwrite}{Logical value determining if you want the results to replace the
+current output (TRUE) or be to be appended (FALSE).}
 }
 \value{
 Returns a data.frame

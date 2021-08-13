@@ -13,7 +13,8 @@ bi_ripleys_k_v2(
   method = "K",
   keep_perm_dis = FALSE,
   exhaustive = TRUE,
-  workers = 1
+  workers = 1,
+  overwrite = FALSE
 )
 }
 \arguments{
@@ -45,6 +46,9 @@ measures will be computed all pairs of unique markers. If FALSE then markers mus
 be a data.frame with the desired combinations.}
 
 \item{workers}{Integer value for the number of workers to spawn}
+
+\item{overwrite}{Logical value determining if you want the results to replace the
+current output (TRUE) or be to be appended (FALSE).}
 }
 \value{
 Returns a data frame

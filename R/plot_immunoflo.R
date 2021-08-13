@@ -18,6 +18,7 @@
 #'    
 #' @export
 #'
+#'
 plot_immunoflo <- function(
   mif,
   plot_title, 
@@ -138,6 +139,8 @@ plot_immunoflo <- function(
     grDevices::dev.off()
   }
   
-  return(plot)
+  mif$derived$spatial_plots = plot
+  
+  return(mif)
   
 }

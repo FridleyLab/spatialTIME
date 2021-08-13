@@ -9,10 +9,10 @@ NN_G(
   mnames,
   r_range = seq(0, 100, 50),
   num_permutations = 50,
-  edge_correction = "translation",
-  method = "rs",
+  edge_correction = "rs",
   keep_perm_dis = FALSE,
-  workers = 1
+  workers = 1,
+  overwrite = FALSE
 )
 }
 \arguments{
@@ -35,6 +35,9 @@ to use. Options include "rs" or "hans".}
 distribution of permuted G values}
 
 \item{workers}{Integer value for the number of workers to spawn}
+
+\item{overwrite}{Logical value determining if you want the results to replace the
+current output (TRUE) or be to be appended (FALSE).}
 
 \item{id}{Character string of variable name for subject ID in TMA data.}
 }

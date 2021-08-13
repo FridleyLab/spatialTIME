@@ -79,63 +79,63 @@ ripleys_k <- function(mif,
   #     mutate('Degree of Clustering' = `Observed K` - `Theoretical CSR`)
   #   
   # } else {
+  
+  estimate_list <- lapply(data, function(data){
     
-    estimate_list <- lapply(data, function(data){
-
-      # update progress bar
-      pb$tick()$print()
-
-      perms <- modelr::permute(data, n = num_permutations, mnames)
-
-      perms_df <- lapply(perms$perm, as.data.frame)
-
-      ripleys_estimates <- lapply(perms_df, function(perm_data){
-        
-        perm_k <- univariate_ripleys_k(perm_data, id, mnames, r_range,
-                                       edge_correction, kestimation, mlabels)
-        
-        perm_k <- dplyr::bind_rows(perm_k)
-
-        return(perm_k)
-
-      })
+    # update progress bar
+    pb$tick()$print()
+    
+    perms <- modelr::permute(data, n = num_permutations, mnames)
+    
+    perms_df <- lapply(perms$perm, as.data.frame)
+    
+    ripleys_estimates <- lapply(perms_df, function(perm_data){
       
-      results_list <- dplyr::bind_rows(ripleys_estimates)
+      perm_k <- univariate_ripleys_k(perm_data, id, mnames, r_range,
+                                     edge_correction, kestimation, mlabels)
       
-      if (keep_perm_dis == TRUE){
-        results_list<- results_list %>% 
-          dplyr::rename('Permuted CSR' = .data$observed_estimate,
-                        'Theoretical CSR' = .data$csr_theoretical) 
-        
-      } else {
-        results_list <- results_list %>% 
-          dplyr::rename(csr_permuted = .data$observed_estimate) %>%
-          dplyr::group_by(.data[[id]], .data$marker, .data$r_value) %>%
-          dplyr::summarise("Permuted CSR" = mean(as.numeric(.data$csr_permuted),
-                                                   na.rm = TRUE),
-                           "Theoretical CSR" = mean(as.numeric(.data$csr_theoretical),
-                                                      na.rm = TRUE)) 
-      }
+      perm_k <- dplyr::bind_rows(perm_k)
       
-      return(results_list)
+      return(perm_k)
       
     })
     
-    #The commented version replaced the sample column with 1,2,3,....
-    #estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
-    estimate_list <- dplyr::bind_rows(estimate_list)
-    observed_list <- purrr::map(data, univariate_ripleys_k, id, mnames,
-                                r_range, edge_correction, kestimation, mlabels)
-    observed_list <- dplyr::bind_rows(observed_list)
+    results_list <- dplyr::bind_rows(ripleys_estimates)
     
-    estimate_list <- estimate_list %>%
-      dplyr::left_join(observed_list %>%
-                         dplyr::select(.data[[id]], .data$marker,
-                                       .data$r_value, .data$observed_estimate) %>%
-                         dplyr::rename(`Observed K` = .data$observed_estimate),
-                       by = c(id, "marker", "r_value")) %>%
-      dplyr::mutate(`Degree of Clustering` = .data$`Observed K` - .data$`Permuted CSR`)
+    if (keep_perm_dis == TRUE){
+      results_list<- results_list %>% 
+        dplyr::rename('Permuted CSR' = .data$observed_estimate,
+                      'Theoretical CSR' = .data$csr_theoretical) 
+      
+    } else {
+      results_list <- results_list %>% 
+        dplyr::rename(csr_permuted = .data$observed_estimate) %>%
+        dplyr::group_by(.data[[id]], .data$marker, .data$r_value) %>%
+        dplyr::summarise("Permuted CSR" = mean(as.numeric(.data$csr_permuted),
+                                               na.rm = TRUE),
+                         "Theoretical CSR" = mean(as.numeric(.data$csr_theoretical),
+                                                  na.rm = TRUE)) 
+    }
     
+    return(results_list)
+    
+  })
+  
+  #The commented version replaced the sample column with 1,2,3,....
+  #estimate_list <- dplyr::bind_rows(estimate_list, .id = "sample")
+  estimate_list <- dplyr::bind_rows(estimate_list)
+  observed_list <- purrr::map(data, univariate_ripleys_k, id, mnames,
+                              r_range, edge_correction, kestimation, mlabels)
+  observed_list <- dplyr::bind_rows(observed_list)
+  
+  estimate_list <- estimate_list %>%
+    dplyr::left_join(observed_list %>%
+                       dplyr::select(.data[[id]], .data$marker,
+                                     .data$r_value, .data$observed_estimate) %>%
+                       dplyr::rename(`Observed K` = .data$observed_estimate),
+                     by = c(id, "marker", "r_value")) %>%
+    dplyr::mutate(`Degree of Clustering` = .data$`Observed K` - .data$`Permuted CSR`)
+  
   #}
   
   return(estimate_list)
@@ -232,66 +232,66 @@ bi_ripleys_k <- function(mif,
   # } else {
   #   
   count = 0
-    estimate_list <- lapply(data, function(data){
-      count <<- count +  1
-      # update progress bar
-      pb$tick()$print()
+  estimate_list <- lapply(data, function(data){
+    count <<- count +  1
+    # update progress bar
+    pb$tick()$print()
+    
+    perms <- modelr::permute(data, n = num_permutations, unique(unlist(mnames)))
+    
+    perms_df <- lapply(perms$perm, as.data.frame)
+    
+    ripleys_estimates <- lapply(perms_df, function(perm_data){
       
-      perms <- modelr::permute(data, n = num_permutations, unique(unlist(mnames)))
+      perm_k <- bivariate_ripleys_k(perm_data, id, mnames, r_range,
+                                    edge_correction, kestimation, mlabels)
       
-      perms_df <- lapply(perms$perm, as.data.frame)
+      perm_k <- dplyr::bind_rows(perm_k)
       
-      ripleys_estimates <- lapply(perms_df, function(perm_data){
-        
-        perm_k <- bivariate_ripleys_k(perm_data, id, mnames, r_range,
-                                       edge_correction, kestimation, mlabels)
-        
-        perm_k <- dplyr::bind_rows(perm_k)
-        
-        return(perm_k)
-        
-      })
-      
-      results_list <- dplyr::bind_rows(ripleys_estimates)
-      
-      if (keep_perm_dis == TRUE){
-        results_list <- results_list %>% 
-          dplyr::rename(`Permuted CSR` = .data$observed_estimate,
-                        `Theoretical CSR` = .data$csr_theoretical) 
-      } else {
-        results_list <- results_list %>% 
-          dplyr::rename(csr_permuted = .data$observed_estimate) %>%
-          dplyr::group_by(.data[[id]], .data$anchor_marker, .data$comparison_marker,
-                          .data$r_value) %>%
-          dplyr::summarise(`Permuted CSR` = mean(as.numeric(.data$csr_permuted),
-                                                 na.rm = TRUE),
-                           `Theoretical CSR` = mean(as.numeric(.data$csr_theoretical),
-                                                    na.rm = TRUE))
-      }
-      # results_list <- plyr::ldply(results_list, data.frame)
-      
-      # results_list <- dplyr::bind_rows(results_list, .id = "V1")
-      
-      return(results_list)
+      return(perm_k)
       
     })
     
-    estimate_list <- dplyr::bind_rows(estimate_list)
+    results_list <- dplyr::bind_rows(ripleys_estimates)
     
-    observed_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
-                                r_range, edge_correction, kestimation,
-                                mlabels) 
-    observed_list <- dplyr::bind_rows(observed_list)
+    if (keep_perm_dis == TRUE){
+      results_list <- results_list %>% 
+        dplyr::rename(`Permuted CSR` = .data$observed_estimate,
+                      `Theoretical CSR` = .data$csr_theoretical) 
+    } else {
+      results_list <- results_list %>% 
+        dplyr::rename(csr_permuted = .data$observed_estimate) %>%
+        dplyr::group_by(.data[[id]], .data$anchor_marker, .data$comparison_marker,
+                        .data$r_value) %>%
+        dplyr::summarise(`Permuted CSR` = mean(as.numeric(.data$csr_permuted),
+                                               na.rm = TRUE),
+                         `Theoretical CSR` = mean(as.numeric(.data$csr_theoretical),
+                                                  na.rm = TRUE))
+    }
+    # results_list <- plyr::ldply(results_list, data.frame)
     
-    estimate_list <- estimate_list %>%
-      dplyr::left_join(observed_list %>% 
-                         dplyr::select(.data[[id]], .data$anchor_marker,
-                                       .data$comparison_marker, .data$r_value,
-                                       .data$observed_estimate) %>% 
-                         dplyr::rename(`Observed K` = .data$observed_estimate),
-                       by = c(id, "anchor_marker", "comparison_marker", "r_value") )%>%
-      dplyr::mutate(`Degree of Clustering` = .data$`Observed K` - .data$`Permuted CSR`)
+    # results_list <- dplyr::bind_rows(results_list, .id = "V1")
     
+    return(results_list)
+    
+  })
+  
+  estimate_list <- dplyr::bind_rows(estimate_list)
+  
+  observed_list <- purrr::map(data, bivariate_ripleys_k, id, mnames, 
+                              r_range, edge_correction, kestimation,
+                              mlabels) 
+  observed_list <- dplyr::bind_rows(observed_list)
+  
+  estimate_list <- estimate_list %>%
+    dplyr::left_join(observed_list %>% 
+                       dplyr::select(.data[[id]], .data$anchor_marker,
+                                     .data$comparison_marker, .data$r_value,
+                                     .data$observed_estimate) %>% 
+                       dplyr::rename(`Observed K` = .data$observed_estimate),
+                     by = c(id, "anchor_marker", "comparison_marker", "r_value") )%>%
+    dplyr::mutate(`Degree of Clustering` = .data$`Observed K` - .data$`Permuted CSR`)
+  
   #}
   
   return(estimate_list)
@@ -319,6 +319,8 @@ bi_ripleys_k <- function(mif,
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted K values
 #' @param workers Integer value for the number of workers to spawn
+#' @param overwrite Logical value determining if you want the results to replace the 
+#' current output (TRUE) or be to be appended (FALSE).
 #'  
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
@@ -334,22 +336,30 @@ bi_ripleys_k <- function(mif,
 
 ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
                         num_permutations = 50, edge_correction = "translation",
-                        method = 'K',keep_perm_dis = FALSE, workers = 1){
+                        method = 'K',keep_perm_dis = FALSE, workers = 1,
+                        overwrite = FALSE){
   require(furrr)
   require(magrittr)
   plan(multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
-  mif$derived$univariate_Count = rbind(mif$derived$univariate_Count,
-                                       future_map(.x = 1:length(data), ~{
-           uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
-                     markers = mnames, id  = id, correction = edge_correction, 
-                     method = method, perm_dist = keep_perm_dis)}, 
-           .options = furrr_options(seed=TRUE), .progress = T,
-           future.globals.maxSize = 10000*1024^2 ) %>%
-             plyr::ldply()
-           
-           )
+  if(overwrite == FALSE){
+    mif$derived$univariate_Count = rbind(mif$derived$univariate_Count,
+                                         future_map(.x = 1:length(data), ~{
+                                           uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
+                                                     markers = mnames, id  = id, correction = edge_correction, 
+                                                     method = method, perm_dist = keep_perm_dis)}, 
+                                           .options = furrr_options(seed=TRUE), .progress = T) %>%
+                                           plyr::ldply()
+    )
+  }else{
+    mif$derived$univariate_Count = future_map(.x = 1:length(data), ~{
+      uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
+                markers = mnames, id  = id, correction = edge_correction, 
+                method = method, perm_dist = keep_perm_dis)}, 
+      .options = furrr_options(seed=TRUE), .progress = T) %>%
+      plyr::ldply()
+  }
   return(mif)
 }
 
@@ -380,6 +390,8 @@ ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
 #' measures will be computed all pairs of unique markers. If FALSE then markers must
 #' be a data.frame with the desired combinations.
 #' @param workers Integer value for the number of workers to spawn
+#' @param overwrite Logical value determining if you want the results to replace the 
+#' current output (TRUE) or be to be appended (FALSE).
 #' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
@@ -395,35 +407,48 @@ ripleys_k_v2 = function(mif, mnames, r_range = seq(0, 100, 50),
 #' @export
 #' 
 bi_ripleys_k_v2 <- function(mif,
-                         mnames, 
-                         r_range = seq(0, 100, 50),
-                         num_permutations = 50,
-                         edge_correction = "translation",
-                         method = 'K',
-                         keep_perm_dis = FALSE,
-                         exhaustive = TRUE,
-                         workers = 1){
+                            mnames, 
+                            r_range = seq(0, 100, 50),
+                            num_permutations = 50,
+                            edge_correction = "translation",
+                            method = 'K',
+                            keep_perm_dis = FALSE,
+                            exhaustive = TRUE,
+                            workers = 1,
+                            overwrite = FALSE){
   require(furrr)
   require(magrittr)
   plan(multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
-  mif$derived$bivariate_Count = rbind( mif$derived$bivariate_Count,
-                                       furrr::future_map(.x = 1:length(data),
-                   ~{
-                     bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
-                              markers = mnames, id  = id, r = r_range,
-                              correction = edge_correction, method = method, 
-                              perm_dist = keep_perm_dis,
-                              exhaustive = exhaustive) %>%
-                       data.frame(check.names = FALSE)
-                     }, .options = furrr_options(seed=TRUE), .progress = T,
-                   future.globals.maxSize = 10000*1024^2 ) %>%
-                     plyr::ldply()
-                   
-  )
-  return(mif)
+  if(overwrite == FALSE){
+    mif$derived$bivariate_Count = rbind( mif$derived$bivariate_Count,
+                                         furrr::future_map(.x = 1:length(data),
+                                                           ~{
+                                                             bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
+                                                                      markers = mnames, id  = id, r = r_range,
+                                                                      correction = edge_correction, method = method, 
+                                                                      perm_dist = keep_perm_dis,
+                                                                      exhaustive = exhaustive) %>%
+                                                               data.frame(check.names = FALSE)
+                                                           }, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                                           plyr::ldply()
+                                         
+    )
+  }else{
+    mif$derived$bivariate_Count = furrr::future_map(.x = 1:length(data),
+                                                    ~{
+                                                      bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
+                                                               markers = mnames, id  = id, r = r_range,
+                                                               correction = edge_correction, method = method, 
+                                                               perm_dist = keep_perm_dis,
+                                                               exhaustive = exhaustive) %>%
+                                                        data.frame(check.names = FALSE)
+                                                    }, .options = furrr_options(seed=TRUE), .progress = T) %>%
+      plyr::ldply()
   }
+  return(mif)
+}
 
 #' Calculate Nearest Neighbor Based Measures of Spatial Clustering for IF data
 #'
@@ -443,7 +468,8 @@ bi_ripleys_k_v2 <- function(mif,
 #' @param keep_perm_dis Logical value determining whether or not to keep the full 
 #'  distribution of permuted G values
 #' @param workers Integer value for the number of workers to spawn
-
+#' @param overwrite Logical value determining if you want the results to replace the 
+#' current output (TRUE) or be to be appended (FALSE).
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
 #'    \item{Permuted CSR}{Average observed G for the permuted point 
@@ -456,25 +482,35 @@ bi_ripleys_k_v2 <- function(mif,
 #' @export
 #'
 NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
-                        num_permutations = 50, edge_correction = "translation",
-                        method = 'rs',keep_perm_dis = FALSE,
-                workers = 1){
+                num_permutations = 50, edge_correction = "rs",
+                keep_perm_dis = FALSE, workers = 1,
+                overwrite = FALSE){
   require(furrr)
   require(magrittr)
   plan(multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
-  mif$derived$univariate_NN = rbind(mif$derived$univariate_NN ,
-                                    future_map(.x = 1:length(data),
-             ~{
-               uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
-                        markers = mnames,  id  = id, 
-                        correction = 'rs', r = r_range,
-                        perm_dist = keep_perm_dis)}, 
-             .options = furrr_options(seed=TRUE), .progress = T,
-             future.globals.maxSize = 10000*1024^2 ) %>%
-               plyr::ldply()
-  )
+  if(overwrite == FALSE){
+    mif$derived$univariate_NN = rbind(mif$derived$univariate_NN ,
+                                      future_map(.x = 1:length(data),
+                                                 ~{
+                                                   uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
+                                                            markers = mnames,  id  = id, 
+                                                            correction = edge_correction, r = r_range,
+                                                            perm_dist = keep_perm_dis)}, 
+                                                 .options = furrr_options(seed=TRUE), .progress = T) %>%
+                                        plyr::ldply()
+    )
+  }else{
+    mif$derived$univariate_NN = future_map(.x = 1:length(data),
+                                           ~{
+                                             uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
+                                                      markers = mnames,  id  = id, 
+                                                      correction = edge_correction, r = r_range,
+                                                      perm_dist = keep_perm_dis)}, 
+                                           .options = furrr_options(seed=TRUE), .progress = T) %>%
+      plyr::ldply()
+  }
   return(mif)
 }
 
@@ -500,6 +536,8 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' measures will be computed all pairs of unique markers. If FALSE then markers must
 #' be a data.frame with the desired combinations.
 #' @param workers Integer value for the number of workers to spawn
+#' @param overwrite Logical value determining if you want the results to replace the 
+#' current output (TRUE) or be to be appended (FALSE).
 #' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
@@ -517,26 +555,40 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                    num_permutations = 50, edge_correction = "rs",
                    keep_perm_dis = FALSE, exhaustive = TRUE,
-                   workers = 1){
+                   workers = 1, overwrite = FALSE){
   require(furrr)
   require(magrittr)
   plan(multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
-mif$derived$bivariate_NN = rbind(mif$derived$bivariate_NN,
-                                 future_map(.x = 1:length(data),
-                                        ~{
-                   bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 
-                                  markers = mnames, r = r_range, id  = id, 
-                                  correction = edge_correction,
-                                  perm_dist = keep_perm_dis,
-                                  exhaustive) %>%
-                     data.frame(check.names = FALSE)}, 
-                   .options = furrr_options(seed=TRUE), 
-                   .progress = T, 
-                   future.globals.maxSize = 10000*1024^2 
-                  ) %>%
-                     plyr::ldply()
-                   )
-return(mif)
+  if(overwrite == FALSE){
+    mif$derived$bivariate_NN = rbind(mif$derived$bivariate_NN,
+                                     future_map(.x = 1:length(data),
+                                                ~{
+                                                  bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 
+                                                                 markers = mnames, r = r_range, id  = id, 
+                                                                 correction = edge_correction,
+                                                                 perm_dist = keep_perm_dis,
+                                                                 exhaustive) %>%
+                                                    data.frame(check.names = FALSE)}, 
+                                                .options = furrr_options(seed=TRUE), 
+                                                .progress = T
+                                     ) %>%
+                                       plyr::ldply()
+    )
+  }else{
+    mif$derived$bivariate_NN = future_map(.x = 1:length(data),
+                                          ~{
+                                            bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 
+                                                           markers = mnames, r = r_range, id  = id, 
+                                                           correction = edge_correction,
+                                                           perm_dist = keep_perm_dis,
+                                                           exhaustive) %>%
+                                              data.frame(check.names = FALSE)}, 
+                                          .options = furrr_options(seed=TRUE), 
+                                          .progress = T
+    ) %>% plyr::ldply()
+  }
+  
+  return(mif)
 }

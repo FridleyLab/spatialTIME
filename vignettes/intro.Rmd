@@ -24,20 +24,32 @@ knitr::opts_chunk$set(
 )
 library(spatialTIME)
 library(tidyverse)
+library(viridis)
 ```
+
+# Background for Tissue Microarray (TMA) Data 
+
+A tissue microarray is an array of samples which are obtained by taking a slice of a biopsied FFPE tumor. Each individual slice is reffered to as a core. Each core is placed on a TMA and is then stained with multiple antibodies and fluorphores which illuminate when a laser is shined at them with varying wavelengths. The intensity is measured and then a random forest algorithm is used to classify the cells as being positive for a particular marker which allows us to phenotype cells. A schematic of this process is provided in [Figure 1](https://www.mdpi.com/2072-6694/13/12/3031).    
 
 # Create Multiplex ImmunoFlourescent (mif) object 
 
 spatialTIME functions use a custom mif object which can be created using `create_mif`. The mif object has 6 slots storing the: 
 
-* Clinical data,
-* Sample summary data,
-* Spatial list (1 per each core),
+* Clinical data which must contain
+  - a column whose column name matches on in the sample dataset.
+* Sample summary data included counts/percentages of each positive cells for each single or combination of markers and total number of cells for each core. In order to use `create_mif` function this table must contain  
+  - a column whose column name matches on in the clinical dataset, and
+  - a column whose column name matches on in the spatial list.
+* Spatial list (1 per each core)
+  - This object should be a list object where each element of the list corresponds to a core and each element should be a  $n\times p$ dataframe ($n$ = number of cells)  containing
+    1. a column name that matches a column name for the sample file, (For merging and potential downstream analysis linking to clinical variables),
+    2. XMin, XMax, YMin, and YMax which defines the area that a cell occupies which is eventually used to assign a location for each cell with is the x-position being the mean of the XMin and XMax and y-position being the mean of the YMin and YMax, and 
+    3. a set of columns that indicate whether a cell is positive to one or multiple markers.
 * patient id (column name used to merge clinical and summary data)
 * sample_id (column name used to merge the statial and summary data)
 * derived where all of the plots and spatial clustering measures are stored
 
-
+We include one example of clinical and sample datasets which have a total of 229 patients with one cores. Out of those 229 samples. only 5 are included in our package.  
 
 ```{r, create}
 
@@ -46,132 +58,177 @@ x <- create_mif(clinical_data = example_clinical,
                 spatial_list = example_spatial,
                 patient_id = "deidentified_id", 
                 sample_id = "deidentified_sample")
-x
+
+x #prints a summary of how many patients, samples, and spatial files are present
 
 ```
 
-A summary of the mif object is called upon calling this object which shows how many rows are in the clinical and summary files, and how many samples are included in the spatial_list. Chris fix
+
 # Plotting Cores
 
 An individual plot for each core (each sample) is created. 
 Plots can be assigned to an R object, such as within the empty `derived` 
 slot and printed to a PDF if a file name is provided. 
 
-When studying phenotype and individual markers, note that it is important to have the individual before the phenotype markers. This will ensure that the phenotyes that are derived by multiple marers are not plotted over by the individual marker. For instance, below the the first plot appears to have no cyctotoxic T cells (CD3+ and CD8+), but then the order is changed we see the cyctotoxic T cells.
+When studying phenotype and individual markers, note that it is important to have the individual before the phenotype markers. This will ensure that the phenotype that are derived by multiple marers are not plotted over by the individual marker. For instance, below the the first plot appears to have no cyctotoxic T cells (CD3+ and CD8+), but then the order is changed we see the cyctotoxic T cells. Moral of the story: Put the marker combinations before the single markers.
 
-```{r, plot_bad, fig.width=10, fig.height=6,fig.align = 'center'}
-mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","FOXP3..Opal.620..Positive", 
-                "CD3..Opal.570..Positive", "CD8..Opal.520..Positive",
+```{r, plot_bad, fig.width=10, fig.height=6,fig.align = 'left', fig.cap='Notice that using the "bad" (B) order that one would have the impression that there is a huge number of CD3+ and would scratch there head over why there are no CD3+ FOXP3+ or CD3+ CD8+. While the "good" (G) order can  better make this distiction as well as show cells that are only positive for CD3 and not postive for FOXP3 or CD8.'}
+mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
+                "CD8..Opal.520..Positive","FOXP3..Opal.620..Positive", 
                 "PDL1..Opal.540..Positive", "PD1..Opal.650..Positive")
 
-mlabels_bad <- c("Cytotoxic T cells", "Treg" ,"FOXP3", "CD3", "CD8", "PDL1", "PD1")
+mlabels_bad <- c("CD3+ CD8+", "CD3+ FOXP3+", "CD3+",
+                 "CD8+", "FOXP3+", "PDL1+", "PD1+")
 
-x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "deidentified_sample", 
-                                                    mnames = mnames_bad, 
-                                                    mlabels = mlabels_bad, 
-                                                    cell_type = "classifier_label")
+# Used to make the legends in both plots below be in same order and use the 
+# same coloring scheme for the purpose making a common legend
 
-x[["derived"]][["spatial_plots"]][[4]]
-```
+values = turbo(length(mlabels_bad))
+names(values) = mlabels_bad
 
-```{r, plot_good, fig.width=10, fig.height=6,fig.align = 'center'}
-mnames_good <- c("FOXP3..Opal.620..Positive", "CD3..Opal.570..Positive",
-                 "CD8..Opal.520..Positive","PDL1..Opal.540..Positive",
+x<- plot_immunoflo(x, plot_title = "deidentified_sample",  mnames = mnames_bad,
+                   mlabels = mlabels_bad, cell_type = "classifier_label")
+
+bad_names <- x[["derived"]][["spatial_plots"]][[4]] + 
+  theme(legend.position = 'bottom') + 
+  scale_color_manual(breaks = mlabels_bad, values = values)
+
+mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
+                 "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
 
-mlabels_good <- c("FOXP3", "CD3", "CD8", "PDL1", "PD1","Cytotoxic T cells", "Treg")
+mlabels_good <- c("CD3+", "CD8+", "FOXP3+","PDL1+", 
+                  "PD1+", "CD3+ CD8+", "CD3+ FOXP3+")
+
+x <- plot_immunoflo(x, plot_title = "deidentified_sample", mnames = mnames_good, 
+                    mlabels = mlabels_good, cell_type = "classifier_label")
+
+good_names <- x[["derived"]][["spatial_plots"]][[4]] + 
+  theme(legend.position = 'bottom') + 
+  scale_color_manual(breaks = mlabels_good, 
+                     values = values[match(mlabels_good, names(values))])
+
+x$sample %>% filter(deidentified_sample == 'TMA3_[9,K].tif') %>% select(c(2, 4:15)) %>%
+  pivot_longer(cols = 2:13, names_to = 'Marker', values_to = 'Count')
+
+ggpubr::ggarrange(plotlist = list(bad_names, good_names), labels = c('B', 'G'),
+                  common.legend = TRUE, legend = 'bottom')
 
 
-x[["derived"]][["spatial_plots"]] <- plot_immunoflo(x, plot_title = "deidentified_sample", 
-                                                    mnames = mnames_good, 
-                                                    mlabels = mlabels_good, 
-                                                    cell_type = "classifier_label")
 
-x[["derived"]][["spatial_plots"]][[4]]
 ```
-
 # Estimating the degree of spatial clustering with Count Based Methods
 
 ## Univariate
 
-Ripley's $K$ measures the average number of neighboring cells across each cell, that is the average number of cells within a specified radius of a cell. Ripley's $K$ is computed as follows:
+### Count Based Methods
 
-$$K(r) = \frac{1}{n}\sum_{i=1}^{n}w_{ij}{\bf 1}_{(d(x_i,x_j)\le r)},$$
+Ripley's $K$ measures the average number of neighboring cells across each cell, that is the average (over all cells) number of cells within a specified radius of a cell. Ripley's $K$ is computed as follows:
 
-where $r$ is the specified radius, $d(x_i,x_j)$ is the distance between the $i^{th}$ and $j^{th}$ cell, ${\bf 1}_A$ is indicator function of event $A$, and $w_{ij}$ is the weights that are assigned for border corrections. The expected value of $K(r)$ is $\pi r^2$, thus $K$ is expected to grow as a quadratic function of $r$.
+$$\hat{K}(r) = \frac{1}{n}\sum_{i=1}^{n}w_{ij}{\bf 1}{(d(x_i,x_j)\le r)},$$
 
-There are several edge correction, our studies has included a small number of cells and we recommend using the isotropic or transnational edge correction, as opposed to the 'border' edge correction. The main goal of the edge correction is to account for the fact that there are unobserved points outside of the region, and the assumption is that the location of these cells has the same distribution as the study region.An excellent description of these corrections are provided [here](https://book.spatstat.org/sample-chapters/chapter07.pdf)
+where $r$ is the specified radius, $d(x_i,x_j)$ is the distance between the $i^{th}$ and $j^{th}$ cell, ${\bf 1}_A$ is indicator function of event $A$, and $w_{ij}$ is the weights that are assigned for border corrections. The expected value of $\hat{K}(r)$ is $\pi r^2$, thus $\hat{K}$ is expected to grow as a quadratic function of $r$.
 
-Damage can occur to TMAs, due to how they are collect. This damage can lead to rips and tears in the TMA which results in regions where it appears that cells cannot be locations, which is not actually the case. Thus the theoretical estimate for CSR may not be accurate, to address this the cell locations can be permuted and the permutation distribution of $K$ or $L$ is a TMA specific measure of CSR. The `ripleys_k` function reports a permuted and theoretical estimate of CSR, the observed value for $K$ (` kestimation = TRUE`) or $L$ (`kestimation = FALSE`), and the full permutation distribution of $K$ or $L$ if `keep_perm_dis = TRUE`.
+There are several edge correction, our studies has included a small number of cells and we recommend using the isotropic or translational edge correction, as opposed to the 'border' edge correction. The main goal of the edge correction is to account for the fact that there are unobserved points outside of the region, and the assumption is that the location of these cells has the same distribution as the study region.An excellent description of these corrections are provided [here](https://book.spatstat.org/sample-chapters/chapter07.pdf)
 
-Currently, the number of permutations is 1, but this should be increased to at least 100.
+### Distance Based Measures
 
-```{r, ripleys, warning = FALSE, fig.width=13, fig.height=20, fig.align = 'center'}
+The distribution of the nearest neighbor distances, $\hat{G}(r)$ can be studied which is computed by
+
+$$\hat{G}(r) = \frac{1}{n}\sum_{i=1}^{n}{\bf 1}(\min_{j}(\{d(x_i,x_j)\}\le r),$$
+which is interpreted as the proportion of cells whose distance to its nearest neighbor is less than $r$. Notice that there is not a weighting factor for each pair of points as we saw above, the edge correction in these methods, reduced sample (rs) and Hanisch (han), simply have different cell inclusion condition. The reduced sample correction is similar to the border correction for count based methods, where the middle chuck of the area of interest are studed. The Hanisch border correction leaves out points whose $k^{th}$ can not be in the area of interest. For more information about these border correction see the following [article]{https://www.routledgehandbooks.com/pdf/doi/10.1201/b16195-4}.
+
+## Need for Permutations
+
+An underlying assumption used for many spatial clustering metrics is that the cells are randomly distributed across the region, no evidence of clustering or repulsion, and that the cell intensity is constant across the entire region. This assumption is the so-called complete spatial randomness (CSR). Damage can occur to TMAs, due to how they are collect. This damage can lead to rips and tears in the TMA which results in regions where it appears that cells cannot be locations, which is not actually the case. Due to these violations of the CSR assumption, the theoretical estimate for CSR may not be accurate, to address this the cell positivity can be permuted across all observed locations and the permutation distribution of $K$, $L$, $M$, and $G$ is a TMA specific measure of CSR. 
+
+# Implementation
+
+## Univariate Count-Based Methods
+
+The `ripleys_k_v2` function reports a permuted and theoretical estimate of CSR, the observed value for $K$ (`method = 'K'`),  $L$ (`method = L`), or Marcon $M$ (`method = 'M'`), and the full permutation distribution of $K$, $L$, and $M$  of `keep_perm_dis = TRUE`.
+
+Currently, the number of permutations is 10, but this should be increased to at least 100 for a more reliable estimate of the mean.
+
+```{r, ripleys, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 
 x <- ripleys_k_v2(mif = x, mnames = mnames_good, num_permutations = 10,
                edge_correction = 'translation', r = seq(0,100,10),
                keep_perm_dis = FALSE, workers = 1)
 
+# This will keeps the colors in every plot for the remainder of the vignette compatable 
+values = turbo(length(unique(x$derived$univariate_Count$deidentified_sample)))
+names(values) = unique(x$derived$univariate_Count$deidentified_sample)
+
 x$derived$univariate_Count  %>%
   filter(Marker != 'PDL1..Opal.540..Positive') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
   geom_line(aes(color = deidentified_sample), show.legend = FALSE) +
-  facet_wrap(Marker~., scales = 'free') + theme_bw()
+  facet_wrap(Marker~., scales = 'free') + theme_bw() + 
+  scale_color_manual(values = values)
   
 
 ```
 
-Positive values of degree of cluster when using `method = 'K'` and `method = 'L'` indicates evidence of spatial clustering, while neagtive valueas correspond to spatial regularity. On the other hand, if using `method = 'M' then values larger than 1 ocrrespond to clusterng and values less than one correspond to regularity. Also, these values can be interpreted as the the percent difference from spatial clustering, for example if $M=0.5$ that means there is 50% less spatial clustering than expected under CSR.
+Positive values of degree of cluster when using `method = 'K'` and `method = 'L'` indicates evidence of spatial clustering, while neagtive valueas correspond to spatial regularity. On the other hand, if using `method = 'M' then values larger than 1 correspond to clustering and values less than one correspond to regularity. Also, these values can be interpreted as the the percent difference from spatial clustering, for example if $M=0.5$ that means there is 50% less spatial clustering than expected under CSR.
 
-## Bivariate
+## Bivariate Count-Based Methods
 
 In the univariate case, we consider each cell of a single cell type and center circles around each cell (reference cell). In the bivariate case, we are interested in how many cells of Type 1 (Counted) are clustered in proximity to Type 2 (Anchor). Here the circles are centered around cell of Type 2 and then the cells of Type 1 are counted.
 
-```{r,fig.width=13, fig.height=20, fig.align = 'center'}
+```{r,fig.width=10, fig.height=6, fig.align = 'center'}
 x <- bi_ripleys_k_v2(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), num_permutations = 10,
                edge_correction = 'translation', r = seq(0,100,10),
                keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE)
 
 x$derived$bivariate_Count  %>%
+  filter(anchor == 'CD3..FOXP3.') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
   geom_line(aes(color = deidentified_sample), show.legend = FALSE) +
-  theme_bw()
+  theme_bw() + scale_color_manual(values = values)
 ```
                
-The interpretation of the degree of clustering is the same here. The green line shows evidence that Tregs tend to cluster around Cytotoxic T cells, while the red line indicates spatial repulsion of Tregs by Cytotoxic T cells. 
+The interpretation of the degree of clustering is the same here. The green line shows evidence that Tregs tend to cluster around Cytotoxic T cells for all values of $r$, while the red line indicates spatial repulsion of Tregs by Cytotoxic T cells for $25\le r\le50$. 
 
 
-# Estimating the degree of spatial clustering with Count Based Methods
+## Univariate Nearest-Neighbor Methods
 
-## Univariate
+The `NN_G` function reports a permuted and theoretical estimate of CSR, the observed value for $G$, and the full permutation distribution of $G$ of `keep_perm_dis = TRUE`. The degree of clustering is computed by taking the ratio of the observed $G$ and either the permutation or theoretical estimate of CSR.
 
-Another way to characterize the spatial clustering of a spatial point process is the to stidy the distance between a cell and its nearest neighbor as opposed to studying the number of cells in a particular space. Typically, we summarize the nearest neighbor distribution to the an exponential distribution or the empty space function (Fest in spatstat package). However, to combat the potential damage to each TMA core, we permute the positive and negative labels for each cell type and compute the nearest neighbor distribution repeatedly. Here the degree of spatial clustering of 2 would correspond the a cell type being twice as likely to have a cell with nearest neight less than a particular distance.
+Currently, the number of permutations is 10, but this should be increased to at least 100 for a more reliable estimate of the mean.
 
-```{r, NN, warning = FALSE, fig.width=13, fig.height=20, fig.align = 'center'}
+```{r, NN, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 
 x <- NN_G(mif = x, mnames = mnames_good, num_permutations = 10,
-               edge_correction = 'rs', r = seq(0,100,10),
-               keep_perm_dis = FALSE, workers = 1)
+                edge_correction = 'rs', r = seq(0,100,10),
+                keep_perm_dis = FALSE, workers = 1)
 
 x$derived$univariate_NN  %>%
   filter(Marker != 'PDL1..Opal.540..Positive') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
   geom_line(aes(color = deidentified_sample), show.legend = FALSE) +
-  facet_wrap(Marker~., scales = 'free') + theme_bw()
+  facet_wrap(Marker~., scales = 'free') + theme_bw() + 
+  scale_color_manual(values = values)
   
 
 ```
 
-## Bivariate
+The interpretation of the degree of clustering for $G$ that values larger than 1 indicate more clustering than expected and values less than 1 are evidence of repulsion. 
 
-The interpretation of the bivariate nearest neighbor distribution is similar to bivariate Ripley's K, in that we are measuring the degree of clustering of one cell type with respect to another. THe actual value of degree of clustering is interpreted in the same manner at the univariate nearest neighbor diatributon. 
 
-```{r,fig.width=13, fig.height=20, fig.align = 'center'}
+## Bivariate Nearest-Neighbor Methods
+
+The interpretation of the bivariate nearest neighbor distribution is similar to bivariate Ripley's K, in that we are measuring the degree of clustering of one cell type with respect to another. THe actual value of degree of clustering is interpreted in the same manner at the univariate nearest neighbor distribution. 
+
+```{r,fig.width=10, fig.height=6, fig.align = 'center'}
 x <- bi_NN_G(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), num_permutations = 10,
                edge_correction = 'rs', r = seq(0,100,10),
-               keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE)
+               keep_perm_dis = FALSE, workers = 1)
 
 x$derived$bivariate_NN  %>%
+  filter(anchor == 'CD3..FOXP3.') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
   geom_line(aes(color = deidentified_sample), show.legend = FALSE) +
-  theme_bw()
+  theme_bw() +  scale_color_manual(values = values)
+```
+
