@@ -29,25 +29,28 @@ library(viridis)
 
 # Background for Tissue Microarray (TMA) Data 
 
-A tissue microarray is an array of samples which are obtained by taking a slice of a biopsied FFPE tumor. Each individual slice is reffered to as a core. Each core is placed on a TMA and is then stained with multiple antibodies and fluorphores which illuminate when a laser is shined at them with varying wavelengths. The intensity is measured and then a random forest algorithm is used to classify the cells as being positive for a particular marker which allows us to phenotype cells. A schematic of this process is provided in [Figure 1](https://www.mdpi.com/2072-6694/13/12/3031).    
+A tissue microarray (TMA) is an array of samples which are obtained by taking a slice of a biopsied FFPE tumor. Each individual slice is referred to as a core. Each core is placed on a TMA and is then stained with multiple antibodies and fluorophores which illuminate when a laser is shined at them with varying wavelengths. The intensity is measured and then a random forest algorithm is used to classify the cells as being positive for a particular marker which allows us to phenotype cells. A schematic of this process is provided in [Figure 1](https://www.mdpi.com/2072-6694/13/12/3031).    
 
 # Create Multiplex ImmunoFlourescent (mif) object 
 
 spatialTIME functions use a custom mif object which can be created using `create_mif`. The mif object has 6 slots storing the: 
 
-* Clinical data which must contain
+* Clinical data which must contain:
   - a column whose column name matches on in the sample dataset.
-* Sample summary data included counts/percentages of each positive cells for each single or combination of markers and total number of cells for each core. In order to use `create_mif` function this table must contain  
+* Sample summary data included counts/percentages of each positive cells for each single or combination of markers and total number of cells for each core. In order to use `create_mif` function this table must contain:
   - a column whose column name matches on in the clinical dataset, and
   - a column whose column name matches on in the spatial list.
-* Spatial list (1 per each core)
-  - This object should be a list object where each element of the list corresponds to a core and each element should be a  $n\times p$ dataframe ($n$ = number of cells)  containing
-    1. a column name that matches a column name for the sample file, (For merging and potential downstream analysis linking to clinical variables),
+* Spatial list (1 per each core):
+  - This object should be a list object where each element of the list corresponds to a core and each element should be a  $n\times p$ dataframe ($n$ = number of cells)  containing:
+    1. a column name that matches a column name for the sample file (for merging and potential downstream analysis linking to clinical variables),
     2. XMin, XMax, YMin, and YMax which defines the area that a cell occupies which is eventually used to assign a location for each cell with is the x-position being the mean of the XMin and XMax and y-position being the mean of the YMin and YMax, and 
     3. a set of columns that indicate whether a cell is positive to one or multiple markers.
-* patient id (column name used to merge clinical and summary data)
-* sample_id (column name used to merge the statial and summary data)
-* derived where all of the plots and spatial clustering measures are stored
+* patient id:
+  - a column name used to merge clinical and summary data
+* sample_id:
+  - a column name used to merge the spatial and summary data
+* derived:
+  - where all of the plots and spatial clustering measures are stored
 
 We include one example of clinical and sample datasets which have a total of 229 patients with one cores. Out of those 229 samples. only 5 are included in our package.  
 
@@ -70,7 +73,7 @@ An individual plot for each core (each sample) is created.
 Plots can be assigned to an R object, such as within the empty `derived` 
 slot and printed to a PDF if a file name is provided. 
 
-When studying phenotype and individual markers, note that it is important to have the individual before the phenotype markers. This will ensure that the phenotype that are derived by multiple marers are not plotted over by the individual marker. For instance, below the the first plot appears to have no cyctotoxic T cells (CD3+ and CD8+), but then the order is changed we see the cyctotoxic T cells. Moral of the story: Put the marker combinations before the single markers.
+When studying phenotype and individual markers, note that it is important to have the individual before the phenotype markers. This will ensure that the phenotype that are derived by multiple markers are not plotted over by the individual marker. For instance, below the the first plot appears to have no cyctotoxic T cells (CD3+ and CD8+), but then the order is changed we see the cyctotoxic T cells. Moral of the story: Put the marker combinations before the single markers.
 
 ```{r, plot_bad, fig.width=10, fig.height=6,fig.align = 'left', fig.cap='Notice that using the "bad" (B) order that one would have the impression that there is a huge number of CD3+ and would scratch there head over why there are no CD3+ FOXP3+ or CD3+ CD8+. While the "good" (G) order can  better make this distiction as well as show cells that are only positive for CD3 and not postive for FOXP3 or CD8.'}
 mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
@@ -83,6 +86,7 @@ mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
 values = turbo(length(mnames_bad))
 names(values) = mnames_bad
 
+#add an element in the `derived` object position
 x<- plot_immunoflo(x, plot_title = "deidentified_sample",  mnames = mnames_bad,
                    cell_type = "Classifier.Label")
 
