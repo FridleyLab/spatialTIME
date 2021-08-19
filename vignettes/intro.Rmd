@@ -127,14 +127,15 @@ $$\hat{K}(r) = \frac{1}{n}\sum_{i=1}^{n}w_{ij}{\bf 1}{(d(x_i,x_j)\le r)},$$
 
 where $r$ is the specified radius, $d(x_i,x_j)$ is the distance between the $i^{th}$ and $j^{th}$ cell, ${\bf 1}_A$ is indicator function of event $A$, and $w_{ij}$ is the weights that are assigned for border corrections. The expected value of $\hat{K}(r)$ is $\pi r^2$, thus $\hat{K}$ is expected to grow as a quadratic function of $r$.
 
-There are several edge correction, our studies has included a small number of cells and we recommend using the isotropic or translational edge correction, as opposed to the 'border' edge correction. The main goal of the edge correction is to account for the fact that there are unobserved points outside of the region, and the assumption is that the location of these cells has the same distribution as the study region.An excellent description of these corrections are provided [here](https://book.spatstat.org/sample-chapters/chapter07.pdf)
+There are several edge corrections. Our studies have included a small number of cells and we recommend using the 'isotropic' or 'translational' edge correction, as opposed to the 'border' edge correction. The main goal of the edge correction is to account for the fact that there are unobserved points outside of the region, and the assumption is that the location of these cells has the same distribution as the study region. An excellent description of these corrections are provided [here](https://book.spatstat.org/sample-chapters/chapter07.pdf).
 
 ### Distance Based Measures
 
-The distribution of the nearest neighbor distances, $\hat{G}(r)$ can be studied which is computed by
+The distribution of the nearest neighbor distances, $\hat{G}(r)$, can be studied and is computed by
 
 $$\hat{G}(r) = \frac{1}{n}\sum_{i=1}^{n}{\bf 1}(\min_{j}(\{d(x_i,x_j)\}\le r),$$
-which is interpreted as the proportion of cells whose distance to its nearest neighbor is less than $r$. Notice that there is not a weighting factor for each pair of points as we saw above, the edge correction in these methods, reduced sample (rs) and Hanisch (han), simply have different cell inclusion condition. The reduced sample correction is similar to the border correction for count based methods, where the middle chuck of the area of interest are studed. The Hanisch border correction leaves out points whose $k^{th}$ can not be in the area of interest. For more information about these border correction see the following [article]{https://www.routledgehandbooks.com/pdf/doi/10.1201/b16195-4}.
+
+which is interpreted as the proportion of cells whose distance to its nearest neighbor is less than $r$. Notice that there is not a weighting factor for each pair of points as we saw above. The edge correction in these methods, reduced sample (rs) and Hanisch (han), simply have different cell inclusion conditions. The reduced sample correction is similar to the border correction for count based methods, where the middle chuck of the area of interest are studied. The Hanisch border correction leaves out points whose $k^{th}$ can not be in the area of interest. For more information about these border correction see the following [article](https://www.routledgehandbooks.com/pdf/doi/10.1201/b16195-4).
 
 ## Need for Permutations
 
