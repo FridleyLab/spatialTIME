@@ -4,9 +4,9 @@ Version: 1.1.0
 Authors@R: 
     c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
-      person("Ram", "Thapa", role = c("aut", "cre"),
+      person("Ram", "Thapa", role = c("aut"),
              email = "ram.thapa@moffitt.org"),
-      person(given = "Christopher", family = "Wilson", role = "ctb",
+      person(given = "Christopher", family = "Wilson", role = "cre",
              email = "christopher.wilson@moffitt.org"))
 Description: A package for visualizing and analyzing Vectra Immunoflourescent
     data. Options for calculating both the univariate and bivariate Ripley's K
