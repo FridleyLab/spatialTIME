@@ -449,15 +449,17 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
   
   if(!perm_dist){
     final = final %>% 
-      dplyr::group_by(Marker, r) %>%
-      dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`, na.rm = TRUE),
-                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]], na.rm = TRUE),
-                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]], na.rm = TRUE),
-                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`, na.rm = TRUE),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, na.rm = TRUE)
-                )
+      dplyr::mutate(id = get(id)) %>%
+      dplyr::select(-(1:2)) %>%
+      dplyr::group_by(id,Marker, r) %>%
+      #dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`, na.rm = TRUE),
+      #          `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]], na.rm = TRUE),
+      #          `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]], na.rm = TRUE),
+      #          `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`, na.rm = TRUE),
+      #          `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, na.rm = TRUE)
+      #          )
+      dplyr::summarize_all(~mean(., na.rm = TRUE))
   }
-  final = cbind(id = data[[id]][1], final %>% dplyr::ungroup())
   colnames(final)[1] = id
   return(final)
 }
@@ -612,18 +614,20 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
   
   if(!perm_dist){
     final = final %>% 
-      dplyr::group_by(anchor, counted, r) %>%
-      dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`),
-                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
-                                      na.rm = TRUE),
-                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
-                                  na.rm = TRUE),
-                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
-                                                          na.rm = TRUE),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
-                na.rm = TRUE))
+      dplyr::mutate(id = get(id)) %>%
+      dplyr::select(-c(1,2)) %>%
+      dplyr::group_by(id, anchor, counted, r) %>%
+      #dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`),
+      #          `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
+      #                                na.rm = TRUE),
+      #          `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
+      #                            na.rm = TRUE),
+      #          `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
+      #                                                    na.rm = TRUE),
+      #          `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
+      #          na.rm = TRUE))
+      dplyr::summarize_all(~mean(.,na.rm = TRUE))
   }
-  final = cbind(id = data[[id]][1],final)
   colnames(final)[1] = id
   return(final)
 }
@@ -715,23 +719,24 @@ uni_NN_G = function(data, markers, id, num_iters, correction,
   if(!perm_dist){
     final = final %>% 
       dplyr::mutate(id = .data[[id]]) %>%
+      dplyr::select(-1) %>%
       dplyr::group_by(id, Marker, r) %>%
-      dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`,na.rm = TRUE),
-                       `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
-                                             na.rm = TRUE),
-                       `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
-                                         na.rm = TRUE),
-                       `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
-                                                                 na.rm = TRUE),
-                       `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
-                                                                  na.rm = TRUE))
+      #dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`,na.rm = TRUE),
+      #                 `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
+      #                                       na.rm = TRUE),
+      #                 `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
+      #                                   na.rm = TRUE),
+      #                 `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
+      #                                                           na.rm = TRUE),
+      #                 `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
+      #                                                            na.rm = TRUE))
+      dplyr::summarize_all(~mean(.,na.rm = TRUE))
     colnames(final)[1] = id
   }
   
   
   return(final) 
 }
-
 
 bi_G = function(data, mark_pair, r, correction, id, iter, win){
   mark_pair = unname(mark_pair)
@@ -846,16 +851,19 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   if(!perm_dist){
     final = final %>% 
       dplyr::mutate(id = .data[[id]]) %>%
+      dplyr::select(-c(1,2)) %>%
       dplyr::group_by(id, anchor, counted, r) %>%
-      dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`,na.rm = TRUE),
-                `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
-                                      na.rm = TRUE),
-                `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
-                                  na.rm = TRUE),
-                `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
-                                                          na.rm = TRUE),
-                `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
-                                                           na.rm = TRUE))
+      #dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`,na.rm = TRUE),
+      #          `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
+      #                                na.rm = TRUE),
+      #          `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
+      #                            na.rm = TRUE),
+      #          `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
+      #                                                    na.rm = TRUE),
+      #          `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
+      #                                                     na.rm = TRUE))
+      dplyr::summarize_all(~mean(.,na.rm = TRUE))
+
     colnames(final)[1] = id
   }
   
