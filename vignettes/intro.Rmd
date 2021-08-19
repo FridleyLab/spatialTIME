@@ -200,7 +200,7 @@ x <- NN_G(mif = x, mnames = mnames_good, num_permutations = 10,
 x$derived$univariate_NN  %>%
   filter(Marker != 'PDL1..Opal.540..Positive') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
-  geom_line(aes(color = deidentified_sample), show.legend = FALSE) +
+  geom_line(aes(color = deidentified_sample)) +
   facet_wrap(Marker~., scales = 'free') + theme_bw() + 
   scale_color_manual(values = values)
   

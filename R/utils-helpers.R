@@ -442,8 +442,7 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
   }
   
   if(method == 'K'){
-    final = final %>% dplyr::mutate_at(c("Theoretical CSR","Permuted K","Observed K"),
-                                ~sqrt(./pi)) %>%
+    final = final %>% 
       dplyr::mutate('Degree of Clustering Permutation' = `Observed K` - `Permuted K`,
              'Degree of Clustering Theoretical' = `Observed K` - `Theoretical CSR`)
   }
@@ -606,8 +605,7 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
   }
   
   if(method == 'K'){
-    final = final %>% dplyr::mutate_at(c("Theoretical CSR","Permuted K","Observed K"),
-                                ~sqrt(./pi)) %>%
+    final = final %>%
       dplyr::mutate('Degree of Clustering Permutation' = `Observed K` - `Permuted K`,
              'Degree of Clustering Theoretical' = `Observed K` - `Theoretical CSR`)
   }
@@ -710,8 +708,8 @@ uni_NN_G = function(data, markers, id, num_iters, correction,
   
   final = suppressMessages(dplyr::left_join(perms, obs)) %>%
     dplyr::mutate(
-      `Degree of Clustering Theoretical` = (`Observed`) / (`Theoretical CSR`),
-      `Degree of Clustering Permutation` = (`Observed`) / (`Permuted CSR`)) %>%
+      `Degree of Clustering Theoretical` = (`Observed`) - (`Theoretical CSR`),
+      `Degree of Clustering Permutation` = (`Observed`) - (`Permuted CSR`)) %>%
     dplyr::select(-iter)
   
   if(!perm_dist){
@@ -842,8 +840,8 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   colnames(obs)[c(1,5,6)] = c(id, 'Theoretical CSR', 'Observed G')
   
   final = suppressMessages(dplyr::left_join(perm, obs)) %>%
-    dplyr::mutate(`Degree of Clustering Permutation` = ifelse(`Permuted G` == 0, NA, (`Observed G`)/(`Permuted G`)),
-           `Degree of Clustering Theoretical` = ifelse(`Theoretical CSR` == 0, NA, (`Observed G`)/(`Theoretical CSR`)))
+    dplyr::mutate(`Degree of Clustering Permutation` = ifelse(`Permuted G` == 0, NA, (`Observed G`)-(`Permuted G`)),
+           `Degree of Clustering Theoretical` = ifelse(`Theoretical CSR` == 0, NA, (`Observed G`)-(`Theoretical CSR`)))
   
   if(!perm_dist){
     final = final %>% 
