@@ -2,53 +2,59 @@
 % Please edit documentation in R/ripleys_k.R
 \name{ripleys_k}
 \alias{ripleys_k}
-\title{Calculate Univariate Ripley's K function for IF data}
+\title{Calculate Count Based Measures of Spatial Clustering for IF data}
 \usage{
 ripleys_k(
   mif,
-  id,
   mnames,
   r_range = seq(0, 100, 50),
   num_permutations = 50,
   edge_correction = "translation",
-  kestimation = TRUE,
+  method = "K",
   keep_perm_dis = FALSE,
-  mlabels = NULL
+  workers = 1,
+  overwrite = FALSE
 )
 }
 \arguments{
 \item{mif}{An MIF object}
 
-\item{id}{Character string of variable name for subject ID in TMA data.}
+\item{mnames}{Character vector of marker names to estimate degree of
+spatial clustering.}
 
-\item{mnames}{Character vector of marker names to calculate Ripley's K on.}
-
-\item{r_range}{Numeric vector of potential r values to estimate K at.}
+\item{r_range}{Numeric vector of potential r values this range must include 0.}
 
 \item{num_permutations}{Numeric value indicating the number of permutations used.
 Default is 50.}
 
 \item{edge_correction}{Character value indicating the type of edge correction
-to use. Options include "translation", "isotropic" or "border".
-Various edges corrections are most appropriate in different settings. Default
-is "translation".}
+to use. Options include "translation" or "isotropic".}
 
-\item{kestimation}{Logical value determining the type estimation performed.
-TRUE estimates Ripley's reduced second moment function while FALSE
-estimates Besags's transformation of Ripley's K.}
+\item{method}{Character value indicating which measure (K, L, M) used to
+estimate the degree of spatial clustering. Description of the methods can be
+found in Details section.}
 
 \item{keep_perm_dis}{Logical value determining whether or not to keep the full
 distribution of permuted K values}
 
-\item{mlabels}{Character vector of label for marker names to display in the marker column.}
+\item{workers}{Integer value for the number of workers to spawn}
+
+\item{overwrite}{Logical value determining if you want the results to replace the
+current output (TRUE) or be to be appended (FALSE).}
 }
 \value{
-Returns a list
-\item{r}{Subject ID in TMA data}
-\item{theo}{Ripley's K estimate using translation edge correction}
+Returns a data.frame
+\item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
+\item{Permuted CSR}{Average observed K, L, or M for the permuted point
+process}
+\item{Observed}{Observed valuefor the observed point process}
+\item{Degree of Clustering Permuted}{Degree of spatial clustering where the
+reference is the permutated estimate of CSR}
+\item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
+reference is the theoretical estimate of CSR}
 }
 \description{
-This function calculates Ripley's K function of IF data to
-characterize correlation of spatial point process using tranlation and
-isotropic edge correction method.
+This function calculates count based Measures (Ripley's K, Besag
+L, and Marcon's M) of IF data to characterize correlation of spatial point
+process.
 }
