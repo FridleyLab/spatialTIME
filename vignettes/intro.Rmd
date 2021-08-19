@@ -146,7 +146,7 @@ Currently, the number of permutations is 10, but this should be increased to at 
 
 ```{r, ripleys, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 
-x <- ripleys_k_v2(mif = x, mnames = mnames_good, num_permutations = 10,
+x <- ripleys_k(mif = x, mnames = mnames_good, num_permutations = 10,
                edge_correction = 'translation', r = seq(0,100,10),
                keep_perm_dis = FALSE, workers = 1)
 
@@ -171,7 +171,7 @@ Positive values of degree of cluster when using `method = 'K'` and `method = 'L'
 In the univariate case, we consider each cell of a single cell type and center circles around each cell (reference cell). In the bivariate case, we are interested in how many cells of Type 1 (Counted) are clustered in proximity to Type 2 (Anchor). Here the circles are centered around cell of Type 2 and then the cells of Type 1 are counted.
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
-x <- bi_ripleys_k_v2(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), num_permutations = 10,
+x <- bi_ripleys_k(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), num_permutations = 10,
                edge_correction = 'translation', r = seq(0,100,10),
                keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE)
 
