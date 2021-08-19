@@ -1,13 +1,17 @@
 Package: spatialTIME
 Title: Spatial Analysis of Vectra Immunoflourescent Data
-Version: 0.0.0.9000
+Version: 1.1.0
 Authors@R: 
-    c(person(given = "Jordan", family = "Creed", role = "aut",
+     c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
-      person("Ram", "Thapa", role = c("aut", "cre"),
+      person("Ram", "Thapa", role = c("aut"),
              email = "ram.thapa@moffitt.org"),
-      person(given = "Christopher", family = "Wilson", role = "ctb",
-             email = "christopher.wilson@moffitt.org"))
+      person(given = "Christopher", family = "Wilson", role = "aut",
+             email = "christopher.wilson@moffitt.org"),
+      person(given = "Brooke", family = "Fridley", role = "cph",
+             email = "brooke.fridley@moffitt.org"),
+      person(given = "Fridley", family = "Lab", role = "cre",
+             email = "fridley.lab@moffitt.org"))
 Description: A package for visualizing and analyzing Vectra Immunoflourescent
     data. Options for calculating both the univariate and bivariate Ripley's K
     are included. Calculations are performed using a permutation-based 

@@ -26,7 +26,7 @@ subset_mif = function(mif, classifier, level){
   
   mif_new = create_mif(clinical_data = mif$clinical, sample_data = mif$sample,
                        spatial_list = split_spatial, patient_id =  mif$patient_id, 
-                       sample_id =  mif$sample_id, clean_columns = FALSE)
+                       sample_id =  mif$sample_id)
   
   return(mif_new)
 }
