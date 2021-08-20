@@ -212,7 +212,7 @@ x$derived$univariate_NN  %>%
 
 ```
 
-The interpretation of the degree of clustering for $G$ that values larger than 1 indicate more clustering than expected and values less than 1 are evidence of repulsion. 
+The interpretation of the degree of clustering for $G$ that values greater than 0 indicate spatial clustering of the cell types of interest, while values less than 0 indicate dispersion of these cells. For example in core [3,B], FOXP3..Opal.620..Positive shows spatial dispersion from $0\le r \le50$ (less than zero), while CD3..Opal.570..Positive for core [3,B] shows spatial clustering $0\le r\le75$ (greater than zero).
 
 
 ## Bivariate Nearest-Neighbor Methods
