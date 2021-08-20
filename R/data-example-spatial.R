@@ -1,4 +1,4 @@
-#' Example list of spatial TMA data 
+#' Example list of 5 spatial TMA data 
 #'
 #' A list containing 5 spatial data frames 
 #'

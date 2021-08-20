@@ -84,6 +84,8 @@ univariate_ripleys_k <- function(data,
     # x and y coordinates for cells
     ## Jordan why do the names need to be cleaned? I see
     ## Is there away to only change a couple of columns (i.e. leave out mnames)
+      
+    if(nrow(data) > 0){s
     X <- data %>% 
       janitor::clean_names() %>% 
       dplyr::mutate(xloc = (.data$x_min + .data$x_max) / 2) %>%
@@ -152,7 +154,19 @@ univariate_ripleys_k <- function(data,
     colnames(results_list)[1] = id 
     return(results_list)
     
+  }else{
+    results_list <- data.frame(
+      id = NA,
+      marker = unname(mlabels),
+      r_value = r_range,
+      observed_estimate = NA,
+      csr_theoretical = NA,
+      degree_of_spatial_diff = NA 
+    )
+    return(results_list)
+  }
   })
+    return(estimate_list)
 }
 
 bivariate_ripleys_k <- function(data,
@@ -300,3 +314,560 @@ full_list_combinations <- function(list_pairs){
   
   return(expanded_list)
 }
+
+#################################################################################
+#Updates Chris 7/8/2021
+
+K_out = function(data, marker, id, iter, correction,r_value, win){
+  #Does the actual computation of Ripley' K
+  K_obs = spatstat.geom::ppp(x = data$xloc, y = data$yloc, window = win) %>%
+    spatstat.core::Kest(r = r_value, correction = correction) %>%
+    data.frame() %>%
+    dplyr::filter(r != 0) %>%
+    dplyr::mutate(Marker = marker,
+           label = data[[id]][1],
+           iter = iter) %>%
+    dplyr::select(iter, label, Marker, r, theo, correction) %>%
+    dplyr::mutate(label = as.character(label))
+  return(K_obs)
+}
+
+perm_data = function(data, markers){
+  #Generate data uses permutation for all markers
+  data_pos = data %>%
+    dplyr::group_by(Marker) %>%
+    dplyr::mutate(Positive = sample(Positive, nrow(data)/length(markers), replace = FALSE))
+  return(data_pos)
+}
+
+## Univariate K Helper functions
+
+uni_K = function(data = data, iter, marker, id, correction, r_value, win){
+  #Filters down to the positive cells and then computes Ripley's K
+  data_pos = data %>% 
+    dplyr::filter(Marker == marker, Positive == 1)
+  
+  if(nrow(data_pos)==0){
+    K = data.frame(iter = iter,label = data[[id]][1],
+                   Marker = marker, r = r_value, 
+                   theo = NA, correction = NA) %>%
+      dplyr::filter(r > 0) %>%
+      dplyr::mutate(label = as.character(label))
+    colnames(K)[6] = correction
+  }else{
+    K = K_out(data = data_pos, marker = marker, 
+              id = id, iter = iter, correction = correction,
+              r_value = r_value, win = win)
+  }
+  return(K)
+}
+
+
+uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method = 'K', 
+                     perm_dist, r){
+  #Main function
+  #Check if the method is selected from K, L, M
+  if(!(method %in% c('K',"L","M"))){
+    stop("Did not provide a valid method.")
+  }
+  
+  #Notice that this follows spatstat's notation and argument name
+  if(!(correction %in% c('trans', "iso", "border", 'translation', 'isotropic'))){
+    stop("Did not provide a valid edge correcion method.")
+  }
+  
+  #These next two if statements deal with the fact that spatstat::Kest accepts,
+  #multiple spelling of the edge correction, but they not necessarily match the
+  #column name in the Kest output.
+  if(correction == 'translation'){
+    correction = 'trans'
+  }
+  
+  if(correction == 'isotropic'){
+    correction = 'iso'
+  }
+  
+  #Use set the cell location as the center of the cell
+  data = data %>% 
+    dplyr::mutate(xloc = (XMin + XMax)/2,
+           yloc = (YMin + YMax)/2
+    )
+  
+  #Create the region that the point process exists. This only needs to be done
+  #once per image
+  win = spatstat.geom::convexhull.xy(x = data$xloc, y = data$yloc)
+  
+  #Make the data a long format
+  data = data %>%
+    tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
+  
+  grid = expand.grid(markers, 1:num_iters) %>%
+    dplyr::mutate(Var1 = as.character(Var1))
+  
+  perms = purrr::map_df(.x = 1:nrow(grid),~{
+    data_new = perm_data(data, markers)
+    return(uni_K(data = data_new, iter = grid[.x,2], 
+                 marker = grid[.x,1], id = id, r_value = r,
+                 correction = correction, win = win))})
+  colnames(perms)[c(2,5,6)] = c(id, 'Theoretical CSR','Permuted K')
+  
+  obs = purrr::map_df(.x = markers, ~uni_K(data = data, iter = 'Observed', 
+                                    marker = .x, correction = correction,
+                                    id = id, r_value = r,
+                                    win = win)) %>%
+    dplyr::select(-iter) 
+  colnames(obs)[c(1,4,5)] = c(id, 'Theoretical CSR', 'Observed K')
+  
+  final = suppressMessages(dplyr::left_join(perms, obs))
+  
+  if(method == 'M'){
+    final = final %>% dplyr::mutate_at(c("Theoretical CSR","Permuted K","Observed K"),
+                                ~./(pi*r^2)) %>%
+      dplyr::mutate('Degree of Clustering Permutation' = `Permuted K`,
+             'Degree of Clustering Theoretical' = `Theoretical CSR`) %>%
+      dplyr::rename('Permuted M' = `Permuted K`,
+             'Theoretical CSR' = `Theoretical CSR`,
+             'Observed M' = `Observed K`)
+  }
+  
+  #Conduct the necessary transformation
+  if(method == 'L'){
+    final = final %>% dplyr::mutate_at(c("Theoretical CSR","Permuted K","Observed K"),
+                                ~sqrt(./pi)) %>%
+      dplyr::mutate('Degree of Clustering Permutation' = `Observed K` - `Permuted K`,
+             'Degree of Clustering Theoretical' = `Observed K` - `Theoretical CSR`)  %>%
+      dplyr::rename('Permuted L' = `Permuted K`,
+             'Theoretical CSR' = `Theoretical CSR`,
+             'Observed L' = `Observed K`)
+  }
+  
+  if(method == 'K'){
+    final = final %>% 
+      dplyr::mutate('Degree of Clustering Permutation' = `Observed K` - `Permuted K`,
+             'Degree of Clustering Theoretical' = `Observed K` - `Theoretical CSR`)
+  }
+  
+  if(!perm_dist){
+    final = final %>% 
+      dplyr::mutate(id = get(id)) %>%
+      dplyr::select(-(1:2)) %>%
+      dplyr::group_by(id,Marker, r) %>%
+      #dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`, na.rm = TRUE),
+      #          `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]], na.rm = TRUE),
+      #          `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]], na.rm = TRUE),
+      #          `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`, na.rm = TRUE),
+      #          `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`, na.rm = TRUE)
+      #          )
+      dplyr::summarize_all(~mean(., na.rm = TRUE))
+  }
+  colnames(final)[1] = id
+  return(final)
+}
+
+## Bivariate Helper Functions
+bi_K = function(data, mark_pair, r, correction, id, iter, win){
+  mark_pair = unname(mark_pair)
+  #Keeps all positive cell for either marker, and then discards the repeated locations
+  data_new = data %>% 
+    dplyr::filter(Marker %in% c(mark_pair[1], mark_pair[2]),
+           Positive == 1) %>%
+    dplyr::group_by(xloc, yloc) %>%
+    dplyr::filter(dplyr::n() == 1) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(Marker = factor(Marker, levels = c(mark_pair[1], mark_pair[2])))
+  
+  
+  if(any(table(data_new$Marker) == 0)){
+    #weird error here :row names were found from a short variable and have been discarded
+    K = data.frame(r = r, theo = NA, trans = NA, 
+                   anchor = levels(data_new$Marker)[1], 
+                   counted = levels(data_new$Marker)[2],
+                   label = data[[id]][1], 
+                   iter = iter)  %>% 
+      dplyr::select(iter, label, anchor, counted,  r, theo, correction) %>% #hardcoded
+      dplyr::filter(r>0)
+  }else{
+    X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win, marks = data_new$Marker)
+    K = spatstat.core::Kcross(r =r, X = X, i = levels(data_new$Marker)[1], 
+               j = levels(data_new$Marker)[2], correction = 'translation') %>% #Hard coded
+      data.frame() %>%
+      dplyr::filter(r!=0) %>%
+      dplyr::mutate(anchor = levels(data_new$Marker)[1],
+             counted = levels(data_new$Marker)[2],
+             iter = iter,
+             label = data[[id]][1]) %>% 
+      dplyr::select(iter, label, anchor, counted, r, theo, correction) #Hardcoded
+  }
+  return(K)
+}
+
+bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans', 
+                    method, perm_dist, r, exhaustive){
+  #Main function
+  #Check if the method is selected from K, L, M
+  if(!(method %in% c('K',"L","M"))){
+    stop("Did not provide a valid method.")
+  }
+  
+  #Check if exhaustive is FALSE, then markers must be a data.frame
+  if(exhaustive == FALSE & class(markers) != 'data.frame'){
+    stop("If exhaustive == FALSE, then markers must be a data.frame.")
+  }
+  if(exhaustive == TRUE & class(markers) != 'character'){
+    stop("If exhaustive == TRUE, then markers must be a character vector")
+  }
+  
+  #Notice that this follows spatstat's notation and argument name
+  if(!(correction %in% c('trans', "iso", "border", 'translation', 'isotropic'))){
+    stop("Did not provide a valid edge correcion method.")
+  }
+  
+  #These next two if statements deal with the fact that spatstat::Kest accepts,
+  #multiple spelling of the edge correction, but they not necessarily match the
+  #column name in the Kest output.
+  if(correction == 'translation'){
+    correction = 'trans'
+  }
+  
+  if(correction == 'isotropic'){
+    correction = 'iso'
+  }
+  
+  #Use set the cell location as the center of the cell
+  data = data %>% 
+    dplyr::mutate(xloc = (XMin + XMax)/2,
+           yloc = (YMin + YMax)/2
+    )
+  
+  #Create the region that the point process exists. This only needs to be done
+  #once per image
+  win = spatstat.geom::convexhull.xy(x = data$xloc, y = data$yloc)
+  
+  #Make the data a long format
+  
+  #Enumerates all possible combination of markers, and removes the ones where
+  #marker 1 and marker 2 are the same
+  if(exhaustive){
+    data = data %>%
+      tidyr::pivot_longer(cols = all_of(markers), 
+                          names_to = 'Marker', values_to = 'Positive')
+    grid = expand.grid(markers, markers, 1:num_iters) %>%
+      dplyr::mutate(Var1 = as.character(Var1),
+           Var2 = as.character(Var2)) %>%
+      dplyr::filter(Var1 != Var2)
+  }else{
+    grid = expand_grid(markers, 1:num_iters) %>%
+      data.frame() %>%
+      dplyr::mutate(Var1 = as.character(Var1),
+             Var2 = as.character(Var2)) %>%
+      dplyr::filter(Var1 != Var2)
+    markers = grid %>% dplyr::select(Var1, Var2) %>%
+      unlist() %>% unique()
+    data = data %>%
+      tidyr::pivot_longer(cols = all_of(markers), 
+                          names_to = 'Marker', values_to = 'Positive')
+  }
+  
+  perm = purrr::map_df(.x = 1:nrow(grid), 
+                ~{
+                  data_new = perm_data(data, markers)
+                  return(bi_K(data = data_new, mark_pair = grid[.x,1:2], r = r, 
+                              correction = 'trans', id = id, iter = grid[.x,3], win = win))
+                }
+  )
+  colnames(perm)[c(2,6,7)] = c(id, 'Theoretical CSR', 'Permuted K')
+  
+  obs = purrr::map_df(.x = 1:nrow(grid[!duplicated(grid[,1:2]),]), 
+               ~bi_K(data = data, mark_pair = grid[.x,1:2], r = r, 
+                     correction = 'trans', id = id, iter = 1, win = win)) %>%
+    dplyr::select(-iter)
+  colnames(obs)[c(1,5,6)] = c(id, 'Theoretical CSR', 'Observed K')
+  
+  final = suppressMessages(dplyr::left_join(perm, obs)) 
+  
+  if(method == 'M'){
+    final = final %>% dplyr::mutate_at(c("Theoretical CSR","Permuted K","Observed K"),
+                                ~./(pi*r^2)) %>%
+      dplyr::mutate('Degree of Clustering Permutation' = `Permuted K`,
+             'Degree of Clustering Theoretical' = `Theoretical CSR`) %>%
+      dplyr::rename('Permuted M' = `Permuted K`,
+             'Theoretical CSR' = `Theoretical CSR`,
+             'Observed M' = `Observed K`)
+  }
+  
+  #Conduct the necessary transformation
+  if(method == 'L'){
+    final = final %>% dplyr::mutate_at(c("Theoretical CSR","Permuted K","Observed K"),
+                                ~sqrt(./pi)) %>%
+      dplyr::mutate('Degree of Clustering Permutation' = `Observed K` - `Permuted K`,
+             'Degree of Clustering Theoretical' = `Observed K` - `Theoretical CSR`)  %>%
+      dplyr::rename('Permuted L' = `Permuted K`,
+             'Theoretical CSR' = `Theoretical CSR`,
+             'Observed L' = `Observed K`)
+  }
+  
+  if(method == 'K'){
+    final = final %>%
+      dplyr::mutate('Degree of Clustering Permutation' = `Observed K` - `Permuted K`,
+             'Degree of Clustering Theoretical' = `Observed K` - `Theoretical CSR`)
+  }
+  
+  if(!perm_dist){
+    final = final %>% 
+      dplyr::mutate(id = get(id)) %>%
+      dplyr::select(-c(1,2)) %>%
+      dplyr::group_by(id, anchor, counted, r) %>%
+      #dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`),
+      #          `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
+      #                                na.rm = TRUE),
+      #          `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
+      #                            na.rm = TRUE),
+      #          `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
+      #                                                    na.rm = TRUE),
+      #          `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
+      #          na.rm = TRUE))
+      dplyr::summarize_all(~mean(.,na.rm = TRUE))
+  }
+  colnames(final)[1] = id
+  return(final)
+}
+
+## Nearest Neighbor
+
+G_out = function(data, marker, id, iter, correction,r_value, win){
+  #Does the actual computation of Ripley' K
+  G_obs = spatstat.geom::ppp(x = data$xloc, y = data$yloc, window = win) %>%
+    spatstat.core::Gest(r = r_value, correction = correction) %>%
+    data.frame() %>%
+    dplyr::filter(r != 0) %>%
+    dplyr::mutate(Marker = marker,
+           label = data[[id]][1],
+           iter = iter) %>%
+    dplyr::select(iter, label, Marker, r, theo, correction) %>%
+    dplyr::mutate(label = as.character(label))
+  return(G_obs)
+}
+
+
+uni_G = function(data = data, iter, marker, id, correction, r_value, win){
+  #Filters down to the positive cells and then computes  G
+  data_pos = data %>% dplyr::filter(Marker == marker,  Positive == 1)
+  
+  if(nrow(data_pos)==0){
+    G = data.frame(iter = iter,label = data[[id]][1],
+                   Marker = marker, r = r_value, 
+                   theo = NA, correction = NA) %>%
+      dplyr::filter(r > 0) %>%
+      dplyr::mutate(label = as.character(label))
+    colnames(G)[6] = correction
+  }else{
+    G = G_out(data = data_pos, marker = marker, 
+              id = id, iter = iter, correction = correction,
+              r_value = r_value, win = win)
+  }
+  return(G)
+}
+
+
+uni_NN_G = function(data, markers, id, num_iters, correction,
+                    perm_dist, r){
+  #Main function
+  
+  #Notice that this follows spatstat's notation and argument name
+  if(!(correction %in% c("rs", "km", "han"))){
+    stop("Did not provide a valid edge correcion method.")
+  }
+  
+  #Use set the cell location as the center of the cell
+  data = data %>% 
+    dplyr::mutate(xloc = (XMin + XMax)/2,
+           yloc = (YMin + YMax)/2
+    )
+  
+  #Create the region that the point process exists. This only needs to be done
+  #once per image
+  win = spatstat.geom::convexhull.xy(x = data$xloc, y = data$yloc)
+  
+  #Make the data a long format
+  data = data %>%
+    tidyr::pivot_longer(cols = all_of(markers), names_to = 'Marker', values_to = 'Positive')
+  
+  grid = expand.grid(markers, 1:num_iters) %>%
+    dplyr::mutate(Var1 = as.character(Var1))
+  
+  perms = purrr::map_df(.x = 1:nrow(grid),~{
+    data_new = perm_data(data, markers)
+    return(uni_G(data = data_new, iter = grid[.x,2], 
+                 marker = grid[.x,1], id = id, r_value = r,
+                 correction = correction, win = win))})
+  colnames(perms)[c(2,5,6)] = c(id, 'Theoretical CSR','Permuted CSR')
+  
+  obs = purrr::map_df(.x = markers, ~uni_G(data = data, iter = 'Observed', 
+                                    marker = .x, correction = correction,
+                                    id = id, r_value = r,
+                                    win = win)) %>%
+   dplyr::select(-iter) 
+  
+  colnames(obs)[c(1,4,5)] = c(id, 'Theoretical CSR', 'Observed')
+  
+  final = suppressMessages(dplyr::left_join(perms, obs)) %>%
+    dplyr::mutate(
+      `Degree of Clustering Theoretical` = (`Observed`) - (`Theoretical CSR`),
+      `Degree of Clustering Permutation` = (`Observed`) - (`Permuted CSR`)) %>%
+    dplyr::select(-iter)
+  
+  if(!perm_dist){
+    final = final %>% 
+      dplyr::mutate(id = .data[[id]]) %>%
+      dplyr::select(-1) %>%
+      dplyr::group_by(id, Marker, r) %>%
+      #dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`,na.rm = TRUE),
+      #                 `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
+      #                                       na.rm = TRUE),
+      #                 `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
+      #                                   na.rm = TRUE),
+      #                 `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
+      #                                                           na.rm = TRUE),
+      #                 `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
+      #                                                            na.rm = TRUE))
+      dplyr::summarize_all(~mean(.,na.rm = TRUE))
+    colnames(final)[1] = id
+  }
+  
+  
+  return(final) 
+}
+
+bi_G = function(data, mark_pair, r, correction, id, iter, win){
+  mark_pair = unname(mark_pair)
+  #Keeps all positive cell for either marker, and then discards the repeated locations
+  data_new = data %>% 
+    dplyr::filter(Marker %in% c(mark_pair[1], mark_pair[2]),
+           Positive == 1) %>%
+    dplyr::group_by(xloc, yloc) %>%
+    dplyr::filter(dplyr::n() == 1) %>%
+    dplyr::ungroup() %>%
+    dplyr::mutate(Marker = factor(Marker, levels = c(mark_pair[1], mark_pair[2])))
+  
+  
+  if(any(table(data_new$Marker) == 0)){
+    #weird error here :row names were found from a short variable and have been discarded
+    G = data.frame(r = r, theo = NA, trans = NA, 
+                   anchor = levels(data_new$Marker)[1], 
+                   counted = levels(data_new$Marker)[2],
+                   label = data[[id]][1], 
+                   iter = iter,
+                   theo = NA,
+                   correction = NA)  %>% 
+      dplyr::select(iter, label, anchor, counted,  r, theo, correction) %>% 
+      dplyr::filter(r>0)
+    colnames(G)[7] = correction
+  }else{
+    X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win,
+                           marks = data_new$Marker)
+    G = spatstat.core::Gcross(r = r, X = X, i = levels(data_new$Marker)[1], 
+               j = levels(data_new$Marker)[2], correction = correction) %>% 
+      data.frame() %>%
+      dplyr::filter(r!=0) %>%
+      dplyr::mutate(anchor = levels(data_new$Marker)[1],
+             counted = levels(data_new$Marker)[2],
+             iter = iter,
+             label = data[[id]][1]) %>% 
+      dplyr::select(iter, label, anchor, counted, r, theo, correction) 
+  }
+  return(G)
+}
+
+bi_NN_G_sample = function(data, markers, id, num_iters, correction, 
+                   perm_dist, r, exhaustive){
+  #Main function
+  #Notice that this follows spatstat's notation and argument name
+  if(!(correction %in% c('rs', 'hans'))){
+    stop("Did not provide a valid edge correcion method.")
+  }
+  
+  #Check if exhaustive is FALSE, then markers must be a data.frame
+  if(exhaustive == FALSE & class(markers) != 'data.frame'){
+    stop("If exhaustive == FALSE, then markers must be a data.frame.")
+  }
+  if(exhaustive == TRUE & class(markers) != 'character'){
+    stop("If exhaustive == TRUE, then markers must be a character vector")
+  }
+  
+  
+  #Use set the cell location as the center of the cell
+  data = data %>% 
+    dplyr::mutate(xloc = (XMin + XMax)/2,
+           yloc = (YMin + YMax)/2
+    )
+  
+  #Create the region that the point process exists. This only needs to be done
+  #once per image
+  win = spatstat.geom::convexhull.xy(x = data$xloc, y = data$yloc)
+
+  #Enumerates all possible combination of markers, and removes the ones where
+  #marker 1 and marker 2 are the same
+  if(exhaustive){
+    data = data %>%
+      tidyr::pivot_longer(cols = all_of(markers), 
+                          names_to = 'Marker', values_to = 'Positive')
+    grid = expand.grid(markers, markers, 1:num_iters) %>%
+      dplyr::mutate(Var1 = as.character(Var1),
+                    Var2 = as.character(Var2)) %>%
+      dplyr::filter(Var1 != Var2)
+  }else{
+    grid = expand_grid(markers, 1:num_iters) %>%
+      data.frame() %>%
+      dplyr::mutate(Var1 = as.character(Var1),
+                    Var2 = as.character(Var2)) %>%
+      dplyr::filter(Var1 != Var2)
+    markers = grid %>% dplyr::select(Var1, Var2) %>%
+      unlist() %>% unique()
+    data = data %>%
+      tidyr::pivot_longer(cols = all_of(markers), 
+                          names_to = 'Marker', values_to = 'Positive')
+  }
+  
+  
+  perm = purrr::map_df(.x = 1:nrow(grid), 
+                ~{
+                  data_new = perm_data(data, markers)
+                  return(bi_G(data = data_new, mark_pair = grid[.x,1:2], r = r, 
+                              correction = correction, id = id, iter = grid[.x,3], win = win))
+                }
+  )
+  colnames(perm)[c(2,6,7)] = c(id, 'Theoretical CSR', 'Permuted G')
+  
+  obs = purrr::map_df(.x = 1:nrow(grid[!duplicated(grid[,1:2]),]), 
+               ~bi_G(data = data, mark_pair = grid[.x,1:2], r = r, 
+                     correction = correction, id = id, iter = 1, win = win)) %>%
+    dplyr::select(-iter)
+  colnames(obs)[c(1,5,6)] = c(id, 'Theoretical CSR', 'Observed G')
+  
+  final = suppressMessages(dplyr::left_join(perm, obs)) %>%
+    dplyr::mutate(`Degree of Clustering Permutation` = ifelse(`Permuted G` == 0, NA, (`Observed G`)-(`Permuted G`)),
+           `Degree of Clustering Theoretical` = ifelse(`Theoretical CSR` == 0, NA, (`Observed G`)-(`Theoretical CSR`)))
+  
+  if(!perm_dist){
+    final = final %>% 
+      dplyr::mutate(id = .data[[id]]) %>%
+      dplyr::select(-c(1,2)) %>%
+      dplyr::group_by(id, anchor, counted, r) %>%
+      #dplyr::summarize(`Theoretical CSR` = mean(`Theoretical CSR`,na.rm = TRUE),
+      #          `Permuted CSR` = mean(.[[grep('Permuted', colnames(.), value = TRUE)]],
+      #                                na.rm = TRUE),
+      #          `Observed` = mean(.[[grep('Observed', colnames(.), value = TRUE)]],
+      #                            na.rm = TRUE),
+      #          `Degree of Clustering Theoretical` = mean(`Degree of Clustering Theoretical`,
+      #                                                    na.rm = TRUE),
+      #          `Degree of Clustering Permutation` =  mean(`Degree of Clustering Permutation`,
+      #                                                     na.rm = TRUE))
+      dplyr::summarize_all(~mean(.,na.rm = TRUE))
+
+    colnames(final)[1] = id
+  }
+  
+  
+  return(final)
+}
+

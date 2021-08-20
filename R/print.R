@@ -7,8 +7,8 @@ print.mif <- function(x, ...){
   # x$sample <- x$sample %>% 
   #   janitor::clean_names()
   
-  cat(emphesis(length(unique(x$clinical[[1]]))), "patients spanning",
-      emphesis(length(unique(x$sample[[2]]))), "samples and",
+  cat(emphesis(length(unique(x$clinical[[x$patient_id]]))), "patients spanning",
+      emphesis(length(unique(x$sample[[x$sample_id]]))), "samples and",
       emphesis(length(x$spatial)), "spatial data frames were found \n")
   # add number/names of genes in a panel
 }

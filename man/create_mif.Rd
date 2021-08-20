@@ -9,8 +9,7 @@ create_mif(
   sample_data,
   spatial_list = NULL,
   patient_id = "patient_id",
-  sample_id = "image_tag",
-  clean_columns = FALSE
+  sample_id = "image_tag"
 )
 }
 \arguments{
@@ -29,9 +28,6 @@ sample and clinical data frames.}
 
 \item{sample_id}{A character string indicating the column name for sample id
 in the sample data frame}
-
-\item{clean_columns}{A logical value indicating if names in spatial data frames
-should be rewritten in a cleaner format. Default is FALSE.}
 }
 \value{
 Returns a custom MIF
@@ -39,6 +35,10 @@ Returns a custom MIF
 \item{sample}{Data frame of sample data}
 \item{spatial}{Named list of spatial data}
 \item{derived}{List of data derived using the MIF object}
+\item{patient_id}{The column name for sample id
+in the sample data frame with the clinical data}
+\item{sample_id}{The column name for sample id
+in the sample data frame to merge with the spatial data}
 }
 \description{
 Creates an MIF object for use in spatialIF functions
