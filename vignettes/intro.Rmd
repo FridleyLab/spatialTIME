@@ -92,7 +92,12 @@ x<- plot_immunoflo(x, plot_title = "deidentified_sample",  mnames = mnames_bad,
 
 bad_names <- x[["derived"]][["spatial_plots"]][[4]] + 
   theme(legend.position = 'bottom') + 
-  scale_color_manual(breaks = mnames_bad, values = values)
+  scale_color_manual(breaks = mnames_bad,
+                     values = values,
+                     labels = mnames_bad %>%
+                       gsub("..Opal.*", "+", .) %>% 
+                       gsub("\\.\\.", "+", .) %>% 
+                       gsub("\\.", "+", .))
 
 mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
@@ -104,7 +109,11 @@ x <- plot_immunoflo(x, plot_title = "deidentified_sample", mnames = mnames_good,
 good_names <- x[["derived"]][["spatial_plots"]][[4]] + 
   theme(legend.position = 'bottom') + 
   scale_color_manual(breaks = mnames_good, 
-                     values = values[match(mnames_good, names(values))])
+                     values = values[match(mnames_good, names(values))],
+                     labels = mnames_good %>%
+                       gsub("..Opal.*", "+", .) %>% 
+                       gsub("\\.\\.", "+", .) %>% 
+                       gsub("\\.", "+", .))
 
 x$sample %>% filter(deidentified_sample == 'TMA3_[9,K].tif') %>% select(c(2, 4:15)) %>%
   pivot_longer(cols = 2:13, names_to = 'Marker', values_to = 'Count')
