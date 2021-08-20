@@ -56,8 +56,12 @@ We include one example of clinical and sample datasets which have a total of 229
 
 ```{r, create}
 
-x <- create_mif(clinical_data = example_clinical,
-                sample_data = example_summary,
+# Make sure the variable types are the same for deidentified_id and 
+# deidentified_sample in their corresponding datasets
+x <- create_mif(clinical_data = example_clinical %>% 
+                  mutate(deidentified_id = as.character(deidentified_id)),
+                sample_data = example_summary %>% 
+                  mutate(deidentified_id = as.character(deidentified_id)),
                 spatial_list = example_spatial,
                 patient_id = "deidentified_id", 
                 sample_id = "deidentified_sample")
