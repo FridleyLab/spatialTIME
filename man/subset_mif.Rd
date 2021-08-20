@@ -4,7 +4,7 @@
 \alias{subset_mif}
 \title{Subset mif object on cellular level}
 \usage{
-subset_mif(mif, classifier, level)
+subset_mif(mif, classifier, level, markers)
 }
 \arguments{
 \item{mif}{An MIF object}
@@ -12,6 +12,8 @@ subset_mif(mif, classifier, level)
 \item{classifier}{Column name for spatial dataframe to subset}
 
 \item{level}{Determines which level of the classifier to keep.}
+
+\item{markers}{vector of}
 }
 \value{
 mif object where the spatial list only as the cell that are the specified level.
