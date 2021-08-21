@@ -8,6 +8,8 @@ Authors@R:
              email = "ram.thapa@moffitt.org"),
       person(given = "Christopher", family = "Wilson", role = "aut",
              email = "christopher.wilson@moffitt.org"),
+             person(given = "Alex", family = "Soupir", role = "aut",
+             email = "alex.soupir@moffitt.org"),
       person(given = "Brooke", family = "Fridley", role = "cph",
              email = "brooke.fridley@moffitt.org"),
       person(given = "Fridley", family = "Lab", role = "cre",
@@ -15,7 +17,7 @@ Authors@R:
 Description: Visualization and analysis  of Vectra Immunoflourescent
     data. Options for calculating both the univariate and bivariate Ripley's K
     are included. Calculations are performed using a permutation-based 
-    approach presented by Wilson et al. (doi: https://doi.org/10.1101/2021.04.27.21256104). 
+    approach presented by Wilson et al. <doi: https://doi.org/10.1101/2021.04.27.21256104>. 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
