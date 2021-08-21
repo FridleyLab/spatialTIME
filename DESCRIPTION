@@ -12,45 +12,24 @@ Authors@R:
              email = "brooke.fridley@moffitt.org"),
       person(given = "Fridley", family = "Lab", role = "cre",
              email = "fridley.lab@moffitt.org"))
-Description: A package for visualizing and analyzing Vectra Immunoflourescent
+Description: Visualization and analysis  of Vectra Immunoflourescent
     data. Options for calculating both the univariate and bivariate Ripley's K
     are included. Calculations are performed using a permutation-based 
-    approach. 
+    approach presented by Wilson et al. (doi: https://doi.org/10.1101/2021.04.27.21256104). 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
-Imports: 
-    magrittr,
-    dplyr,
-    tidyr,
-    ggplot2,
-    scales,
-    stringr,
-    ggdark,
-    viridisLite,
-    crayon,
-    grDevices,
-    Surrogate,
-    purrr,
-    janitor,
-    rlang,
-    modelr,
-    plyr,
-    tibble,
-    spatstat.geom,
-    spatstat.core,
-    RColorBrewer,
-    stats,
-    rlist,
-    furrr
-Depends: 
-    R (>= 2.10)
-Suggests: 
-    knitr,
-    rmarkdown,
-    testthat
+Imports: magrittr, dplyr, tidyr, ggplot2, scales, stringr,
+        grDevices, purrr, rlang, plyr, spatstat.geom,
+        spatstat.core, RColorBrewer, stats, rlist, furrr, ggpubr, 
+        viridis, future, tidyselect, crayon
+Depends: R (>= 3.5.0)
+Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
 URL: https://github.com/FridleyLab/spatialTIME
 BugReports: https://github.com/FridleyLab/spatialTIME/issues
+NeedsCompilation: no
+Packaged: 2021-08-19 22:31:18 UTC; 4468179
+
