@@ -13,7 +13,9 @@ ripleys_k(
   method = "K",
   keep_perm_dis = FALSE,
   workers = 1,
-  overwrite = FALSE
+  overwrite = FALSE,
+  xloc = NULL,
+  yloc = NULL
 )
 }
 \arguments{
@@ -41,6 +43,12 @@ distribution of permuted K values}
 
 \item{overwrite}{Logical value determining if you want the results to replace the
 current output (TRUE) or be to be appended (FALSE).}
+
+\item{xloc}{a string corresponding to the x coordinates. If null the average of
+XMin and XMax will be used}
+
+\item{yloc}{a string corresponding to the y coordinates. If null the average of
+YMin and YMax will be used}
 }
 \value{
 Returns a data.frame
@@ -57,4 +65,27 @@ reference is the theoretical estimate of CSR}
 This function calculates count based Measures (Ripley's K, Besag
 L, and Marcon's M) of IF data to characterize correlation of spatial point
 process.
+}
+\examples{
+#Create mif object
+library(dplyr)
+x <- create_mif(clinical_data = example_clinical \%>\% 
+mutate(deidentified_id = as.character(deidentified_id)),
+sample_data = example_summary \%>\% 
+mutate(deidentified_id = as.character(deidentified_id)),
+spatial_list = example_spatial,
+patient_id = "deidentified_id", 
+sample_id = "deidentified_sample")
+
+# Define the set of markers to study
+markers <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
+"FOXP3..Opal.620..Positive","CD3..CD8.","CD3..FOXP3.")
+
+# Ripley's K for all markers with a neighborhood size 
+# of  10,20,...,100 (zero must be included in the input).
+
+x <- ripleys_k(mif = x, mnames = markers, num_permutations = 1,
+edge_correction = 'translation', r = seq(0,100,10),
+keep_perm_dis = FALSE, workers = 1)
+
 }

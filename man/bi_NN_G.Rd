@@ -13,7 +13,9 @@ bi_NN_G(
   keep_perm_dis = FALSE,
   exhaustive = TRUE,
   workers = 1,
-  overwrite = FALSE
+  overwrite = FALSE,
+  xloc = NULL,
+  yloc = NULL
 )
 }
 \arguments{
@@ -43,6 +45,12 @@ be a data.frame with the desired combinations.}
 
 \item{overwrite}{Logical value determining if you want the results to replace the
 current output (TRUE) or be to be appended (FALSE).}
+
+\item{xloc}{a string corresponding to the x coordinates. If null the average of
+XMin and XMax will be used}
+
+\item{yloc}{a string corresponding to the y coordinates. If null the average of
+YMin and YMax will be used}
 }
 \value{
 Returns a data frame
@@ -61,4 +69,25 @@ reference is the theoretical estimate of CSR}
 This function computes the nearest neighbor distribution for a
 particular marker relative to another marker for the observed and permuted point
 processes.
+}
+\examples{
+#' #Create mif object
+library(dplyr)
+x <- create_mif(clinical_data = example_clinical \%>\% 
+mutate(deidentified_id = as.character(deidentified_id)),
+sample_data = example_summary \%>\% 
+mutate(deidentified_id = as.character(deidentified_id)),
+spatial_list = example_spatial,
+patient_id = "deidentified_id", 
+sample_id = "deidentified_sample")
+
+#Nearest Neighbor distribution for the colocalization of CD3+CD8+ positive 
+#cells and CD3+FOXP3+ positive cells where CD3+FOXP3+ is the reference cell 
+#type at neighborhood size of 10,20,...,100 (zero must be included in the 
+#input).
+
+x <- bi_NN_G(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
+num_permutations = 1, edge_correction = 'rs', r = seq(0,100,10),
+keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE) 
+
 }

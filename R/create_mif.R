@@ -24,6 +24,17 @@
 #'  in the sample data frame to merge with the spatial data}
 #'    
 #' @export
+#' @examples
+#' #Create mif object
+#' library(dplyr)
+#' x <- create_mif(clinical_data = example_clinical %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' sample_data = example_summary %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' spatial_list = example_spatial,
+#' patient_id = "deidentified_id", 
+#' sample_id = "deidentified_sample")
+
 create_mif <- function(clinical_data, sample_data, spatial_list = NULL,
                        patient_id = "patient_id", sample_id = "image_tag"){
   

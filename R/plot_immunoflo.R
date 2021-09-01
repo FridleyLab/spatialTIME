@@ -8,7 +8,6 @@
 #' @param mcolors Character vector of color names to display markers in the plot.
 #' @param cell_type Character vector of cell type
 #' @param path Different path than file name or to use in conjunction with filename ???
-#' @param dark_mode Plot using dark color scheme 
 #' 
 #' @return mif object and the ggplot objects can be viewed form the derived slot of the mif object
 #' 
@@ -17,14 +16,33 @@
 #'    
 #' @export
 #'
-#'
+#' @examples
+#' #Create mif object
+#' library(dplyr)
+#' x <- create_mif(clinical_data = example_clinical %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' sample_data = example_summary %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' spatial_list = example_spatial,
+#' patient_id = "deidentified_id", 
+#' sample_id = "deidentified_sample")
+#' 
+#' mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
+#' "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
+#' "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
+#' 
+#' x <- plot_immunoflo(x, plot_title = "deidentified_sample", mnames = mnames_good, 
+#' cell_type = "Classifier.Label")
+#' 
+#' x[["derived"]][["spatial_plots"]][[4]]
+
+
 plot_immunoflo <- function(
   mif,
   plot_title, 
   mnames, 
   # pretty_labels = TRUE,
   mcolors = NULL, 
-  dark_mode = FALSE,
   cell_type = NULL, 
   filename = NULL,
   path = NULL
@@ -122,10 +140,6 @@ plot_immunoflo <- function(
       ggplot2::theme_bw(base_size = 18) +
       ggplot2::theme(axis.title = ggplot2::element_blank(),
                     panel.grid = ggplot2::element_blank())
-    }
-    
-    if(dark_mode == TRUE){
-      basic_plot <- basic_plot + theme_dark_mode()
     }
     
     return(basic_plot)

@@ -19,6 +19,10 @@
 #' @param workers Integer value for the number of workers to spawn
 #' @param overwrite Logical value determining if you want the results to replace the 
 #' current output (TRUE) or be to be appended (FALSE).
+#' @param xloc a string corresponding to the x coordinates. If null the average of 
+#' XMin and XMax will be used 
+#' @param yloc a string corresponding to the y coordinates. If null the average of 
+#' YMin and YMax will be used 
 #'  
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
@@ -29,33 +33,54 @@
 #'    reference is the permutated estimate of CSR}
 #'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
 #'    reference is the theoretical estimate of CSR}
-#' @export
-#'
+#' @examples 
+#' #Create mif object
+#' library(dplyr)
+#' x <- create_mif(clinical_data = example_clinical %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' sample_data = example_summary %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' spatial_list = example_spatial,
+#' patient_id = "deidentified_id", 
+#' sample_id = "deidentified_sample")
+#' 
+#' # Define the set of markers to study
+#' markers <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
+#' "FOXP3..Opal.620..Positive","CD3..CD8.","CD3..FOXP3.")
+#' 
+#' # Ripley's K for all markers with a neighborhood size 
+#' # of  10,20,...,100 (zero must be included in the input).
+#' 
+#' x <- ripleys_k(mif = x, mnames = markers, num_permutations = 1,
+#' edge_correction = 'translation', r = seq(0,100,10),
+#' keep_perm_dis = FALSE, workers = 1)
+#' 
+#'@export
 
 ripleys_k = function(mif, mnames, r_range = seq(0, 100, 50),
                         num_permutations = 50, edge_correction = "translation",
                         method = 'K',keep_perm_dis = FALSE, workers = 1,
-                        overwrite = FALSE){
-  require(furrr)
-  require(magrittr)
-  plan(multisession, workers = workers)
+                        overwrite = FALSE, xloc = NULL, yloc = NULL){
+  
+  future::plan(future::multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
   if(overwrite == FALSE){
     mif$derived$univariate_Count = rbind(mif$derived$univariate_Count,
-                                         future_map(.x = 1:length(data), ~{
+                                         furrr::future_map(.x = 1:length(data), ~{
                                            uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
                                                      markers = mnames, id  = id, correction = edge_correction, 
-                                                     method = method, perm_dist = keep_perm_dis)}, 
-                                           .options = furrr_options(seed=TRUE), .progress = T) %>%
+                                                     method = method, perm_dist = keep_perm_dis, xloc, yloc)}, 
+                                           .options = furrr::furrr_options(seed=TRUE), .progress = T,
+                                           xloc = xloc, yloc = yloc) %>%
                                            plyr::ldply()
     )
   }else{
-    mif$derived$univariate_Count = future_map(.x = 1:length(data), ~{
+    mif$derived$univariate_Count = furrr::future_map(.x = 1:length(data), ~{
       uni_Rip_K(data = data[[.x]], num_iters = num_permutations, r = r_range,
                 markers = mnames, id  = id, correction = edge_correction, 
-                method = method, perm_dist = keep_perm_dis)}, 
-      .options = furrr_options(seed=TRUE), .progress = T) %>%
+                method = method, perm_dist = keep_perm_dis, xloc, yloc)}, 
+      .options = furrr::furrr_options(seed=TRUE), .progress = T) %>%
       plyr::ldply()
   }
   return(mif)
@@ -89,6 +114,10 @@ ripleys_k = function(mif, mnames, r_range = seq(0, 100, 50),
 #' @param workers Integer value for the number of workers to spawn
 #' @param overwrite Logical value determining if you want the results to replace the 
 #' current output (TRUE) or be to be appended (FALSE).
+#' @param xloc a string corresponding to the x coordinates. If null the average of 
+#' XMin and XMax will be used 
+#' @param yloc a string corresponding to the y coordinates. If null the average of 
+#' YMin and YMax will be used 
 #' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
@@ -101,8 +130,29 @@ ripleys_k = function(mif, mnames, r_range = seq(0, 100, 50),
 #'    reference is the permuted estimate of CSR}
 #'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
 #'    reference is the theoretical estimate of CSR}
-#' @export
+#'    
+#' @examples 
+#' #' #Create mif object
+#' library(dplyr)
+#' x <- create_mif(clinical_data = example_clinical %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' sample_data = example_summary %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' spatial_list = example_spatial,
+#' patient_id = "deidentified_id", 
+#' sample_id = "deidentified_sample")
 #' 
+#' #Ripley's K for the colocalization of CD3+CD8+ positive cells and
+#' #CD3+FOXP3+ positive cells where CD3+FOXP3+ is the reference cell type at 
+#' #neighborhood size of 10,20,...,100 (zero must be included in the input).
+#' 
+#' x <- bi_ripleys_k(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
+#' num_permutations = 1, edge_correction = 'translation', r = seq(0,100,10),
+#' keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE) 
+#' 
+#' @export
+
+
 bi_ripleys_k <- function(mif,
                             mnames, 
                             r_range = seq(0, 100, 50),
@@ -112,23 +162,23 @@ bi_ripleys_k <- function(mif,
                             keep_perm_dis = FALSE,
                             exhaustive = TRUE,
                             workers = 1,
-                            overwrite = FALSE){
-  require(furrr)
-  require(magrittr)
-  plan(multisession, workers = workers)
+                            overwrite = FALSE,
+                         xloc = NULL, yloc = NULL){
+
+  future::plan(future::multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
   if(overwrite == FALSE){
-    mif$derived$bivariate_Count = rbind( mif$derived$bivariate_Count,
+    mif$derived$bivariate_Count = rbind(mif$derived$bivariate_Count,
                                          furrr::future_map(.x = 1:length(data),
                                                            ~{
                                                              bi_Rip_K(data = data[[.x]], num_iters = num_permutations, 
                                                                       markers = mnames, id  = id, r = r_range,
                                                                       correction = edge_correction, method = method, 
                                                                       perm_dist = keep_perm_dis,
-                                                                      exhaustive = exhaustive) %>%
+                                                                      exhaustive = exhaustive, xloc, yloc) %>%
                                                                data.frame(check.names = FALSE)
-                                                           }, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                                                           }, .options = furrr::furrr_options(seed=TRUE), .progress = T) %>%
                                            plyr::ldply()
                                          
     )
@@ -139,9 +189,9 @@ bi_ripleys_k <- function(mif,
                                                                markers = mnames, id  = id, r = r_range,
                                                                correction = edge_correction, method = method, 
                                                                perm_dist = keep_perm_dis,
-                                                               exhaustive = exhaustive) %>%
+                                                               exhaustive = exhaustive, xloc, yloc) %>%
                                                         data.frame(check.names = FALSE)
-                                                    }, .options = furrr_options(seed=TRUE), .progress = T) %>%
+                                                    }, .options = furrr::furrr_options(seed=TRUE), .progress = T) %>%
       plyr::ldply()
   }
   return(mif)
@@ -164,6 +214,11 @@ bi_ripleys_k <- function(mif,
 #' @param workers Integer value for the number of workers to spawn
 #' @param overwrite Logical value determining if you want the results to replace the 
 #' current output (TRUE) or be to be appended (FALSE).
+#' @param xloc a string corresponding to the x coordinates. If null the average of 
+#' XMin and XMax will be used 
+#' @param yloc a string corresponding to the y coordinates. If null the average of 
+#' YMin and YMax will be used 
+#' 
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
 #'    \item{Permuted CSR}{Average observed G for the permuted point 
@@ -173,36 +228,58 @@ bi_ripleys_k <- function(mif,
 #'    reference is the permuted estimate of CSR}
 #'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
 #'    reference is the theoretical estimate of CSR}
-#' @export
+#' @examples 
+#' #Create mif object
+#' library(dplyr)
+#' x <- create_mif(clinical_data = example_clinical %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' sample_data = example_summary %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' spatial_list = example_spatial,
+#' patient_id = "deidentified_id", 
+#' sample_id = "deidentified_sample")
+#' 
+#' # Define the set of markers to study
+#' markers <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
+#' "FOXP3..Opal.620..Positive","CD3..CD8.","CD3..FOXP3.")
+#' 
+#' # Nearest Neighbor distribution for all markers with a neighborhood size 
+#' # of  10,20,...,100 (zero must be included in the input).
 #'
+#' 
+#' x <- NN_G(mif = x, mnames = markers, num_permutations = 1,
+#' edge_correction = 'rs', r = seq(0,100,10),
+#' keep_perm_dis = FALSE, workers = 1)
+#' 
+#' @export
+
+
 NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                 num_permutations = 50, edge_correction = "rs",
                 keep_perm_dis = FALSE, workers = 1,
-                overwrite = FALSE){
-  require(furrr)
-  require(magrittr)
-  plan(multisession, workers = workers)
+                overwrite = FALSE, xloc = NULL, yloc = NULL){
+  future::plan(future::multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
   if(overwrite == FALSE){
     mif$derived$univariate_NN = rbind(mif$derived$univariate_NN ,
-                                      future_map(.x = 1:length(data),
+                                      furrr::future_map(.x = 1:length(data),
                                                  ~{
                                                    uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
                                                             markers = mnames,  id  = id, 
                                                             correction = edge_correction, r = r_range,
-                                                            perm_dist = keep_perm_dis)}, 
-                                                 .options = furrr_options(seed=TRUE), .progress = T) %>%
+                                                            perm_dist = keep_perm_dis, xloc, yloc)}, 
+                                                 .options = furrr::furrr_options(seed=TRUE), .progress = T) %>%
                                         plyr::ldply()
     )
   }else{
-    mif$derived$univariate_NN = future_map(.x = 1:length(data),
+    mif$derived$univariate_NN = furrr::future_map(.x = 1:length(data),
                                            ~{
                                              uni_NN_G(data = data[[.x]], num_iters = num_permutations, 
                                                       markers = mnames,  id  = id, 
                                                       correction = edge_correction, r = r_range,
-                                                      perm_dist = keep_perm_dis)}, 
-                                           .options = furrr_options(seed=TRUE), .progress = T) %>%
+                                                      perm_dist = keep_perm_dis, xloc, yloc)}, 
+                                           .options = furrr::furrr_options(seed=TRUE), .progress = T) %>%
       plyr::ldply()
   }
   return(mif)
@@ -232,6 +309,10 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' @param workers Integer value for the number of workers to spawn
 #' @param overwrite Logical value determining if you want the results to replace the 
 #' current output (TRUE) or be to be appended (FALSE).
+#' @param xloc a string corresponding to the x coordinates. If null the average of 
+#' XMin and XMax will be used 
+#' @param yloc a string corresponding to the y coordinates. If null the average of 
+#' YMin and YMax will be used 
 #' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
@@ -244,42 +325,62 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #'    reference is the permuted estimate of CSR}
 #'    \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
 #'    reference is the theoretical estimate of CSR}
-#'@export
-#'
+#' @examples 
+#' #' #Create mif object
+#' library(dplyr)
+#' x <- create_mif(clinical_data = example_clinical %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' sample_data = example_summary %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' spatial_list = example_spatial,
+#' patient_id = "deidentified_id", 
+#' sample_id = "deidentified_sample")
+#' 
+#' #Nearest Neighbor distribution for the colocalization of CD3+CD8+ positive 
+#' #cells and CD3+FOXP3+ positive cells where CD3+FOXP3+ is the reference cell 
+#' #type at neighborhood size of 10,20,...,100 (zero must be included in the 
+#' #input).
+#' 
+#' x <- bi_NN_G(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
+#' num_permutations = 1, edge_correction = 'rs', r = seq(0,100,10),
+#' keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE) 
+#' 
+#' @export
+
+
 bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
                    num_permutations = 50, edge_correction = "rs",
                    keep_perm_dis = FALSE, exhaustive = TRUE,
-                   workers = 1, overwrite = FALSE){
-  require(furrr)
-  require(magrittr)
-  plan(multisession, workers = workers)
+                   workers = 1, overwrite = FALSE, xloc = NULL, yloc = NULL){
+
+  future::plan(future::multisession, workers = workers)
   data = mif$spatial
   id = mif$sample_id
   if(overwrite == FALSE){
     mif$derived$bivariate_NN = rbind(mif$derived$bivariate_NN,
-                                     future_map(.x = 1:length(data),
+                                     furrr::future_map(.x = 1:length(data),
                                                 ~{
                                                   bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 
                                                                  markers = mnames, r = r_range, id  = id, 
                                                                  correction = edge_correction,
                                                                  perm_dist = keep_perm_dis,
-                                                                 exhaustive) %>%
+                                                                 exhaustive, xloc, yloc) %>%
                                                     data.frame(check.names = FALSE)}, 
-                                                .options = furrr_options(seed=TRUE), 
+                                                .options = furrr::furrr_options(seed=TRUE), 
                                                 .progress = T
                                      ) %>%
                                        plyr::ldply()
     )
   }else{
-    mif$derived$bivariate_NN = future_map(.x = 1:length(data),
+    mif$derived$bivariate_NN = furrr::future_map(.x = 1:length(data),
                                           ~{
                                             bi_NN_G_sample(data = data[[.x]], num_iters = num_permutations, 
                                                            markers = mnames, r = r_range, id  = id, 
                                                            correction = edge_correction,
                                                            perm_dist = keep_perm_dis,
-                                                           exhaustive) %>%
+                                                           exhaustive, xloc, yloc) %>%
                                               data.frame(check.names = FALSE)}, 
-                                          .options = furrr_options(seed=TRUE), 
+                                          .options = furrr::furrr_options(seed=TRUE), 
                                           .progress = T
     ) %>% plyr::ldply()
   }
