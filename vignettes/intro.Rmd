@@ -82,7 +82,7 @@ slot and printed to a PDF if a file name is provided.
 
 When studying phenotype and individual markers, note that it is important to have the individual before the phenotype markers. This will ensure that the phenotype that are derived by multiple markers are not plotted over by the individual marker. For instance, below the the first plot appears to have no cyctotoxic T cells (CD3+ and CD8+), but then the order is changed we see the cyctotoxic T cells. Moral of the story: Put the marker combinations before the single markers.
 
-```{r, plot_bad, fig.width=10, fig.height=6,fig.align = 'left', fig.cap='Notice that using the "bad" (B) order that one would have the impression that there is a huge number of CD3+ and would scratch there head over why there are no CD3+ FOXP3+ or CD3+ CD8+. While the "good" (G) order can  better make this distiction as well as show cells that are only positive for CD3 and not postive for FOXP3 or CD8.'}
+```{r, plot_bad, fig.width=10, fig.height=6,fig.align = 'center', fig.cap='Notice that using the "bad" (B) order that one would have the impression that there is a huge number of CD3+ and would scratch there head over why there are no CD3+ FOXP3+ or CD3+ CD8+. While the "good" (G) order can  better make this distiction as well as show cells that are only positive for CD3 and not postive for FOXP3 or CD8.'}
 mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
                 "CD8..Opal.520..Positive","FOXP3..Opal.620..Positive", 
                 "PDL1..Opal.540..Positive", "PD1..Opal.650..Positive")
@@ -250,7 +250,7 @@ x$derived$bivariate_NN  %>%
 
 For this example, we use the same data used above for plotting cell locations. Now we only focus on the same TMA core and only focus on CD3+ positive cells. In this particular TMA core that the overall cell distribution is not uniform (i.e. there are many regions where cells do not occur). Also notice, that there is the CD3+ occur mostly in two places thus we suspect that the degree of clustering is quite large in this TMA core.
 
-```{r}
+```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap='Cell locations for a particular TMA core where the blue cells are CD3+ cells and the grey cells are CD3- cells. Notice that there is a much larger quantity on the left than the right half indicating that there is some clustering occuring.'}
 x <- plot_immunoflo(x, plot_title = "deidentified_sample", mnames = mnames_good[1], 
                     cell_type = "Classifier.Label")
 
@@ -260,22 +260,38 @@ x[["derived"]][["spatial_plots"]][[4]]
 
 Below is an example that shows how to select a single value for $r$, and how one can visualize the permutation distribution and how it relates to the theoretical and observed value. Here we plot the permutation distribution for the CD3+ cells with $r = 50$ and note that the range of r that is included must included 0 and the output will not include the degree of clustering at $r = 0$ which is 0 for $K$ and $L$, and $\infty$ for $M$. Notice that the theoretical value is smaller than all 100 values from the permutation distribution. 
 
-```{r}
+```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap = 'Histogram displaying how much the permuted estimates of K (100 permutations) can vary and also illustrate how different the permutation distribution and its mean (green vertical line) can be from the theoretical value (red vertical line). Lastily, this plot confirms what we see visually above in that the CD3+ cells are not uniformly distributed throughout this side but clustered.'}
 x <- ripleys_k(mif = x, mnames = mnames_good[1], num_permutations = 100,
                edge_correction = 'translation', r = c(0,50),
                keep_perm_dis = TRUE, workers = 1, overwrite = TRUE)
 
-x$derived$univariate_Count %>% head()
+#Computed the mean of the permutation distribution for a particular image
+perm_mean  = x$derived$univariate_Count %>%
+  filter(deidentified_sample == 'TMA3_[9,K].tif')  %>%
+  summarize(`Permuted K` = mean(`Permuted K`)) %>%
+  unlist()
 
 x$derived$univariate_Count %>%
   filter(deidentified_sample == 'TMA3_[9,K].tif') %>%
   ggplot(aes(x = `Permuted K`)) + 
   geom_histogram(color = 'white', bins = 50) + 
-  geom_vline(aes(xintercept = `Theoretical CSR`), color = 'red', size = 2) + 
-  geom_vline(aes(xintercept = `Observed K`), color = 'blue', size = 2) + 
+  geom_vline(aes(xintercept = `Theoretical CSR`), color = 'red', size = 1.5) + 
+  geom_vline(aes(xintercept = `Observed K`), color = 'blue', size = 1.5) + 
+  geom_vline(xintercept = perm_mean, color = 'green', size = 1.5) + 
   theme_bw()
 
 
+```
+
+# Subsetting by Compartment
+
+Many studies may only interested in the spatial location within the tumor or stroma compartment instead of studying all cells. By using the `subset_mif` function which requires the column (Classifier.Label in our example) and label of cells desired (Tumor here meaning that we want to focus our analysis on only the tumor compartment).
+
+```{r}
+x_tumor = subset_mif(x, classifier = 'Classifier.Label', level = 'Tumor', markers = mnames_good)
+
+table(x$spatial[[1]]$Classifier.Label)
+table(x_tumor$spatial[[1]]$Classifier.Label)
 ```
 
 # Follow-up Analysis
@@ -284,22 +300,20 @@ Once the degree of spatial clustering has be computed questions like "Are CD3+ c
 
 Due to space constraints, there are only 5 TMA cores included in the example dataset. Thus, visualization is included and no statistical analysis will be conducted. With this very limited number of samples it does look like there is some evidence that CD3+CD8+, CD8+, and FOXP3+ are more clustered in patients from status B than status A, while the CD3+ cells are less clustered in patients with status B.
 
-```{r}
+```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap='Scatter plots showing the difference in degree of spatial clustering for CD3+, and CD8+ cells. These markers were selected since all 5 examples spatial files had at least 2 to these cells.'}
 x <- ripleys_k(mif = x, mnames = mnames_good, num_permutations = 10,
                edge_correction = 'translation', r = c(0,50),
                keep_perm_dis = FALSE, workers = 1, overwrite = TRUE)
 
 inner_join(x$clinical, x$derived$univariate_Count) %>%
-  filter(!(Marker %in% c('PDL1..Opal.540..Positive', 
-                         'CD3..FOXP3.',
-                         'PD1..Opal.650..Positive'))) %>% 
+  filter(grepl('CD3..O|CD8..O', Marker)) %>% 
   ggplot(aes(x = status, y = `Degree of Clustering Permutation`)) + 
   geom_point(aes(color = deidentified_sample), show.legend = FALSE) + 
   facet_wrap(Marker ~., scales = 'free') 
 
 ```
 
-```{r}
+```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap='Heatmaps showing a potential descriptive visualization for identifying difference patterns within multiple markers across different populations.'}
 
 Rip_K_df = x$derived$univariate_Count %>% 
   filter(!(Marker %in% c('PDL1..Opal.540..Positive', 
@@ -325,20 +339,19 @@ rownames(annotation) = annotation$deidentified_sample
 annotation = annotation %>%
   select(status)
   
-pheatmap::pheatmap(Rip_K_matrix, treeheight_row = 0, treeheight_col = 0,
-                   annotation = annotation)
+pheatmap::pheatmap(Rip_K_matrix, treeheight_row = 0, treeheight_col = 0, 
+                   cluster_cols = FALSE, annotation = annotation)
 
 
 ```
 
 # Using Custom Cell Locations
 
-If xloc and yloc are set as null when computing spatial clustering than the cell location is the center of the cell (x-coordinate is the average of XMin and XMax, and y-coordinate is the average of YMin and YMax). If you desire to use custom points, this is possible by identifying which column the new coordinates are from. Here were compute Ripley's $K$ with the minimum coordinate of x and y. 
+If xloc and yloc are set as null when computing spatial clustering than the cell location is the center of the cell (x-coordinate is the average of XMin and XMax, and y-coordinate is the average of YMin and YMax). If you desire to use custom points, this is possible by identifying which column the new coordinates are from. Here were compute Ripley's $K$ with the minimum coordinate of x and y.  
 
 ```{r}
 x <- ripleys_k(mif = x, mnames = mnames_good[1], num_permutations = 100,
                edge_correction = 'translation', r = c(0,50),
                keep_perm_dis = TRUE, workers = 1, overwrite = TRUE,
                xloc = 'XMin', yloc = 'YMin')
-
 ```

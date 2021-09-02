@@ -604,3 +604,9 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   return(final)
 }
 
+list.append = function(list, new){
+  new_list = list
+  new_list[[length(new_list) + 1]] = new
+  return(new_list)
+}
+
