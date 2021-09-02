@@ -186,6 +186,19 @@ x$derived$univariate_Count  %>%
 
 Positive values of degree of cluster when using `method = 'K'` and `method = 'L'` indicates evidence of spatial clustering, while negqtive values correspond to spatial regularity. On the other hand, if using `method = 'M' then values larger than 1 correspond to clustering and values less than one correspond to regularity. Also, these values can be interpreted as the the percent difference from spatial clustering, for example if $M=0.5$ that means there is 50% less spatial clustering than expected under CSR.
 
+## Sensitivity of r
+
+There is no clear way to select which value of $r$ to use for a particular analysis. Below we illustrate how the degree of clustering can change with the value of $r$. Notice that for values of $r > 20$ that there is very little difference in the ordering between the samples (though the degree of spatial clustering can changes dramatically), while very small values $r$ would have different results.
+
+```{r,fig.width=10, fig.height=6, fig.align = 'center'}
+x$derived$univariate_Count  %>%
+  filter(Marker == 'CD3..CD8.') %>%
+  inner_join(x$clinical,.) %>%
+  ggplot(aes(shape = status, y = `Degree of Clustering Permutation`, x =r)) +
+  geom_point(aes(color = deidentified_sample)) +
+  theme_bw() + scale_color_manual(values = values)
+```
+
 ## Bivariate Count-Based Methods
 
 In the univariate case, we consider each cell of a single cell type and center circles around each cell (reference cell). In the bivariate case, we are interested in how many cells of Type 1 (Counted) are clustered in proximity to Type 2 (Anchor). Here the circles are centered around cell of Type 2 and then the cells of Type 1 are counted.
