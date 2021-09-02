@@ -117,7 +117,7 @@ plot_immunoflo <- function(
         ggplot2::scale_color_manual(NULL, values = mcolors, drop = FALSE) +
         ggplot2::theme_bw(base_size = 18) +
         ggplot2::theme(axis.title = ggplot2::element_blank(),
-                       panel.grid = ggplot2::element_blank())
+                       panel.grid = ggplot2::element_blank()) 
     }else{
     basic_plot <- plot_data %>% 
       dplyr::filter(.data$indicator == 1) %>% 
@@ -141,7 +141,8 @@ plot_immunoflo <- function(
       ggplot2::theme(axis.title = ggplot2::element_blank(),
                     panel.grid = ggplot2::element_blank())
     }
-    
+    basic_plot = basic_plot + 
+      scale_y_reverse()
     return(basic_plot)
     
   })
