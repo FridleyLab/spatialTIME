@@ -219,7 +219,7 @@ x$derived$bivariate_Count  %>%
   theme_bw() + scale_color_manual(values = values)
 ```
                
-The interpretation of the degree of clustering is the same here. The green line shows evidence that Tregs tend to cluster around Cytotoxic T cells for all values of $r$, while the red line indicates spatial repulsion of Tregs by Cytotoxic T cells for $25\le r\le50$. 
+The interpretation of the degree of clustering is the same here. The green line shows evidence that Tregs tend to cluster around Cytotoxic T cells for all values of $r$, while the black line indicates spatial repulsion of Tregs by Cytotoxic T cells for $\gt50$. 
 
 
 ## Univariate Nearest-Neighbor Methods
@@ -244,7 +244,7 @@ x$derived$univariate_NN  %>%
 
 ```
 
-The interpretation of the degree of clustering for $G$ that values greater than 0 indicate spatial clustering of the cell types of interest, while values less than 0 indicate dispersion of these cells. For example in core [3,B], `FOXP3..Opal.620..Positive` shows spatial dispersion from $0\le r \le50$ (less than zero), while `CD3..Opal.570..Positive` for core [3,B] shows spatial clustering $0\le r\le75$ (greater than zero).
+The interpretation of the degree of clustering for $G$ that values greater than 0 indicate spatial clustering of the cell types of interest, while values less than 0 indicate dispersion of these cells. For example in core TMA2_[3,B], `FOXP3..Opal.620..Positive` shows spatial dispersion from $0\le r \le50$ (less than zero), while `CD3..Opal.570..Positive` for core TMA2_[3,B] shows spatial clustering $0\le r\le75$ (greater than zero).
 
 
 ## Bivariate Nearest-Neighbor Methods
@@ -265,7 +265,7 @@ x$derived$bivariate_NN  %>%
 
 ## Permutation Distribution
 
-For this example, we use the same data used above for plotting cell locations. Now we only focus on the same TMA core and only focus on CD3+ positive cells. In this particular TMA core that the overall cell distribution is not uniform (i.e. there are many regions where cells do not occur). Also notice, that there is the CD3+ occur mostly in two places thus we suspect that the degree of clustering is quite large in this TMA core.
+For this example, we use the same data used above for plotting cell locations. Now we only focus on the same TMA core and only focus on CD3 positive cells. In this particular TMA core, we can see that the overall cell distribution is not uniform (i.e. there are many regions where cells do not occur). Also notice, that there the CD3+ cells occur mostly in two places, thus we suspect that the degree of clustering is quite large in this TMA core.
 
 ```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap='Cell locations for a particular TMA core where the blue cells are CD3+ cells and the grey cells are CD3- cells. Notice that there is a much larger quantity on the left than the right half indicating that there is some clustering occuring.'}
 x <- plot_immunoflo(x, plot_title = "deidentified_sample", mnames = mnames_good[1], 
@@ -275,9 +275,9 @@ x[["derived"]][["spatial_plots"]][[4]]
 ```
 
 
-Below is an example that shows how to select a single value for $r$, and how one can visualize the permutation distribution and how it relates to the theoretical and observed value. Here we plot the permutation distribution for the CD3+ cells with $r = 50$ and note that the range of r that is included must included 0 and the output will not include the degree of clustering at $r = 0$ which is 0 for $K$ and $L$, and $\infty$ for $M$. Notice that the theoretical value is smaller than all 100 values from the permutation distribution. 
+Below is an example that shows how to select a single value for $r$, and how one can visualize the permutation distribution as it relates to the theoretical and observed values. Here we plot the permutation distribution for the CD3+ cells with $r = 50$. Note that the range of $r$ that is included must contain 0 and the output will not include the degree of clustering at $r = 0$, which is 0 for $K$ and $L$, and $\infty$ for $M$. Notice that the theoretical value is smaller than all 100 values from the permutation distribution. 
 
-```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap = 'Histogram displaying how much the permuted estimates of K (100 permutations) can vary and also illustrate how different the permutation distribution and its mean (green vertical line) can be from the theoretical value (red vertical line). Lastily, this plot confirms what we see visually above in that the CD3+ cells are not uniformly distributed throughout this side but clustered.'}
+```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap = 'Histogram displaying how much the permuted estimates of K (100 permutations) can vary. This also illustrates how different the permutation distribution and its mean (green vertical line) can be from the theoretical value (red vertical line) or observed value (blue vertical line). Lastly, this plot confirms what we see visually above in that the CD3+ cells are not uniformly distributed throughout this slide, but clustered.'}
 x <- ripleys_k(mif = x, mnames = mnames_good[1], num_permutations = 100,
                edge_correction = 'translation', r = c(0,50),
                keep_perm_dis = TRUE, workers = 1, overwrite = TRUE)
@@ -313,7 +313,7 @@ table(x_tumor$spatial[[1]]$Classifier.Label)
 
 # Follow-up Analysis
 
-Once the degree of spatial clustering has be computed questions like "Are CD3+ cells have a larger degree of clustering different between two populations?" (t-test) or "Is the pattern of degree of clustering different between two populations?" (can be checked visually with a heatmap).
+Once the degree of spatial clustering has be computed questions like "Is the degree of clustering for CD3+ cells between two populations different? (t-test) or "Is the pattern of degree of clustering different between two populations?" (can be checked visually with a heatmap).
 
 Due to space constraints, there are only 5 TMA cores included in the example dataset. Thus, visualization is included and no statistical analysis will be conducted. With this very limited number of samples it does look like there is some evidence that CD3+CD8+, CD8+, and FOXP3+ are more clustered in patients from status B than status A, while the CD3+ cells are less clustered in patients with status B.
 
