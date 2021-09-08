@@ -313,7 +313,7 @@ table(x_tumor$spatial[[1]]$Classifier.Label)
 
 # Follow-up Analysis
 
-Once the degree of spatial clustering has be computed questions like "Is the degree of clustering for CD3+ cells between two populations different? (t-test) or "Is the pattern of degree of clustering different between two populations?" (can be checked visually with a heatmap).
+Once the degree of spatial clustering has be computed, questions like "Is the degree of clustering for CD3+ cells between two populations different? (t-test) or "Is the pattern of degree of clustering different between two populations?" (can be checked visually with a heatmap) may be answered.
 
 Due to space constraints, there are only 5 TMA cores included in the example dataset. Thus, visualization is included and no statistical analysis will be conducted. With this very limited number of samples it does look like there is some evidence that CD3+CD8+, CD8+, and FOXP3+ are more clustered in patients from status B than status A, while the CD3+ cells are less clustered in patients with status B.
 
@@ -364,7 +364,7 @@ pheatmap::pheatmap(Rip_K_matrix, treeheight_row = 0, treeheight_col = 0,
 
 # Using Custom Cell Locations
 
-If xloc and yloc are set as null when computing spatial clustering than the cell location is the center of the cell (x-coordinate is the average of XMin and XMax, and y-coordinate is the average of YMin and YMax). If you desire to use custom points, this is possible by identifying which column the new coordinates are from. Here were compute Ripley's $K$ with the minimum coordinate of x and y.  
+If `xloc` and `yloc` are set as `NULL`, when computing spatial clustering than the cell location is the center of the cell (x-coordinate is the average of `XMin` and `XMax`, and y-coordinate is the average of `YMin` and `YMax`). If you desire to use custom points, this is possible by identifying which column the new coordinates are from. Here were compute Ripley's $K$ with the minimum coordinate of x and y.  
 
 ```{r}
 x <- ripleys_k(mif = x, mnames = mnames_good[1], num_permutations = 100,
