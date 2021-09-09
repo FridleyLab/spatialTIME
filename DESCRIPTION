@@ -1,6 +1,6 @@
 Package: spatialTIME
 Title: Spatial Analysis of Vectra Immunoflourescent Data
-Version: 1.1.0
+Version: 1.2.0
 Authors@R: 
      c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
@@ -17,16 +17,16 @@ Authors@R:
 Description: Visualization and analysis  of Vectra Immunoflourescent
     data. Options for calculating both the univariate and bivariate Ripley's K
     are included. Calculations are performed using a permutation-based 
-    approach presented by Wilson et al. <doi: https://doi.org/10.1101/2021.04.27.21256104>. 
+    approach presented by Wilson et al.  <doi:10.1101/2021.04.27.21256104>. 
 License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.1.1
-Imports: magrittr, dplyr, tidyr, ggplot2, scales, stringr,
+Imports: magrittr, dplyr, tidyr, ggplot2, scales,
         grDevices, purrr, rlang, plyr, spatstat.geom,
-        spatstat.core, RColorBrewer, stats, furrr, ggpubr, 
-        viridis, future, tidyselect, crayon, pheatmap
+        spatstat.core, RColorBrewer, stats, rlist, furrr, 
+        future, tidyselect, crayon, pheatmap
 Depends: R (>= 3.5.0)
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
