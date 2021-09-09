@@ -84,7 +84,7 @@ slot and printed to a PDF if a file name is provided.
 
 When studying phenotype and individual markers, note that it is important to have the individual before the phenotype markers. This will ensure that the phenotype that are derived by multiple markers are not plotted over by the individual marker. For instance, below the the first plot appears to have no cytotoxic T cells (CD3+ and CD8+), but then the order is changed we see the cytotoxic T cells. Moral of the story: Put the marker combinations before the single markers.
 
-```{r, plot_bad, fig.width=10, fig.height=6,fig.align = 'left', fig.cap='Notice that using the "bad" (B) order that one would have the impression that there is a huge number of CD3+ and there are no cells that are CD3+ FOXP3+ or CD3+ CD8+. While the "good" (G) order can  better make this distiction as well as show cells that are only positive for CD3 and not postive for FOXP3 or CD8.'}
+```{r, plot_bad, fig.width=14, fig.height=6,fig.align = 'left', fig.cap='Notice that using the "bad" (B) order that one would have the impression that there is a huge number of CD3+ and there are no cells that are CD3+ FOXP3+ or CD3+ CD8+. While the "good" (G) order can  better make this distiction as well as show cells that are only positive for CD3 and not postive for FOXP3 or CD8.'}
 mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
                 "CD8..Opal.520..Positive","FOXP3..Opal.620..Positive", 
                 "PDL1..Opal.540..Positive", "PD1..Opal.650..Positive")
@@ -141,7 +141,7 @@ ggpubr::ggarrange(plotlist = list(bad_names, good_names), labels = c('B', 'G'),
 
 Ripley's $K$ measures the average number of neighboring cells across each cell. That is, the average (over all cells) number of cells within a specified radius of a cell. Ripley's $K$ is computed as follows:
 
-$$\hat{K}(r) = \frac{1}{n}\sum_{i=1}^{n}w_{ij}{\bf 1}{(d(x_i,x_j)\le r)},$$
+$$\hat{K}(r) = \frac{1}{n(n-1)}\sum_{i=1}^{n}\sum_{j\neq i}w_{ij}{\bf 1}{(d(x_i,x_j)\le r)},$$
 
 where $r$ is the specified radius, $d(x_i,x_j)$ is the distance between the $i^{th}$ and $j^{th}$ cell, ${\bf 1}_A$ is indicator function of event $A$, and $w_{ij}$ is the weights that are assigned for border corrections. The expected value of $\hat{K}(r)$ is $\pi r^2$, thus $\hat{K}$ is expected to grow as a quadratic function of $r$.
 
