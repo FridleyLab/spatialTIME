@@ -142,7 +142,7 @@ plot_immunoflo <- function(
                     panel.grid = ggplot2::element_blank())
     }
     basic_plot = basic_plot + 
-      scale_y_reverse()
+      ggplot2::scale_y_reverse()
     return(basic_plot)
     
   })
