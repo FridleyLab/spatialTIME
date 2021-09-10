@@ -1,7 +1,7 @@
 
 <!-- badges: start -->
 
-[![tic](https://github.com/jhcreed/spatial_ihc/workflows/tic/badge.svg?branch=master)](https://github.com/jhcreed/spatial_ihc/actions)
+[![tic](https://github.com/fridleylab/spatialTIME/workflows/tic/badge.svg?branch=master)](https://github.com/fridleylab/spatialTIME/actions)
 <!-- badges: end -->
 
 # spatialTIME <img src="man/hex_sticker/hex.png" align="right" height="139" />

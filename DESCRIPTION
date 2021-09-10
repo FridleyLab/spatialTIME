@@ -26,7 +26,7 @@ RoxygenNote: 7.1.1
 Imports: magrittr, dplyr, tidyr, ggplot2, scales,
         grDevices, purrr, rlang, plyr, spatstat.geom,
         spatstat.core, RColorBrewer, stats, rlist, furrr, 
-        future, tidyselect, crayon, pheatmap, ggpubr
+        future, tidyselect, crayon, pheatmap, ggpubr, viridis
 Depends: R (>= 3.5.0)
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr

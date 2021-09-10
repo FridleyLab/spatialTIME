@@ -3,7 +3,7 @@ output: github_document
 ---
 
 <!-- badges: start -->
-[![tic](https://github.com/jhcreed/spatial_ihc/workflows/tic/badge.svg?branch=master)](https://github.com/jhcreed/spatial_ihc/actions)
+[![tic](https://github.com/fridleylab/spatialTIME/workflows/tic/badge.svg?branch=master)](https://github.com/fridleylab/spatialTIME/actions)
 <!-- badges: end -->
 
 ```{r setup, include=FALSE}
