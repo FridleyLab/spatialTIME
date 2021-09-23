@@ -34,6 +34,11 @@ subset_mif = function(mif, classifier, level, markers){
   summary = data.frame()
   for(a in 1:length(mif$spatial)){
     tmp = mif$spatial[[a]] %>% dplyr::filter(get(classifier) == level)
+    patient = mif$sample[[mif$patient_id]][mif$sample[[mif$sample_id]] == 
+                                      tmp[[mif$sample_id]][1]]
+    if(length(patient) < 1){
+      patient = NA
+    }
     if(nrow(tmp)>2){
       split_spatial = list.append(split_spatial, tmp)
       names(split_spatial)[length(split_spatial)] = tmp[[mif$sample_id]][1]
@@ -47,7 +52,7 @@ subset_mif = function(mif, classifier, level, markers){
         dplyr::summarize_all(~sum(.)) %>%
         dplyr::mutate(`Total Cells` = nrow(tmp))
       colnames(counts) = paste0(level, ': ', colnames(counts))
-      out = c(tmp[[mif$patient_id]][1], 
+      out = c(patient, 
               tmp[[mif$sample_id]][1],
               unlist(counts) , unlist(percent))
       names(out)[1:2] = c(mif$patient_id,mif$sample_id)
