@@ -8,8 +8,10 @@ Authors@R:
              email = "ram.thapa@moffitt.org"),
       person(given = "Christopher", family = "Wilson", role = "aut",
              email = "christopher.wilson@moffitt.org"),
-             person(given = "Alex", family = "Soupir", role = "aut",
+      person(given = "Alex", family = "Soupir", role = "aut",
              email = "alex.soupir@moffitt.org"),
+      person(given = "Oscar", family = "Ospina", role = "aut",
+             email = "oscar.ospina@moffitt.org")
       person(given = "Brooke", family = "Fridley", role = "cph",
              email = "brooke.fridley@moffitt.org"),
       person(given = "Fridley", family = "Lab", role = "cre",
@@ -22,11 +24,11 @@ License: MIT + file LICENSE
 Encoding: UTF-8
 LazyData: true
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.1.1
+RoxygenNote: 7.1.2
 Imports: magrittr, dplyr, tidyr, ggplot2, scales,
         grDevices, purrr, rlang, plyr, spatstat.geom,
         spatstat.core, RColorBrewer, stats, furrr, 
-        future, tidyselect, crayon, pheatmap, ggpubr, viridis
+        future, tidyselect, crayon, pheatmap, viridis, vizier
 Depends: R (>= 3.5.0)
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr
