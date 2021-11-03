@@ -1,6 +1,6 @@
 Package: spatialTIME
 Title: Spatial Analysis of Vectra Immunoflourescent Data
-Version: 1.2.0
+Version: 1.2.1
 Authors@R: 
      c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
@@ -11,7 +11,7 @@ Authors@R:
       person(given = "Alex", family = "Soupir", role = "aut",
              email = "alex.soupir@moffitt.org"),
       person(given = "Oscar", family = "Ospina", role = "aut",
-             email = "oscar.ospina@moffitt.org")
+             email = "oscar.ospina@moffitt.org"),
       person(given = "Brooke", family = "Fridley", role = "cph",
              email = "brooke.fridley@moffitt.org"),
       person(given = "Fridley", family = "Lab", role = "cre",
