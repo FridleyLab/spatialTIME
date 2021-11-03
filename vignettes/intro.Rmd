@@ -92,7 +92,7 @@ mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
 # Used to make the legends in both plots below be in same order and use the 
 # same coloring scheme for the purpose making a common legend
 
-values = turbo(length(mnames_bad))
+values = vizier::turbo(length(mnames_bad))
 names(values) = mnames_bad
 
 #add an element in the `derived` object position
@@ -126,12 +126,10 @@ good_names <- x[["derived"]][["spatial_plots"]][[4]] +
 
 x$sample %>% filter(deidentified_sample == 'TMA3_[9,K].tif') %>% select(c(2, 4:15)) %>%
   pivot_longer(cols = 2:13, names_to = 'Marker', values_to = 'Count')
+```
 
-ggpubr::ggarrange(plotlist = list(bad_names, good_names), labels = c('B', 'G'),
-                  common.legend = TRUE, legend = 'bottom')
-
-
-
+```{r}
+gridExtra::grid.arrange(bad_names, good_names, ncol=2)
 ```
 # Estimating the degree of spatial clustering with Count Based Methods
 
@@ -174,7 +172,7 @@ x <- ripleys_k(mif = x, mnames = mnames_good,
                keep_perm_dis = FALSE, workers = 1)
 
 # This will keeps the colors in evx$ery plot for the remainder of the vignette compatible 
-values = turbo(length(unique(x$derived$univariate_Count$deidentified_sample)))
+values = vizier::turbo(length(unique(x$derived$univariate_Count$deidentified_sample)))
 names(values) = unique(x$derived$univariate_Count$deidentified_sample)
 
 x$derived$univariate_Count  %>%
