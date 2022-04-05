@@ -92,7 +92,7 @@ mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
 # Used to make the legends in both plots below be in same order and use the 
 # same coloring scheme for the purpose making a common legend
 
-values = vizier::turbo(length(mnames_bad))
+values =  RColorBrewer::brewer.pal(length(mnames_bad), "Accent")
 names(values) = mnames_bad
 
 #add an element in the `derived` object position
@@ -172,7 +172,7 @@ x <- ripleys_k(mif = x, mnames = mnames_good,
                keep_perm_dis = FALSE, workers = 1)
 
 # This will keeps the colors in evx$ery plot for the remainder of the vignette compatible 
-values = vizier::turbo(length(unique(x$derived$univariate_Count$deidentified_sample)))
+values = RColorBrewer::brewer.pal(length(unique(x$derived$univariate_Count$deidentified_sample)), "Accent")
 names(values) = unique(x$derived$univariate_Count$deidentified_sample)
 
 x$derived$univariate_Count  %>%

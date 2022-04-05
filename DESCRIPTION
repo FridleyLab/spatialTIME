@@ -1,6 +1,6 @@
 Package: spatialTIME
 Title: Spatial Analysis of Vectra Immunoflourescent Data
-Version: 1.2.1
+Version: 1.2.2
 Authors@R: 
      c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
@@ -28,12 +28,15 @@ RoxygenNote: 7.1.2
 Imports: magrittr, dplyr, tidyr, ggplot2, scales,
         grDevices, purrr, rlang, plyr, spatstat.geom,
         spatstat.core, RColorBrewer, stats, furrr, 
-        future, tidyselect, crayon, pheatmap, viridis, vizier
+        future, tidyselect, crayon, pheatmap, viridis
 Depends: R (>= 3.5.0)
-Suggests: knitr, rmarkdown, testthat
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0)
 VignetteBuilder: knitr
 URL: https://github.com/FridleyLab/spatialTIME
 BugReports: https://github.com/FridleyLab/spatialTIME/issues
 NeedsCompilation: no
 Packaged: 2021-08-19 22:31:18 UTC; 4468179
-
+Config/testthat/edition: 3
