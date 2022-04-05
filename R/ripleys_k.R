@@ -105,13 +105,12 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
   #create table for metrics to calculate
   calc_grid = expand.grid(Method = method, `K Transformation` = k_trans, 
                           `Range` = r_range, Permutation = rep(1, num_permutations), 
-                            `Spatial File` = length(data))
-  calc_grid = calc_grid %>%
-    dplyr::mutate(`Correction Method` = case_when(Method %in% c("K", "BiK") ~ 
-                                    c("translation", "isotropic")[which(c("translation", "isotropic") %in% correction)],
-                                    Method %in% c("G", "BiG") ~
-                                    c("rs", "hans")[which(c("rs", "hans") %in% correction)])) %>%
+                            `Spatial File` = seq(data)) %>%
     dplyr::filter(Range != 0)
+  
+  calc_grid$`Correction Method` = ifelse(calc_grid$Method %in% c("K", "BiK"), 
+                                         c("translation", "isotropic")[which(c("translation", "isotropic") %in% correction)],
+                                         c("rs", "hans")[which(c("rs", "hans") %in% correction)]) 
   
   #setting up derived tables
   univariate_Count = data.frame(matrix(ncol = 9, nrow = 0))
@@ -168,7 +167,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
                 BiK = bivariate_Count,
                 UniG = univariate_NN,
                 BiK = bivariate_NN))
-  }, .options = furrr::furrr_options(seed=TRUE))
+  }, .options = furrr::furrr_options(seed=TRUE), .progress = T)
   #collapse tables from permutations and methods
   derived2 = lapply(seq(derived[[1]]), function(metric){
     lapply(seq(derived), function(run){
@@ -191,14 +190,14 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
   if(keep_perm_dis){
     derived = lapply(derived2, function(tmp){
       tmp %>%
-        dplyr::group_by(dplyr::across(dplyr::any_of(c(id, "Marker", "anchor", "counted"))), r) %>%
+        dplyr::group_by(dplyr::across(dplyr::any_of(c(id, "Marker", "anchor", "counted", "r")))) %>%
         dplyr::mutate(iter = 1:n(), .before = !!id)
         
     })
   } else { #if not keep permutation, find mean of all runs
     derived = lapply(derived2, function(tmp){
       tmp %>%
-        dplyr::group_by(dplyr::across(dplyr::any_of(c(id, "Marker", "anchor", "counted"))), r) %>%
+        dplyr::group_by(dplyr::across(dplyr::any_of(c(id, "Marker", "anchor", "counted", "r")))) %>%
         dplyr::summarize_all(~mean(., na.rm = TRUE)) %>%
         dplyr::mutate(iter = paste0("Mean of ", num_permutations, " permutations"))
     })
