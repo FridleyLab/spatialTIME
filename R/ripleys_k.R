@@ -137,7 +137,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
     #assign("info", info, envir = .GlobalEnv)
     if(info$Method == "K"){
       univariate_Count = rbind(univariate_Count,
-                               uni_Rip_K(data = data[[info$`Spatial File`]], markers = mnames_good, id = id,
+                               uni_Rip_K(data = data[[info$`Spatial File`]], markers = mnames, id = id,
                                          num_iters = info$Permutation, r = c(0, info$Range),
                                          correction = info$`Correction Method`, method = info$`K Transformation`,
                                          perm_dist = keep_perm_dis, xloc, yloc))
