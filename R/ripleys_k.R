@@ -73,6 +73,10 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
   #set working variables
   data = mif$spatial
   id = mif$sample_id
+  #check markers and methods
+  if(length(mnames) == 1 & (TRUE %in% (c("BiK", "BiG") %in% method))){
+    stop("For bivariate calculations, at least 2 cell markers must be submitted")
+  }
   correction = c() #making new correction variable for edge correction methods
   if(length(edge_correction) > 2){
     stop("Please specify an edge correction for the methods of interest")
