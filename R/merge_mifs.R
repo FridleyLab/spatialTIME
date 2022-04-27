@@ -80,12 +80,13 @@ merge_mifs = function(mifs = NULL, check.names = T){
   sizes = sapply(mifs, function(mif){
     length(mif$derived)
   })
+  names(sizes) = seq(length(sizes))
   derived = lapply(mifs, function(mif){
     mif$derived
   })
-  names(derived) = sizes
+  names(derived) = names(sizes)
   #sort derived to have order with most derived first
-  derived = derived[paste(sort(sizes, decreasing = T))]
+  derived = derived[names(sort(sizes, decreasing = T))]
   #begin merging
   derived2 = lapply(derived_names, function(name){
     lapply(derived, function(mif){
