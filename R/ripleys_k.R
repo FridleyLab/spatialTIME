@@ -190,7 +190,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
   rm(derived)
   key = c("univariate_Count" = "K", "bivariate_Count" = "BiK",
           "univariate_NN" = "G", "bivariate_NN" = "BiG")
-  names(derived2) = names(key)[which(method %in% key)]
+  names(derived2) = names(key)
   
   #if keep permutation, set permutation number in table
   if(keep_perm_dis){
