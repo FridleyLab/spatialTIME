@@ -610,3 +610,160 @@ list.append = function(list, new){
   return(new_list)
 }
 
+#calculate dixons s Z table
+dix_s_z = function(data, markers, classifier_label, num_permutations, xloc, yloc){
+  #in function that calls dix_s_classifier needs to assign or find x and y locations
+  #see uni_rip_k function 
+  if(!is.null(xloc) && !is.null(yloc)){
+    data = data %>%
+      dplyr::mutate(XMin = get(xloc),
+                    XMax = get(xloc),
+                    YMin = get(yloc),
+                    YMax = get(yloc))
+  }
+  
+  #Use set the cell location as the center of the cell
+  data = data %>% 
+    dplyr::mutate(xloc = (XMin + XMax)/2,
+                  yloc = (YMin + YMax)/2
+    )
+  #identify the different classifier levels
+  levs = data %>% pull(!!classifier_label) %>% unique()
+  #loop through for markers
+  dixon_s = purrr::map(.x = markers, 
+                       ~{
+                         marker = .x
+                         tmp = data %>% dplyr::filter(get(!!marker) == 1) %>% dplyr::select(xloc, yloc, !!classifier_label)
+                         #check if marker is only in one tissue type or there are zero rows
+                         if(length(unique(tmp[[classifier_label]])) == 1){
+                           dat = expand.grid("From" = levs, "To" = levs) %>%
+                             dplyr::bind_cols(data.frame("    Obs.Count" = rep(NA, nrow(.)),
+                                                  "    Exp. Count" = rep(NA, nrow(.)),
+                                                  "S " = rep(NA, nrow(.)),
+                                                  "Z " = rep(NA, nrow(.)),
+                                                  "  p-val.Z" = rep(NA, nrow(.)),
+                                                  "  p-val.Nobs" = rep(NA, nrow(.)), check.names = F)) %>%
+                             dplyr::mutate(Marker = marker)
+                           ns = tmp %>% dplyr::group_by(get(!!classifier_label)) %>% dplyr::summarise(n()) %>% dplyr::pull(2, 1)
+                           ns_mat = matrix(data = ns, nrow = 4, byrow = T) %>% data.frame(check.names=F)
+                           colnames(ns_mat) = names(ns)
+                           dat = dplyr::bind_cols(dat, ns_mat)
+                           #if there are zero can skip finding how many there are
+                         } else if(nrow(tmp) == 0){
+                           dat = expand.grid("From" = levs, "To" = levs) %>%
+                             dplyr::bind_cols(data.frame("    Obs.Count" = rep(NA, nrow(.)),
+                                                  "    Exp. Count" = rep(NA, nrow(.)),
+                                                  "S " = rep(NA, nrow(.)),
+                                                  "Z " = rep(NA, nrow(.)),
+                                                  "  p-val.Z" = rep(NA, nrow(.)),
+                                                  "  p-val.Nobs" = rep(NA, nrow(.)), check.names = F)) %>%
+                             dplyr::mutate(Marker = marker)
+                           #if there less than 2 in all classifiers
+                         } else if(TRUE %in% ((tmp %>% group_by(get(!!classifier_label)) %>% summarise(n()) %>%
+                                               pull(2, 1)) < 2)){
+                           dat = expand.grid("From" = levs, "To" = levs) %>%
+                             dplyr::bind_cols(data.frame("    Obs.Count" = rep(NA, nrow(.)),
+                                                  "    Exp. Count" = rep(NA, nrow(.)),
+                                                  "S " = rep(NA, nrow(.)),
+                                                  "Z " = rep(NA, nrow(.)),
+                                                  "  p-val.Z" = rep(NA, nrow(.)),
+                                                  "  p-val.Nobs" = rep(NA, nrow(.)), check.names = F)) %>%
+                             dplyr::mutate(Marker = marker)
+                           ns = tmp %>% dplyr::group_by(get(!!classifier_label)) %>% dplyr::summarise(n()) %>% dplyr::pull(2, 1)
+                           ns_mat = matrix(data = rep(ns, 4), nrow = 4, byrow = T) %>% data.frame(check.names=F)
+                           colnames(ns_mat) = names(ns)
+                           dat = dplyr::bind_cols(dat, ns_mat)
+                           #if dixons s can be computed do so
+                         } else {
+                           invisible(capture.output(dat <- dixon::dixon(tmp, nsim = num_permutations)$tablaZ))
+                           dat = dat %>%
+                             dplyr::mutate(Marker = marker)
+                           ns = tmp %>% dplyr::group_by(get(!!classifier_label)) %>% dplyr::summarise(n()) %>% dplyr::pull(2, 1)
+                           ns_mat = matrix(data = rep(ns, 4), nrow = 4, byrow = T) %>% data.frame(check.names=F)
+                           colnames(ns_mat) = names(ns)
+                           dat = dplyr::bind_cols(dat, ns_mat)
+                         }
+                         return(dat)
+                       }
+  ) %>%
+    #bind the resulting dfs together
+    do.call(dplyr::bind_rows, .)
+  return(dixon_s)
+}
+
+#calculate dixons s C table
+dix_s_c = function(data, markers, classifier_label, num_permutations, xloc, yloc){
+  #in function that calls dix_s_classifier needs to assign or find x and y locations
+  #see uni_rip_k function 
+  if(!is.null(xloc) && !is.null(yloc)){
+    data = data %>%
+      dplyr::mutate(XMin = get(xloc),
+                    XMax = get(xloc),
+                    YMin = get(yloc),
+                    YMax = get(yloc))
+  }
+  
+  #Use set the cell location as the center of the cell
+  data = data %>% 
+    dplyr::mutate(xloc = (XMin + XMax)/2,
+                  yloc = (YMin + YMax)/2
+    )
+  #identify the different classifier levels
+  levs = data %>% pull(!!classifier_label) %>% unique()
+  #loop through for markers
+  dixon_s = purrr::map(.x = markers, 
+                       ~{
+                         marker = .x
+                         tmp = data %>% dplyr::filter(get(!!marker) == 1) %>% dplyr::select(xloc, yloc, !!classifier_label)
+                         #check if marker is only in one tissue type or there are zero rows
+                         if(length(unique(tmp[[classifier_label]])) == 1){
+                           dat = data.frame("  df " = rep(NA, length(levs) + 1),
+                                            "Chi-sq" = rep(NA, length(levs) + 1),
+                                            "P.asymp" = rep(NA, length(levs) + 1),
+                                            "  P.rand" = rep(NA, length(levs) + 1), check.names = F) %>%
+                             dplyr::mutate(Marker = marker) %>%
+                             mutate(Segregation = c("Overall segregation", paste("From", levs)))
+                           ns = tmp %>% dplyr::group_by(get(!!classifier_label)) %>% dplyr::summarise(n()) %>% pull(2, 1)
+                           ns_mat = matrix(data = length(levs) + 1, nrow = length(levs) + 1, byrow = T) %>% data.frame(check.names=F)
+                           colnames(ns_mat) = names(ns)
+                           dat = dplyr::bind_cols(dat, ns_mat)
+                           #if there are zero can skip finding how many there are
+                         } else if(nrow(tmp) == 0){
+                           dat = data.frame("  df " = rep(NA, length(levs) + 1),
+                                            "Chi-sq" = rep(NA, length(levs) + 1),
+                                            "P.asymp" = rep(NA, length(levs) + 1),
+                                            "  P.rand" = rep(NA, length(levs) + 1), check.names = F) %>%
+                             dplyr::mutate(Marker = marker) %>%
+                             mutate(Segregation = c("Overall segregation", paste("From", levs)))
+                           #if there less than 2 in all classifiers
+                         } else if(TRUE %in% ((tmp %>% dplyr::group_by(get(!!classifier_label)) %>% dplyr::summarise(n()) %>%
+                                               dplyr::pull(2, 1)) < 2)){
+                           dat = data.frame("  df " = rep(NA, length(levs) + 1),
+                                                  "Chi-sq" = rep(NA, length(levs) + 1),
+                                                  "P.asymp" = rep(NA, length(levs) + 1),
+                                                  "  P.rand" = rep(NA, length(levs) + 1), check.names = F) %>%
+                             dplyr::mutate(Marker = marker) %>%
+                             mutate(Segregation = c("Overall segregation", paste("From", levs)))
+                           ns = tmp %>% dplyr::group_by(get(!!classifier_label)) %>% dplyr::summarise(n()) %>% dplyr::pull(2, 1)
+                           ns_mat = matrix(data = rep(ns, length(levs) + 1), nrow = length(levs) + 1, byrow = T) %>% data.frame(check.names=F)
+                           colnames(ns_mat) = names(ns)
+                           dat = dplyr::bind_cols(dat, ns_mat)
+                           #if dixons s can be computed do so
+                         } else {
+                           invisible(capture.output(dat <- dixon::dixon(tmp, nsim = num_permutations)$tablaC))
+                           dat = dat %>%
+                             tibble::rownames_to_column("Segregation") %>%
+                             dplyr::mutate(Marker = marker,
+                                           Segregation = Segregation %>% gsub("\\  ", " ", .) %>% gsub("\\  *$", "", .))
+                           ns = tmp %>% dplyr::group_by(get(!!classifier_label)) %>% dplyr::summarise(n()) %>% dplyr::pull(2, 1)
+                           ns_mat = matrix(data = rep(ns, length(levs) + 1), nrow = length(levs) + 1, byrow = T) %>% data.frame(check.names=F)
+                           colnames(ns_mat) = names(ns)
+                           dat = dplyr::bind_cols(dat, ns_mat)
+                         }
+                         return(dat)
+                       }
+  ) %>%
+    #bind the resulting dfs together
+    do.call(dplyr::bind_rows, .)
+  return(dixon_s)
+}

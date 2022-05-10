@@ -107,6 +107,8 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
     k_trans = "K"
   }
   #create table for metrics to calculate
+  #all markers are calculated on a single image in one function call rather than parallelizing down to the actual markers
+  #potentially future update
   calc_grid = expand.grid(Method = method, `K Transformation` = k_trans, 
                           `Range` = r_range, Permutation = rep(1, num_permutations), 
                             `Spatial File` = seq(data)) %>%
@@ -210,7 +212,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
   #Overwrite or Not
   if(overwrite == FALSE){
     if("K" %in% method){
-      if(!exists("mif$derived$univariate_Count")){
+      if(is.null("mif$derived$univariate_Count")){
         mif$derived$univariate_Count = derived$univariate_Count
       } else {
         mif$derived$univariate_Count = dplyr::bind_rows(mif$derived$univariate_Count,
@@ -218,7 +220,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
       }
     }
     if("BiK" %in% method){
-      if(!exists("mif$derived$univariate_Count")){
+      if(is.null("mif$derived$bivariate_Count")){
         mif$derived$bivariate_Count = derived$bivariate_Count
       } else {
         mif$derived$bivariate_Count = dplyr::bind_rows(mif$derived$bivariate_Count,
@@ -226,7 +228,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
       }
     }
     if("G" %in% method){
-      if(!exists("mif$derived$univariate_Count")){
+      if(is.null("mif$derived$univariate_NN")){
         mif$derived$univariate_NN = derived$univariate_NN
       } else {
         mif$derived$univariate_NN = dplyr::bind_rows(mif$derived$univariate_NN,
@@ -234,7 +236,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
       }
     }
     if("BiG" %in% method){
-      if(!exists("mif$derived$univariate_Count")){
+      if(is.null("mif$derived$bivariate_NN")){
         mif$derived$bivariate_NN = derived$bivariate_NN
       } else {
         mif$derived$bivariate_NN = dplyr::bind_rows(mif$derived$bivariate_NN,
@@ -648,4 +650,125 @@ bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
   }
   
   return(mif)
+}
+
+#' Dixon's S Segregation Statistic
+#'
+#' @description This function processes the spatial files in the mif object,
+#' requiring a column that distinguishes between different groups i.e. tumor and 
+#' stroma
+#' @param mif An MIF object
+#' @param mnames Character vector of marker names to estimate degree of 
+#' nearest neighbor distribution
+#' @param num_permutations Numeric value indicating the number of permutations used. 
+#'  Default is 1000.
+#' @param type a character string for the type that is wanted in the output which can
+#' be "Z" for z-statistic results or "C" for Chi-squared statistic results
+#' @param workers Integer value for the number of workers to spawn
+#' @param overwrite Logical value determining if you want the results to replace the 
+#' current output (TRUE) or be to be appended (FALSE).
+#' @param xloc a string corresponding to the x coordinates. If null the average of 
+#' XMin and XMax will be used 
+#' @param yloc a string corresponding to the y coordinates. If null the average of 
+#' YMin and YMax will be used 
+#' 
+#' @return Returns a data frame for Z-statistic
+#'    \item{From}{}
+#'    \item{To}{}
+#'    \item{Obs.Count}{}
+#'    \item{Exp. Count}{}
+#'    \item{S}{}
+#'    \item{Z}{}
+#'    \item{p-val.Z}{}
+#'    \item{p-val.Nobs}{}
+#'    \item{Marker}{}
+#'    \item{Classifier Labeled Column Counts}{}
+#'    \item{Image.Tag}{}
+#' @return Returns a data frame for C-statistic
+#'    \item{Segregation}{}
+#'    \item{df}{}
+#'    \item{Chi-sq}{}
+#'    \item{P.asymp}{}
+#'    \item{P.rand}{}
+#'    \item{Marker}{}
+#'    \item{Classifier Labeled Column Counts}{}
+#'    \item{Image.Tag}{}
+#' @examples 
+#' #' #Create mif object
+#' library(dplyr)
+#' x <- create_mif(clinical_data = example_clinical %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' sample_data = example_summary %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' spatial_list = example_spatial,
+#' patient_id = "deidentified_id", 
+#' sample_id = "deidentified_sample")
+#' 
+#' #run dixons s statistic
+#' x <- dixons_s(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
+#' num_permutations = 1000, type = "Z", workers = 1, overwrite = T) 
+#' 
+#' @export
+
+dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 1000, type = c("Z", "C"),
+                    workers = 1, overwrite = FALSE, xloc = NULL, yloc = NULL){
+  #dix_s_z
+  #dix_s_c
+  #make sure to assign the spatial data name to the output of dix_s_z and dix_s_c
+  #check classifier label
+  if(is.null(classifier_label)){
+    stop("Please enter a column name for the separation classifier")
+  }
+  data = mif$spatial
+  
+  future::plan(future::multisession, workers = workers)
+  if(overwrite == FALSE){
+    if("Z" %in% type){
+      mif$derived$dixons_S_Z = rbind(mif$derived$dixons_S_Z,
+                                     furrr::future_map(.x = 1:length(data),
+                                                       ~{
+                                                         dix_s_z(data = data[[.x]], num_permutations = num_permutations,
+                                                                 markers = mnames, classifier_label = classifier_label, 
+                                                                 xloc = xloc, yloc = yloc) %>%
+                                                           mutate(Image.Tag = names(data)[.x])
+                                                       }, .options = furrr::furrr_options(seed = T),
+                                                       .progress = T) %>%
+                                       plyr::ldply())
+    }
+    if("C" %in% type){
+      mif$derived$dixons_S_C = rbind(mif$derived$dixons_S_C,
+                                     furrr::future_map(.x = 1:length(data),
+                                                       ~{
+                                                         dix_s_c(data = data[[.x]], num_permutations = num_permutations,
+                                                                 markers = mnames, classifier_label = classifier_label, 
+                                                                 xloc = xloc, yloc = yloc) %>%
+                                                           mutate(Image.Tag = names(data)[.x])
+                                                       }, .options = furrr::furrr_options(seed = T),
+                                                       .progress = T) %>%
+                                       plyr::ldply())
+    }
+  } else {
+    if("Z" %in% type){
+      mif$derived$dixons_S_Z = furrr::future_map(.x = 1:length(data),
+                                                 ~{
+                                                   dix_s_z(data = data[[.x]], num_permutations = num_permutations,
+                                                           markers = mnames, classifier_label = classifier_label, 
+                                                           xloc = xloc, yloc = yloc) %>%
+                                                     mutate(Image.Tag = names(data)[.x])
+                                                 }, .options = furrr::furrr_options(seed = T),
+                                                 .progress = T) %>%
+        plyr::ldply()
+    }
+    if("C" %in% type){
+      mif$derived$dixons_S_C = furrr::future_map(.x = 1:length(data),
+                                                 ~{
+                                                   dix_s_c(data = data[[.x]], num_permutations = num_permutations,
+                                                           markers = mnames, classifier_label = classifier_label, 
+                                                           xloc = xloc, yloc = yloc) %>%
+                                                     mutate(Image.Tag = names(data)[.x])
+                                                 }, .options = furrr::furrr_options(seed = T),
+                                                 .progress = T) %>%
+        plyr::ldply()
+    }
+  }
 }
