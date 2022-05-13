@@ -771,4 +771,5 @@ dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 100
         plyr::ldply()
     }
   }
+  structure(mif, class="mif")
 }
