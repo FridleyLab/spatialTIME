@@ -6,10 +6,18 @@ K_out = function(data, marker, id, iter, correction,r_value, win){
     dplyr::filter(r != 0) %>%
     dplyr::mutate(Marker = marker,
            label = data[[id]][1],
-           iter = iter) %>%
-    dplyr::select(iter, label, Marker, r, theo, correction) %>%
-    dplyr::mutate(label = as.character(label))
-  return(K_obs)
+           iter = iter)
+  if(correction=="none"){
+    K_obs = K_obs %>%
+      dplyr::select(iter, label, Marker, r, theo, un) %>%
+      dplyr::mutate(label = as.character(label))
+    return(K_obs)
+  } else {
+    K_obs = K_obs %>%
+      dplyr::select(iter, label, Marker, r, theo, correction) %>%
+      dplyr::mutate(label = as.character(label))
+    return(K_obs)
+  }
 }
 
 perm_data = function(data, markers){
@@ -52,7 +60,7 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
   }
   
   #Notice that this follows spatstat's notation and argument name
-  if(!(correction %in% c('trans', "iso", "border", 'translation', 'isotropic'))){
+  if(!(correction %in% c('trans', "iso", "border", 'translation', 'isotropic', 'none'))){
     stop("Did not provide a valid edge correcion method.")
   }
   
@@ -98,9 +106,15 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
   
   perms = purrr::map_df(.x = 1:nrow(grid),~{
     data_new = perm_data(data, markers)
+    print(which(data_new$CD3..CD8. == 1))
     return(uni_K(data = data_new, iter = grid[.x,2], 
                  marker = grid[.x,1], id = id, r_value = r,
                  correction = correction, win = win))})
+  if(correction == "none"){
+    perms = perms %>%
+      select(-!!correction) %>%
+      rename(!!correction := un)
+  }
   colnames(perms)[c(2,5,6)] = c(id, 'Theoretical CSR','Permuted K')
   
   obs = purrr::map_df(.x = markers, ~uni_K(data = data, iter = 'Observed', 
@@ -767,3 +781,38 @@ dix_s_c = function(data, markers, classifier_label, num_permutations, xloc, yloc
     do.call(dplyr::bind_rows, .)
   return(dixon_s)
 }
+
+#special thanks to Simon Vandekar and Julia Wrobel
+get_kperm = function(pp_obj,
+                     mark1,
+                     mark2 = NULL,
+                     r_vec = NULL,
+                     ...){
+  
+  n = pp_obj$n
+  K = spatstat.core::Kest(pp_obj, r = r_vec, ...)
+  sumW = K * n * (n-1)
+  
+  if(is.null(mark2)){
+    X1 = ifelse(pp_obj$marks == mark1, 1, 0)
+    sX1 = sum(X1)
+    #v1 = sX1/n
+    v2 = (sX1 * (sX1 - 1))/(n * (n-1))
+    lambda2 = (sX1 *(sX1-1))
+  }else{
+    X1 = ifelse(pp_obj$marks == mark1, 1, 0)
+    X2 = ifelse(pp_obj$marks == mark2, 1, 0)
+    sX1 = sum(X1)
+    sX2 = sum(X2)
+    sX1X2 = sum(X1*X2)
+    
+    v1 = sX1X2/n
+    v2 = (sX1*sX2-sX1X2)/(n*(n-1))
+    lambda2 = sX1*sX2/(areapp^2)
+  }
+  
+  Kperm = v2 * sumW/lambda2
+  tidyr::as_tibble(Kperm[,-2])
+}
+
+
