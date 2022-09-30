@@ -84,17 +84,21 @@ ripleys_k2 = function(mif,
       
       #dists = fast_mm(dists, edge)
       res = parallel::mclapply(mnames, function(marker){
+        print(marker)
         #find the rows that are positive for marker
         pos = which(spat[marker] == 1)
         #if there are less than 3 cells then just return NA table because cannot calculate
         if(length(pos) < 3){
-          return(data.frame(iter = as.character(seq(num_permutations)), 
-                            label = spat[1,"deidentified_sample"],
-                            Marker = marker,
-                            r = r_range,
-                            theo = pi * r_range^2,
-                            un = NA,
-                            permed = NA))
+          d = data.frame(iter = as.character(seq(num_permutations)), 
+                     Label = spat[1,"deidentified_sample"],
+                     Marker = marker,
+                     `Observed K` = NA,
+                     `Permuted K` = NA,
+                     check.names = F)
+          d = dplyr::full_join(d, expand.grid(iter = as.character(seq(num_permutations)),
+                                              r = r_range)) %>%
+            dplyr::mutate(`Theoretical K` = pi * r^2)
+          return(d)
         }
         #for each r
         parallel::mclapply(r_range, function(r){
@@ -140,7 +144,9 @@ ripleys_k2 = function(mif,
           do.call(dplyr::bind_rows, .) %>%
           dplyr::rename(Label = 2, `Theoretical K` = 5, `Observed K` = 6, `Permuted K` = 7)
       }) %>% #collapse all markers for spat
-        do.call(dplyr::bind_rows, .)
+        do.call(dplyr::bind_rows, .) %>%
+        dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
     } else if(nrow(spat) >= 10000 & keep_perm_dis == T){ #if we need perm distribution but too many cells
       res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
@@ -170,7 +176,9 @@ ripleys_k2 = function(mif,
         K = dplyr::full_join(kobs, kperms,
                              by = c("Label", "Marker", "r", "Theoretical K"))
       }) %>%
-        do.call(dplyr::bind_rows, .)
+        do.call(dplyr::bind_rows, .) %>%
+        dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
     } else if(keep_perm_dis == F){
       res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
@@ -210,14 +218,14 @@ ripleys_k2 = function(mif,
           dplyr::mutate(iter = "Estimater", .before = 1)
         return(final)
       }) %>% #collapse all markers for spat
-        do.call(dplyr::bind_rows, .)
+        do.call(dplyr::bind_rows, .) %>%
+        dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
     }
     #return final results
     return(res)
-  }, mc.cores = workers, mc.allow.recursive = T) %>% #set mclapply params
-    do.call(dplyr::bind_rows, .)  %>% #collapse all samples to single data frame
-    dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                  `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
+  }, mc.cores = workers, mc.allow.recursive = T, mc.preschedule = F) %>% #set mclapply params
+    do.call(dplyr::bind_rows, .) #collapse all samples to single data frame
   
   if(overwrite){ #overwrite existing data in univariate_Count slot
     mif$derived$univariate_Count = out %>%
