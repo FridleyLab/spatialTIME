@@ -126,12 +126,7 @@ ripleys_k2 = function(mif,
             sample(1:nrow(spat), length(pos), replace = F)
           }) %>% t() %>% data.frame() %>% dplyr::distinct() %>% t()
           #perform above calculations on permuted positives
-          permed = apply(perms, 2, function(x){
-            in_range = dists[x, x] <= r & dists[x, x]>0
-            in_range_adj = (in_range * 1) * edge[x, x]
-            counts = sum(in_range_adj)
-            (counts * area)/(length(x)*(length(x)-1))
-          })
+          permed = compute_perms(perms, r, dists, edge, area)
           #return permuted ripk for marker at r
           return(data.frame(iter = as.character(seq(num_permutations)),
                             label = spat[1, "deidentified_sample"],
