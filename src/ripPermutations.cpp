@@ -23,6 +23,7 @@ NumericMatrix cpp_matrix_subsetting(NumericMatrix m, NumericVector rows, Numeric
 // [[Rcpp::export]]
 NumericVector compute_perms(NumericMatrix perms, double r_val, NumericMatrix distances, NumericMatrix edge, double area){
   int n = perms.cols();
+  int cells = perms.rows();
   NumericVector K(n);
   
   for(int i=0; i<n; i++){
@@ -45,7 +46,7 @@ NumericVector compute_perms(NumericMatrix perms, double r_val, NumericMatrix dis
       }
     }
     
-    K[i] = (summed_vals * area)/(n * (n-1));
+    K[i] = (summed_vals * area)/(cells * (cells-1)); //(summed_vals * area)/(n * (n-1));
   }
   
   return(K);
@@ -54,6 +55,7 @@ NumericVector compute_perms(NumericMatrix perms, double r_val, NumericMatrix dis
 // [[Rcpp::export]]
 NumericVector compute_perms2(NumericMatrix perms, NumericVector r_range, NumericMatrix distances, NumericMatrix edge, double area){
   int n = perms.cols();
+  int cells = perms.rows();
   NumericMatrix K(n, r_range.length());
   
   for(int r_index=0; r_index<r_range.length(); r_index++){
@@ -78,7 +80,7 @@ NumericVector compute_perms2(NumericMatrix perms, NumericVector r_range, Numeric
         }
       }
       
-      K(i, r_index) = (summed_vals * area)/(n * (n-1));
+      K(i, r_index) = (summed_vals * area)/(cells * (cells-1));
     }
   }
   colnames(K) = r_range;
