@@ -28,6 +28,8 @@
 #' XMin and XMax will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
 #' YMin and YMax will be used 
+#' @param exhaustive whether or not to compute all combinations of markers
+#' @importFrom magrittr %>%
 #'  
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
@@ -50,16 +52,12 @@
 #' sample_id = "deidentified_sample")
 #' 
 #' # Define the set of markers to study
-#' markers <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
+#' mnames <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
 #' "FOXP3..Opal.620..Positive","CD3..CD8.","CD3..FOXP3.")
 #' 
 #' # Ripley's K and nearest neighbor G for all markers with a neighborhood size 
 #' # of  10,20,...,100 (zero must be included in the input).
 #' 
-#' x <- compute_metrics(x, mnames, r_range = seq(0, 100, 10),
-#' num_permutations = 10, edge_correction = c("translation", "rs"),
-#' method = c("K", "G", "BiK", "BiG"), k_trans = "none", keep_perm_dis = T,
-#' workers = 1, overwrite = T, exhaustive = T)
 #' 
 #'@export
 
@@ -287,6 +285,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
 #' XMin and XMax will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
 #' YMin and YMax will be used 
+#' @importFrom magrittr %>%
 #'  
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
@@ -382,6 +381,7 @@ ripleys_k = function(mif, mnames, r_range = seq(0, 100, 50),
 #' XMin and XMax will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
 #' YMin and YMax will be used 
+#' @importFrom magrittr %>%
 #' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
@@ -482,6 +482,7 @@ bi_ripleys_k <- function(mif,
 #' XMin and XMax will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
 #' YMin and YMax will be used 
+#' @importFrom magrittr %>%
 #' 
 #' @return Returns a data.frame
 #'    \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
@@ -577,6 +578,7 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' XMin and XMax will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
 #' YMin and YMax will be used 
+#' @importFrom magrittr %>%
 #' 
 #' @return Returns a data frame 
 #'    \item{anchor}{Marker for which the distances are measured from}
@@ -671,6 +673,8 @@ bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' XMin and XMax will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
 #' YMin and YMax will be used 
+#' @param classifier_label column name used for tissue segmentation
+#' @importFrom magrittr %>%
 #' 
 #' @return Returns a data frame for Z-statistic
 #'    \item{From}{}
@@ -704,10 +708,6 @@ bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' patient_id = "deidentified_id", 
 #' sample_id = "deidentified_sample")
 #' 
-#' #run dixons s statistic
-#' x <- dixons_s(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
-#' num_permutations = 1000, type = "Z", workers = 1, overwrite = T) 
-#' 
 #' @export
 
 dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 1000, type = c("Z", "C"),
@@ -731,8 +731,8 @@ dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 100
                                                                  markers = mnames, classifier_label = classifier_label, 
                                                                  xloc = xloc, yloc = yloc) %>%
                                                            mutate(Image.Tag = names(data)[.x])
-                                                       }, .options = furrr::furrr_options(seed = T),
-                                                       .progress = T) %>%
+                                                       }, .options = furrr::furrr_options(seed = TRUE),
+                                                       .progress = TRUE) %>%
                                        plyr::ldply())
     }
     if("C" %in% type){
@@ -743,8 +743,8 @@ dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 100
                                                                  markers = mnames, classifier_label = classifier_label, 
                                                                  xloc = xloc, yloc = yloc) %>%
                                                            mutate(Image.Tag = names(data)[.x])
-                                                       }, .options = furrr::furrr_options(seed = T),
-                                                       .progress = T) %>%
+                                                       }, .options = furrr::furrr_options(seed =TRUE),
+                                                       .progress =TRUE) %>%
                                        plyr::ldply())
     }
   } else {
@@ -755,8 +755,8 @@ dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 100
                                                            markers = mnames, classifier_label = classifier_label, 
                                                            xloc = xloc, yloc = yloc) %>%
                                                      mutate(Image.Tag = names(data)[.x])
-                                                 }, .options = furrr::furrr_options(seed = T),
-                                                 .progress = T) %>%
+                                                 }, .options = furrr::furrr_options(seed =TRUE),
+                                                 .progress =TRUE) %>%
         plyr::ldply()
     }
     if("C" %in% type){
@@ -766,8 +766,8 @@ dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 100
                                                            markers = mnames, classifier_label = classifier_label, 
                                                            xloc = xloc, yloc = yloc) %>%
                                                      mutate(Image.Tag = names(data)[.x])
-                                                 }, .options = furrr::furrr_options(seed = T),
-                                                 .progress = T) %>%
+                                                 }, .options = furrr::furrr_options(seed =TRUE),
+                                                 .progress =TRUE) %>%
         plyr::ldply()
     }
   }

@@ -19,15 +19,15 @@ ripleys_k2(
 )
 }
 \arguments{
-\item{mif}{object of class \code{mif} created with \code{create_mif}}
+\item{mif}{object of class `mif` created with `create_mif`}
 
 \item{mnames}{cell phenotype markers to calculate Ripley's K for}
 
 \item{r_range}{radius range (including 0)}
 
-\item{num_permutations}{number of permutations to use to estimate CSR. If \code{keep_perm_dis} is set to FALSE, this will be ignored}
+\item{num_permutations}{number of permutations to use to estimate CSR. If `keep_perm_dis` is set to FALSE, this will be ignored}
 
-\item{edge_correction}{edge correction method to pass to \code{Kest}. can take one of "translation", "isotropic", "none"}
+\item{edge_correction}{edge correction method to pass to `Kest`. can take one of "translation", "isotropic", "none"}
 
 \item{method}{not used currently}
 
@@ -35,12 +35,14 @@ ripleys_k2(
 
 \item{workers}{number of cores to use for calculations}
 
-\item{overwrite}{whether to overwrite the \code{univariate_Count} slot within \code{mif$derived}}
+\item{overwrite}{whether to overwrite the `univariate_Count` slot within `mif$derived`}
 
-\item{xloc, }{yloc the location of the center of cells. If left \code{NULL}, \code{XMin}, \code{XMax}, \code{YMin}, and \code{YMax} must be present.}
+\item{xloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+
+\item{yloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
 }
 \value{
-object of class \code{mif}
+object of class `mif`
 }
 \description{
 Calculate Ripley's K
@@ -55,15 +57,15 @@ x <- spatialTIME::create_mif(clinical_data =spatialTIME::example_clinical \%>\%
   sample_id = "deidentified_sample")
 mnames = x$spatial[[1]] \%>\%
   colnames() \%>\%
-  grep("Pos|CD", ., value = T) \%>\%
-  grep("Cyto|Nucle", ., value = T, invert = T)
+  grep("Pos|CD", ., value =TRUE) \%>\%
+  grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
 x2 = ripleys_k2(mif = x, 
   mnames = mnames, 
    r_range = seq(0, 100, 1), 
     num_permutations = 100,
      edge_correction = "translation", 
       method = "K", 
-      keep_perm_dis = F, 
+      keep_perm_dis =FALSE, 
       workers = 1, 
-       overwrite = T)
+       overwrite =TRUE)
 }

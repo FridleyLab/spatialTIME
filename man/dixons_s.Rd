@@ -19,10 +19,12 @@ dixons_s(
 \arguments{
 \item{mif}{An MIF object}
 
-\item{mnames}{Character vector of marker names to estimate degree of
+\item{mnames}{Character vector of marker names to estimate degree of 
 nearest neighbor distribution}
 
-\item{num_permutations}{Numeric value indicating the number of permutations used.
+\item{classifier_label}{column name used for tissue segmentation}
+
+\item{num_permutations}{Numeric value indicating the number of permutations used. 
 Default is 1000.}
 
 \item{type}{a character string for the type that is wanted in the output which can
@@ -30,42 +32,42 @@ be "Z" for z-statistic results or "C" for Chi-squared statistic results}
 
 \item{workers}{Integer value for the number of workers to spawn}
 
-\item{overwrite}{Logical value determining if you want the results to replace the
+\item{overwrite}{Logical value determining if you want the results to replace the 
 current output (TRUE) or be to be appended (FALSE).}
 
-\item{xloc}{a string corresponding to the x coordinates. If null the average of
+\item{xloc}{a string corresponding to the x coordinates. If null the average of 
 XMin and XMax will be used}
 
-\item{yloc}{a string corresponding to the y coordinates. If null the average of
+\item{yloc}{a string corresponding to the y coordinates. If null the average of 
 YMin and YMax will be used}
 }
 \value{
 Returns a data frame for Z-statistic
-\item{From}{}
-\item{To}{}
-\item{Obs.Count}{}
-\item{Exp. Count}{}
-\item{S}{}
-\item{Z}{}
-\item{p-val.Z}{}
-\item{p-val.Nobs}{}
-\item{Marker}{}
-\item{Classifier Labeled Column Counts}{}
-\item{Image.Tag}{}
+   \item{From}{}
+   \item{To}{}
+   \item{Obs.Count}{}
+   \item{Exp. Count}{}
+   \item{S}{}
+   \item{Z}{}
+   \item{p-val.Z}{}
+   \item{p-val.Nobs}{}
+   \item{Marker}{}
+   \item{Classifier Labeled Column Counts}{}
+   \item{Image.Tag}{}
 
 Returns a data frame for C-statistic
-\item{Segregation}{}
-\item{df}{}
-\item{Chi-sq}{}
-\item{P.asymp}{}
-\item{P.rand}{}
-\item{Marker}{}
-\item{Classifier Labeled Column Counts}{}
-\item{Image.Tag}{}
+   \item{Segregation}{}
+   \item{df}{}
+   \item{Chi-sq}{}
+   \item{P.asymp}{}
+   \item{P.rand}{}
+   \item{Marker}{}
+   \item{Classifier Labeled Column Counts}{}
+   \item{Image.Tag}{}
 }
 \description{
 This function processes the spatial files in the mif object,
-requiring a column that distinguishes between different groups i.e. tumor and
+requiring a column that distinguishes between different groups i.e. tumor and 
 stroma
 }
 \examples{
@@ -78,9 +80,5 @@ mutate(deidentified_id = as.character(deidentified_id)),
 spatial_list = example_spatial,
 patient_id = "deidentified_id", 
 sample_id = "deidentified_sample")
-
-#run dixons s statistic
-x <- dixons_s(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
-num_permutations = 1000, type = "Z", workers = 1, overwrite = T) 
 
 }

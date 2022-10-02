@@ -20,44 +20,44 @@ NN_G(
 \arguments{
 \item{mif}{An MIF object}
 
-\item{mnames}{Character vector of marker names to estimate degree of
+\item{mnames}{Character vector of marker names to estimate degree of 
 nearest neighbor distribution}
 
 \item{r_range}{Numeric vector of potential r values this range must include 0.}
 
-\item{num_permutations}{Numeric value indicating the number of permutations used.
+\item{num_permutations}{Numeric value indicating the number of permutations used. 
 Default is 50.}
 
-\item{edge_correction}{Character value indicating the type of edge correction
+\item{edge_correction}{Character value indicating the type of edge correction 
 to use. Options include "rs" or "hans".}
 
-\item{keep_perm_dis}{Logical value determining whether or not to keep the full
+\item{keep_perm_dis}{Logical value determining whether or not to keep the full 
 distribution of permuted G values}
 
 \item{workers}{Integer value for the number of workers to spawn}
 
-\item{overwrite}{Logical value determining if you want the results to replace the
+\item{overwrite}{Logical value determining if you want the results to replace the 
 current output (TRUE) or be to be appended (FALSE).}
 
-\item{xloc}{a string corresponding to the x coordinates. If null the average of
+\item{xloc}{a string corresponding to the x coordinates. If null the average of 
 XMin and XMax will be used}
 
-\item{yloc}{a string corresponding to the y coordinates. If null the average of
+\item{yloc}{a string corresponding to the y coordinates. If null the average of 
 YMin and YMax will be used}
 }
 \value{
 Returns a data.frame
-\item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
-\item{Permuted CSR}{Average observed G for the permuted point
-process}
-\item{Observed}{Observed valuefor the observed point process}
-\item{Degree of Clustering Permuted}{Degree of spatial clustering where the
-reference is the permuted estimate of CSR}
-\item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
-reference is the theoretical estimate of CSR}
+   \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
+   \item{Permuted CSR}{Average observed G for the permuted point 
+   process}
+   \item{Observed}{Observed valuefor the observed point process}
+   \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
+   reference is the permuted estimate of CSR}
+   \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
+   reference is the theoretical estimate of CSR}
 }
 \description{
-For a given cell type, this function computes proportion of cells
+For a given cell type, this function computes proportion of cells 
 that have nearest neighbor less than r for the observed and permuted point processes.
 }
 \examples{

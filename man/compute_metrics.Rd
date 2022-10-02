@@ -23,56 +23,58 @@ compute_metrics(
 \arguments{
 \item{mif}{An MIF object}
 
-\item{mnames}{Character vector of marker names to estimate degree of
+\item{mnames}{Character vector of marker names to estimate degree of 
 spatial clustering.}
 
 \item{r_range}{Numeric vector of potential r values this range must include 0.}
 
-\item{num_permutations}{Numeric value indicating the number of permutations used.
+\item{num_permutations}{Numeric value indicating the number of permutations used. 
 Default is 50.}
 
-\item{edge_correction}{Character vector indicating the type of edge correction
-to use. Options for count based include "translation" or "isotropic" and for
+\item{edge_correction}{Character vector indicating the type of edge correction 
+to use. Options for count based include "translation" or "isotropic" and for 
 nearest neighboroOptions include "rs" or "hans".}
 
-\item{method}{Character vector indicating which count based measure (K, BiK,
-G, BiG) used to estimate the degree of spatial clustering. Description of the
+\item{method}{Character vector indicating which count based measure (K, BiK, 
+G, BiG) used to estimate the degree of spatial clustering. Description of the 
 methods can be found in Details section.}
 
-\item{k_trans}{Character value of the transformation to apply to count based
+\item{k_trans}{Character value of the transformation to apply to count based 
 metrics (none, M, or L)}
 
-\item{keep_perm_dis}{Logical value determining whether or not to keep the full
+\item{keep_perm_dis}{Logical value determining whether or not to keep the full 
 distribution of permuted K or G values}
 
 \item{workers}{Integer value for the number of workers to spawn}
 
-\item{overwrite}{Logical value determining if you want the results to replace the
+\item{overwrite}{Logical value determining if you want the results to replace the 
 current output (TRUE) or be to be appended (FALSE).}
 
-\item{xloc}{a string corresponding to the x coordinates. If null the average of
+\item{xloc}{a string corresponding to the x coordinates. If null the average of 
 XMin and XMax will be used}
 
-\item{yloc}{a string corresponding to the y coordinates. If null the average of
+\item{yloc}{a string corresponding to the y coordinates. If null the average of 
 YMin and YMax will be used}
+
+\item{exhaustive}{whether or not to compute all combinations of markers}
 }
 \value{
 Returns a data.frame
-\item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
-\item{Permuted CSR}{Average observed K, L, or M for the permuted point
-process}
-\item{Observed}{Observed valuefor the observed point process}
-\item{Degree of Clustering Permuted}{Degree of spatial clustering where the
-reference is the permutated estimate of CSR}
-\item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
-reference is the theoretical estimate of CSR}
+   \item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
+   \item{Permuted CSR}{Average observed K, L, or M for the permuted point 
+   process}
+   \item{Observed}{Observed valuefor the observed point process}
+   \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
+   reference is the permutated estimate of CSR}
+   \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
+   reference is the theoretical estimate of CSR}
 }
 \description{
-This function calculates count based Measures (Ripley's K, Besag
-L, and Marcon's M) of IF data to characterize correlation of spatial point
-process. For neareast neighbor calculations of a given cell type, this function
-computes proportion of cells that have nearest neighbor less than r for the
-observed and permuted point processes.
+This function calculates count based Measures (Ripley's K, Besag 
+  L, and Marcon's M) of IF data to characterize correlation of spatial point
+  process. For neareast neighbor calculations of a given cell type, this function 
+  computes proportion of cells that have nearest neighbor less than r for the 
+  observed and permuted point processes.
 }
 \examples{
 #Create mif object
@@ -86,15 +88,11 @@ patient_id = "deidentified_id",
 sample_id = "deidentified_sample")
 
 # Define the set of markers to study
-markers <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
+mnames <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
 "FOXP3..Opal.620..Positive","CD3..CD8.","CD3..FOXP3.")
 
 # Ripley's K and nearest neighbor G for all markers with a neighborhood size 
 # of  10,20,...,100 (zero must be included in the input).
 
-x <- compute_metrics(x, mnames, r_range = seq(0, 100, 10),
-num_permutations = 10, edge_correction = c("translation", "rs"),
-method = c("K", "G", "BiK", "BiG"), k_trans = "none", keep_perm_dis = T,
-workers = 1, overwrite = T, exhaustive = T)
 
 }

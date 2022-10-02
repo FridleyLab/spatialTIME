@@ -19,9 +19,9 @@ subset_mif(mif, classifier, level, markers)
 mif object where the spatial list only as the cell that are the specified level.
 }
 \description{
-This function allows to subset the mif object into compartments.
+This function allows to subset the mif object into compartments. 
 For instance a mif object includes all cells and the desired analysis is based
-on only the tumor or stroma compartment then this function will subset the
+on only the tumor or stroma compartment then this function will subset the 
 spatial list to just the cells in the desired compartment
 }
 \examples{

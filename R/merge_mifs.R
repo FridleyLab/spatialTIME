@@ -4,7 +4,8 @@
 #' can be used as a single MIF. MIF objects don't *need* but *should* have the same
 #' column names in the summary file and clinical data file. The MIF objects **DO**
 #' need to have the same patient_id and sample_id.
-#' @param mif_list A list of MIF objects to merge together
+#' @param mifs A list of MIF objects to merge together
+#' @param check.names whether to check names of spatial files and summary enttries
 #'  
 #' @return Returns a new MIF object list
 #'    \item{clinical_data}{clinical information from all}
@@ -18,7 +19,14 @@
 #' @examples 
 #' #merge several MIF objects
 #' library(dplyr)
-#' x <- merge_mifs(mifs = list(mif1, mif2, mif3))
+#' x <- create_mif(clinical_data = example_clinical %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' sample_data = example_summary %>% 
+#' mutate(deidentified_id = as.character(deidentified_id)),
+#' spatial_list = example_spatial,
+#' patient_id = "deidentified_id", 
+#' sample_id = "deidentified_sample")
+#' x <- merge_mifs(mifs = list(x, x), check.names = FALSE)
 #' 
 #'@export
 

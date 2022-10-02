@@ -7,28 +7,37 @@
 merge_mifs(mifs = NULL, check.names = T)
 }
 \arguments{
-\item{mif_list}{A list of MIF objects to merge together}
+\item{mifs}{A list of MIF objects to merge together}
+
+\item{check.names}{whether to check names of spatial files and summary enttries}
 }
 \value{
 Returns a new MIF object list
-\item{clinical_data}{clinical information from all}
-\item{sample}{cell level summary data from all}
-\item{spatial}{contains all spatial files from all MIFs}
-\item{derived}{appended derived variables}
-\item{patient_id}{patient_id from the first MIF - this is
-why it is important to have the same patient_id for all MIFs}
-\item{sample_id}{sample_id from the first MIF - also important
-for all MIFs to have the same sample_id}
+   \item{clinical_data}{clinical information from all}
+   \item{sample}{cell level summary data from all}
+   \item{spatial}{contains all spatial files from all MIFs}
+   \item{derived}{appended derived variables}
+   \item{patient_id}{patient_id from the first MIF - this is
+   why it is important to have the same patient_id for all MIFs}
+   \item{sample_id}{sample_id from the first MIF - also important
+   for all MIFs to have the same sample_id}
 }
 \description{
 This function merges MIF objects that were run separately so they
-can be used as a single MIF. MIF objects don't \emph{need} but \emph{should} have the same
-column names in the summary file and clinical data file. The MIF objects \strong{DO}
+can be used as a single MIF. MIF objects don't *need* but *should* have the same
+column names in the summary file and clinical data file. The MIF objects **DO**
 need to have the same patient_id and sample_id.
 }
 \examples{
 #merge several MIF objects
 library(dplyr)
-x <- merge_mifs(mifs = list(mif1, mif2, mif3))
+x <- create_mif(clinical_data = example_clinical \%>\% 
+mutate(deidentified_id = as.character(deidentified_id)),
+sample_data = example_summary \%>\% 
+mutate(deidentified_id = as.character(deidentified_id)),
+spatial_list = example_spatial,
+patient_id = "deidentified_id", 
+sample_id = "deidentified_sample")
+x <- merge_mifs(mifs = list(x, x), check.names = FALSE)
 
 }

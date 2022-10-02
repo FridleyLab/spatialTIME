@@ -20,16 +20,12 @@ Description: Visualization and analysis  of Vectra Immunoflourescent
     data. Options for calculating both the univariate and bivariate Ripley's K
     are included. Calculations are performed using a permutation-based 
     approach presented by Wilson et al.  <doi:10.1101/2021.04.27.21256104>. 
-License: MIT + file LICENSE
-Encoding: UTF-8
-LazyData: true
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.1
-Imports: magrittr, dplyr, tidyr, ggplot2, scales,
+License: GPL (>= 2)
+Imports: Rcpp (>= 1.0.9), magrittr, dplyr, tidyr, ggplot2, scales,
         grDevices, purrr, rlang, plyr, spatstat.geom,
-        spatstat.core, RColorBrewer, stats, furrr, future, 
-        tidyselect, crayon, pheatmap, viridis, dixon
-Depends: R (>= 3.5.0)
+        spatstat.core, RColorBrewer, furrr, future, 
+        tidyselect, crayon, dixon, stats
+LinkingTo: Rcpp
 Suggests: 
     knitr,
     rmarkdown,
@@ -40,3 +36,7 @@ BugReports: https://github.com/FridleyLab/spatialTIME/issues
 NeedsCompilation: no
 Packaged: 2021-08-19 22:31:18 UTC; 4468179
 Config/testthat/edition: 3
+RoxygenNote: 7.2.1
+Depends: 
+    R (>= 2.10)
+LazyData: true

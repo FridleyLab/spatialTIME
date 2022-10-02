@@ -22,59 +22,59 @@ bi_ripleys_k(
 \arguments{
 \item{mif}{An MIF object}
 
-\item{mnames}{Character vector of marker names to estimate degree of
-spatial clustering. Spatial clustering will be computed between each
+\item{mnames}{Character vector of marker names to estimate degree of 
+spatial clustering. Spatial clustering will be computed between each 
 combination of markers in this list.}
 
 \item{r_range}{Numeric vector of potential r values this range must include 0}
 
-\item{num_permutations}{Numeric value indicating the number of permutations used.
+\item{num_permutations}{Numeric value indicating the number of permutations used. 
 Default is 50.}
 
-\item{edge_correction}{Character value indicating the type of edge correction
-to use. Options include "theoretical", "translation", "isotropic" or "border".
+\item{edge_correction}{Character value indicating the type of edge correction 
+to use. Options include "theoretical", "translation", "isotropic" or "border". 
 Various edges corrections are most appropriate in different settings. Default
 is "translation".}
 
-\item{method}{Character value indicating which measure (K, L, M) used to
-estimate the degree of spatial clustering. Description of the methods can be
+\item{method}{Character value indicating which measure (K, L, M) used to 
+estimate the degree of spatial clustering. Description of the methods can be 
 found in Details section.}
 
-\item{keep_perm_dis}{Logical value determining whether or not to keep the full
+\item{keep_perm_dis}{Logical value determining whether or not to keep the full 
 distribution of permuted K values}
 
-\item{exhaustive}{Logical. If TRUE then markers must be a vector and spatial
+\item{exhaustive}{Logical. If TRUE then markers must be a vector and spatial 
 measures will be computed all pairs of unique markers. If FALSE then markers must
 be a data.frame with the desired combinations.}
 
 \item{workers}{Integer value for the number of workers to spawn}
 
-\item{overwrite}{Logical value determining if you want the results to replace the
+\item{overwrite}{Logical value determining if you want the results to replace the 
 current output (TRUE) or be to be appended (FALSE).}
 
-\item{xloc}{a string corresponding to the x coordinates. If null the average of
+\item{xloc}{a string corresponding to the x coordinates. If null the average of 
 XMin and XMax will be used}
 
-\item{yloc}{a string corresponding to the y coordinates. If null the average of
+\item{yloc}{a string corresponding to the y coordinates. If null the average of 
 YMin and YMax will be used}
 }
 \value{
-Returns a data frame
-\item{anchor}{Marker for which the distances are measured from}
-\item{counted}{Marker for which the distances are measured to}
-\item{Theoretical CSR}{Expected value assuming complete spatial randomness}
-\item{Permuted CSR}{Average observed K, L, or M for the permuted point
-process}
-\item{Observed}{Observed value for the observed point process}
-\item{Degree of Clustering Permuted}{Degree of spatial clustering where the
-reference is the permuted estimate of CSR}
-\item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
-reference is the theoretical estimate of CSR}
+Returns a data frame 
+   \item{anchor}{Marker for which the distances are measured from}
+   \item{counted}{Marker for which the distances are measured to}
+   \item{Theoretical CSR}{Expected value assuming complete spatial randomness}
+   \item{Permuted CSR}{Average observed K, L, or M for the permuted point 
+   process}
+   \item{Observed}{Observed value for the observed point process}
+   \item{Degree of Clustering Permuted}{Degree of spatial clustering where the
+   reference is the permuted estimate of CSR}
+   \item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
+   reference is the theoretical estimate of CSR}
 }
 \description{
-This function calculates count based Measures (Ripley's K, Besag
-L, and Marcon's M) of IF data to characterize correlation of the observed and permyted spatial point
-processes for two markers.
+This function calculates count based Measures (Ripley's K, Besag 
+  L, and Marcon's M) of IF data to characterize correlation of the observed and permyted spatial point
+  processes for two markers.
 }
 \examples{
 #' #Create mif object

@@ -9,7 +9,8 @@
 #' @param keep_perm_dis whether to keep the permutation results. Setting to FALSE will cause skipping of permutations and use CSR estimate
 #' @param workers number of cores to use for calculations
 #' @param overwrite whether to overwrite the `univariate_Count` slot within `mif$derived`
-#' @param xloc, yloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
+#' @param xloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
+#' @param yloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
 #' @return object of class `mif`
 #' @export
 #'
@@ -23,17 +24,17 @@
 #'   sample_id = "deidentified_sample")
 #' mnames = x$spatial[[1]] %>%
 #'   colnames() %>%
-#'   grep("Pos|CD", ., value = T) %>%
-#'   grep("Cyto|Nucle", ., value = T, invert = T)
+#'   grep("Pos|CD", ., value =TRUE) %>%
+#'   grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
 #' x2 = ripleys_k2(mif = x, 
 #'   mnames = mnames, 
 #'    r_range = seq(0, 100, 1), 
 #'     num_permutations = 100,
 #'      edge_correction = "translation", 
 #'       method = "K", 
-#'       keep_perm_dis = F, 
+#'       keep_perm_dis =FALSE, 
 #'       workers = 1, 
-#'        overwrite = T)
+#'        overwrite =TRUE)
 ripleys_k2 = function(mif, 
                      mnames,
                      r_range = seq(0, 100, 1), 
@@ -45,6 +46,8 @@ ripleys_k2 = function(mif,
                      overwrite = F,
                      xloc = NULL,
                      yloc = NULL){
+  require(Rcpp)
+  require(stats)
   
   if(keep_perm_dis == FALSE){
     message("With 'keep_perm_dis' equal to FALSE, CSR Estimator will be used.")
@@ -68,7 +71,7 @@ ripleys_k2 = function(mif,
     #window
     win = spatstat.geom::convexhull.xy(spat$xloc, spat$yloc)
     #begin calculating the ripley's k and the permutation/estimate
-    if(nrow(spat)<10000 & keep_perm_dis == T){ #have to calculate the permutation distribution
+    if(nrow(spat)<10000 & keep_perm_dis ==TRUE){ #have to calculate the permutation distribution
       #get distances between cells and area
       dists = as.matrix(dist(spat[,c("xloc", "yloc")]))
       area = spatstat.geom::area(win)
@@ -94,7 +97,7 @@ ripleys_k2 = function(mif,
                      Marker = marker,
                      `Observed K` = NA,
                      `Permuted K` = NA,
-                     check.names = F)
+                     check.names =FALSE)
           d = dplyr::full_join(d, expand.grid(iter = as.character(seq(num_permutations)),
                                               r = r_range)) %>%
             dplyr::mutate(`Theoretical K` = pi * r^2)
@@ -125,10 +128,10 @@ ripleys_k2 = function(mif,
           theo = pi * r^2
           #prep permutations by selecting rnadom rows of positive length
           perms = sapply(seq(num_permutations), function(x){
-            sample(1:nrow(spat), length(pos), replace = F)
+            sample(1:nrow(spat), length(pos), replace =FALSE)
           }) %>% t() %>% data.frame() %>% dplyr::distinct() %>% t()
           #perform above calculations on permuted positives
-          permed = compute_perms(perms, r, dists, edge, area)
+          permed = spatialTIME:::compute_perms(perms, r, dists, edge, area)
           #return permuted ripk for marker at r
           return(data.frame(iter = as.character(seq(num_permutations)),
                             label = spat[1, "deidentified_sample"],
@@ -144,7 +147,7 @@ ripleys_k2 = function(mif,
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
-    } else if(nrow(spat) >= 10000 & keep_perm_dis == T){ #if we need perm distribution but too many cells
+    } else if(nrow(spat) >= 10000 & keep_perm_dis ==TRUE){ #if we need perm distribution but too many cells
       res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
         dat = spat %>%
@@ -176,7 +179,7 @@ ripleys_k2 = function(mif,
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
-    } else if(keep_perm_dis == F){
+    } else if(keep_perm_dis ==FALSE){
       res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
         dat = spat %>%
@@ -192,7 +195,7 @@ ripleys_k2 = function(mif,
                             `Theoretical K` = pi * r_range^2,
                             `Observed K` = NA,
                             `Permuted K` = NA,
-                            check.names = F))
+                            check.names =FALSE))
         }
         #calculate the observed K
         kobs = spatstat.geom::ppp(dat2$xloc, dat2$yloc, window = win) %>%
@@ -221,7 +224,7 @@ ripleys_k2 = function(mif,
     }
     #return final results
     return(res)
-  }, mc.cores = workers, mc.allow.recursive = T, mc.preschedule = F) %>% #set mclapply params
+  }, mc.cores = workers, mc.allow.recursive =TRUE, mc.preschedule =FALSE) %>% #set mclapply params
     do.call(dplyr::bind_rows, .) #collapse all samples to single data frame
   
   if(overwrite){ #overwrite existing data in univariate_Count slot
