@@ -100,6 +100,8 @@ ripleys_k2 = function(mif,
             dplyr::mutate(`Theoretical K` = pi * r^2)
           return(d)
         }
+        
+        
         #for each r
         parallel::mclapply(r_range, function(r){
           #if r = 0 return 0s for cells - cannot be positive for itself
