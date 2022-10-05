@@ -11,7 +11,8 @@ ripleys_k2(
   num_permutations = 50,
   edge_correction = "translation",
   method = "K",
-  keep_perm_dis = FALSE,
+  permute = FALSE,
+  keep_permutation_distribution = FALSE,
   workers = 1,
   overwrite = F,
   xloc = NULL,
@@ -31,7 +32,10 @@ ripleys_k2(
 
 \item{method}{not used currently}
 
-\item{keep_perm_dis}{whether to keep the permutation results. Setting to FALSE will cause skipping of permutations and use CSR estimate}
+\item{permute}{whether to use CSR estimate or use permutations to determine CSR}
+
+\item{keep_permutation_distribution}{whether to find mean of permutation distribution or each
+permutation calculation}
 
 \item{workers}{number of cores to use for calculations}
 

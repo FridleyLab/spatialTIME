@@ -1,6 +1,6 @@
 Package: spatialTIME
 Title: Spatial Analysis of Vectra Immunoflourescent Data
-Version: 1.3.0-1
+Version: 1.3.1-1
 Authors@R: 
      c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
@@ -24,7 +24,7 @@ License: GPL (>= 2)
 Imports: Rcpp (>= 1.0.9), magrittr, dplyr, tidyr, ggplot2, scales,
         grDevices, purrr, rlang, plyr, spatstat.geom,
         spatstat.core, RColorBrewer, furrr, future, 
-        tidyselect, crayon, dixon, stats
+        tidyselect, crayon, dixon, stats, flux
 LinkingTo: Rcpp
 Suggests: 
     knitr,

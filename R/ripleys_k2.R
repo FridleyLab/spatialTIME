@@ -6,7 +6,9 @@
 #' @param num_permutations number of permutations to use to estimate CSR. If `keep_perm_dis` is set to FALSE, this will be ignored
 #' @param edge_correction edge correction method to pass to `Kest`. can take one of "translation", "isotropic", "none"
 #' @param method not used currently
-#' @param keep_perm_dis whether to keep the permutation results. Setting to FALSE will cause skipping of permutations and use CSR estimate
+#' @param permute whether to use CSR estimate or use permutations to determine CSR
+#' @param keep_permutation_distribution whether to find mean of permutation distribution or each
+#' permutation calculation
 #' @param workers number of cores to use for calculations
 #' @param overwrite whether to overwrite the `univariate_Count` slot within `mif$derived`
 #' @param xloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
@@ -41,21 +43,23 @@ ripleys_k2 = function(mif,
                      num_permutations = 50, 
                      edge_correction = "translation",
                      method = "K", 
-                     keep_perm_dis = FALSE,
+                     permute = FALSE, #redo for permutation or estimate
+                     keep_permutation_distribution = FALSE,
                      workers = 1,
                      overwrite = F,
                      xloc = NULL,
                      yloc = NULL){
-  require(Rcpp)
-  require(stats)
   
-  if(keep_perm_dis == FALSE){
-    message("With 'keep_perm_dis' equal to FALSE, CSR Estimator will be used.")
-    message("If wanting to specify permutations, set 'keep_perm_dis' to TRUE.")
+  if(keep_permutation_distribution == TRUE & permute == FALSE){
+    stop("Conflicting `perm` and `keep_permutation_distribution` parameters. Using estimate\n
+         \tIf wanting to use permutatations, set `permute = TRUE`")
   }
   #check if 0 is contained within the range of r
   if(!(0 %in% r_range)){
     r_range = c(0, r_range)
+  }
+  if(!inherits(mif, "mif")){
+    stop("mIF should be of class `mif` created with function `createMIF()`\n\tTo check use `inherits(mif, 'mif')`")
   }
   
   out = parallel::mclapply(mif$spatial, function(spat){
@@ -71,7 +75,8 @@ ripleys_k2 = function(mif,
     #window
     win = spatstat.geom::convexhull.xy(spat$xloc, spat$yloc)
     #begin calculating the ripley's k and the permutation/estimate
-    if(nrow(spat)<10000 & keep_perm_dis ==TRUE){ #have to calculate the permutation distribution
+    if(nrow(spat)<10000 & permute == TRUE){ #have to calculate the permutation distribution
+      require(Rcpp)
       #get distances between cells and area
       dists = as.matrix(dist(spat[,c("xloc", "yloc")]))
       area = spatstat.geom::area(win)
@@ -147,7 +152,7 @@ ripleys_k2 = function(mif,
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
-    } else if(nrow(spat) >= 10000 & keep_perm_dis ==TRUE){ #if we need perm distribution but too many cells
+    } else if(nrow(spat) >= 10000 & permute ==TRUE){ #if we need perm distribution but too many cells
       res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
         dat = spat %>%
@@ -179,7 +184,7 @@ ripleys_k2 = function(mif,
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
-    } else if(keep_perm_dis ==FALSE){
+    } else if(permute ==FALSE){
       res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
         dat = spat %>%
@@ -226,6 +231,13 @@ ripleys_k2 = function(mif,
     return(res)
   }, mc.cores = workers, mc.allow.recursive =TRUE, mc.preschedule =FALSE) %>% #set mclapply params
     do.call(dplyr::bind_rows, .) #collapse all samples to single data frame
+  
+  if(permute == TRUE & keep_permutation_distribution == F){
+    out = out %>%
+      dplyr::mutate(iter = "Permuted") %>%
+      dplyr::group_by(iter, Label, Marker, r) %>%
+      dplyr::summarise_all(~mean(., na.rm=T))
+  }
   
   if(overwrite){ #overwrite existing data in univariate_Count slot
     mif$derived$univariate_Count = out %>%
