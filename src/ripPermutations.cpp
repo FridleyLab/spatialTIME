@@ -21,7 +21,8 @@ NumericMatrix cpp_matrix_subsetting(NumericMatrix m, NumericVector rows, Numeric
 }
 
 // [[Rcpp::export]]
-NumericVector compute_perms(NumericMatrix perms, double r_val, NumericMatrix distances, NumericMatrix edge, double area){
+NumericVector compute_perms(SEXP perms1, double r_val, SEXP distances1, SEXP edge1, double area){
+  NumericMatrix perms(perms1), distances(distances1), edge(edge1), subset_distances, subset_edge;
   int n = perms.cols();
   int cells = perms.rows();
   NumericVector K(n);
@@ -29,15 +30,15 @@ NumericVector compute_perms(NumericMatrix perms, double r_val, NumericMatrix dis
   for(int i=0; i<n; i++){
     NumericVector random_cells = perms.column(i);
     
-    NumericMatrix subset_distances = cpp_matrix_subsetting(distances, random_cells, random_cells);
-    NumericMatrix subset_edge = cpp_matrix_subsetting(edge, random_cells, random_cells);
+    subset_distances = cpp_matrix_subsetting(distances, random_cells, random_cells); //distance matrix for permutation
+    subset_edge = cpp_matrix_subsetting(edge, random_cells, random_cells); //edge correction for permutation
     
     int rl = random_cells.length();
     int cl = rl;
     
     double summed_vals = 0.0;
     
-    for(int j=0; j<cl; j++){
+    for(int j=0; j<cl; j++){ //column length
       for(int k=0; k<rl; k++){
         double val = subset_distances(j, k);
         if(val < r_val && val > 0){
@@ -48,7 +49,40 @@ NumericVector compute_perms(NumericMatrix perms, double r_val, NumericMatrix dis
     
     K[i] = (summed_vals * area)/(cells * (cells-1)); //(summed_vals * area)/(n * (n-1));
   }
+  return(K);
+}
+
+// [[Rcpp::export]]
+NumericVector compute_perms3(SEXP perms1, double r_val, SEXP distances1, SEXP edge1, double area){
+  NumericMatrix perms(perms1), distances(distances1), edge(edge1), subset_distances, subset_edge;
+  int n = perms.cols();
+  int cells = perms.rows();
+  NumericVector K(n), edge_c, val;
   
+  for(int i=0; i<n; i++){
+    NumericVector random_cells = perms.column(i);
+    
+    subset_distances = cpp_matrix_subsetting(distances, random_cells, random_cells); //distance matrix for permutation
+    subset_edge = cpp_matrix_subsetting(edge, random_cells, random_cells); //edge correction for permutation
+    
+    int cl = random_cells.length();
+    
+    double summed_vals = 0.0;
+    
+    for(int j=0; j<cl; j++){ //column length
+      NumericMatrix::Column dist_c = subset_distances(_, j);
+      edge_c = subset_edge(_, j);
+      val = edge_c[dist_c < r_val & dist_c > 0];
+      summed_vals = summed_vals + sum(val);
+      // for(int k=0; k<rl; k++){
+      //   double val = subset_distances(j, k);
+      //   if(val < r_val && val > 0){
+      //     summed_vals =  summed_vals + subset_edge(j, k);
+      //   }
+      // }
+    }
+    K[i] = (summed_vals * area)/(cells * (cells-1)); //(summed_vals * area)/(n * (n-1));
+  }
   return(K);
 }
 
