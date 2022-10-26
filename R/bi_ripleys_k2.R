@@ -43,20 +43,30 @@ bi_ripleys_k2 = function(mif,
     #matrix operations are WAY faster than data frame
     #since now all numeric, easy enough to use matrix
     spat = as.matrix(spat[,c("xloc", "yloc", mnames)])
-    m_combos = expand.grid(anchor = mnames,
-                           counted = mnames)
+    #get the combinations data frame
+    if(inherits(mnames, "data.frame")){
+      m_combos = mnames
+    }
+    if(inherits(mnames, "character")){
+      m_combos = expand.grid(anchor = mnames,
+                             counted = mnames)
+    }
+    #remove combinations that have 
     m_combos = m_combos[m_combos$anchor != m_combos$counted,]
-    
+    #for the combinations of markers, do bivark and permutations
     res = parallel::mclapply(1:nrow(m_combos), function(combo){
+      #pull anchor and counted marker from combos data frame
       anchor = as.character(m_combos[combo, 1])
       counted = as.character(m_combos[combo, 2])
       cat(anchor, "\t", counted, "\n")
+      #remove rows that are positive for both counted and anchor
       spat_tmp = spat[!(spat[,anchor] == 1 & spat[,counted] == 1),c("xloc", "yloc", anchor, counted)]
       
       #get data for both anchor and counted
       i_dat = spat_tmp[spat_tmp[,3] == 1,]
       j_dat = spat_tmp[spat_tmp[,4] == 1,]
       
+      #if the number of positive cells for either counted or anchor is less than 2, return empty K
       if(sum(spat_tmp[,3]) < 2 | sum(spat_tmp[,4]) < 2){
         final = data.frame(r = r_range,
                            Anchor = anchor,
@@ -70,6 +80,7 @@ bi_ripleys_k2 = function(mif,
                            by = "r")
         return(final)
       }
+      
       K_obs = data.frame(r = r_range,
                          `Theoretical K` = pi * r_range^2,
                          check.names = FALSE)
@@ -226,51 +237,3 @@ getBiK = function(i_dat, j_dat, area, r_range, win, correction){
   K = (1/(lambdai * lambdaj * area)) * counts
   K
 }
-
-#need pipe
-library(magrittr)
-#get spatial file
-spatial = spatialTIME::example_spatial[[5]] %>%
-  dplyr::filter(Classifier.Label == "Tumor")
-#marker names in spatial
-mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-                 "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-                 "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-#check which markers to use for testing
-spatial %>%
-  dplyr::select(!!mnames_good) %>%
-  colSums()
-#calculate biK using above function
-K_spatialTIME = bi_ripleys_k2(spatial = spatial,
-                              anchor = mnames_good[6],
-                              counted = mnames_good[7],
-                              r_range = 0:350,
-                              correction = "translation",
-                              cores = 1)
-#view
-plot(0:350, K_spatialTIME)
-
-#spatstats
-library(spatstat)
-#prep data for creating window
-spat1 = spatial %>%
-  dplyr::mutate(xloc = (XMin + XMax)/2,
-                yloc = (YMin + YMax)/2) %>%
-  dplyr::select(xloc, yloc, !!mnames_good[c(6,7)])
-#convert from wide to long with only positive locations
-spat2 = spat1 %>%
-  dplyr::filter(!(get(mnames_good[6]) == 1 & get(mnames_good[7]))) %>%
-  tidyr::gather(Marker, Positive, -xloc, -yloc) %>%
-  dplyr::filter(Positive == 1)
-#create window
-win = convexhull.xy(x = spat1$xloc, spat1$yloc)
-#create the point pattern process object
-pp_obj = ppp(x = spat2$xloc, y = spat2$yloc, window = win, marks = as.factor(spat2$Marker))
-#calculate biK with spatstat Kcross
-K_spatstat = Kcross(pp_obj, i = "CD3..CD8.", j = "CD3..FOXP3.", r = 0:350, correction = "translation")
-
-
-
-#compare plots
-plot(0:350, K_spatialTIME)
-plot(0:350, K_spatstat$trans)
