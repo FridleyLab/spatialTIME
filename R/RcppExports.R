@@ -5,8 +5,12 @@ cpp_matrix_subsetting <- function(m, rows, cols) {
     .Call(`_spatialTIME_cpp_matrix_subsetting`, m, rows, cols)
 }
 
-compute_perms <- function(perms, r_val, distances, edge, area) {
-    .Call(`_spatialTIME_compute_perms`, perms, r_val, distances, edge, area)
+compute_perms <- function(perms1, r_val, distances1, edge1, area) {
+    .Call(`_spatialTIME_compute_perms`, perms1, r_val, distances1, edge1, area)
+}
+
+compute_perms3 <- function(perms1, r_val, distances1, edge1, area) {
+    .Call(`_spatialTIME_compute_perms3`, perms1, r_val, distances1, edge1, area)
 }
 
 compute_perms2 <- function(perms, r_range, distances, edge, area) {

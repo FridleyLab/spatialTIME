@@ -24,17 +24,32 @@ BEGIN_RCPP
 END_RCPP
 }
 // compute_perms
-NumericVector compute_perms(NumericMatrix perms, double r_val, NumericMatrix distances, NumericMatrix edge, double area);
-RcppExport SEXP _spatialTIME_compute_perms(SEXP permsSEXP, SEXP r_valSEXP, SEXP distancesSEXP, SEXP edgeSEXP, SEXP areaSEXP) {
+NumericVector compute_perms(SEXP perms1, double r_val, SEXP distances1, SEXP edge1, double area);
+RcppExport SEXP _spatialTIME_compute_perms(SEXP perms1SEXP, SEXP r_valSEXP, SEXP distances1SEXP, SEXP edge1SEXP, SEXP areaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
     Rcpp::RNGScope rcpp_rngScope_gen;
-    Rcpp::traits::input_parameter< NumericMatrix >::type perms(permsSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type perms1(perms1SEXP);
     Rcpp::traits::input_parameter< double >::type r_val(r_valSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type distances(distancesSEXP);
-    Rcpp::traits::input_parameter< NumericMatrix >::type edge(edgeSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type distances1(distances1SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type edge1(edge1SEXP);
     Rcpp::traits::input_parameter< double >::type area(areaSEXP);
-    rcpp_result_gen = Rcpp::wrap(compute_perms(perms, r_val, distances, edge, area));
+    rcpp_result_gen = Rcpp::wrap(compute_perms(perms1, r_val, distances1, edge1, area));
+    return rcpp_result_gen;
+END_RCPP
+}
+// compute_perms3
+NumericVector compute_perms3(SEXP perms1, double r_val, SEXP distances1, SEXP edge1, double area);
+RcppExport SEXP _spatialTIME_compute_perms3(SEXP perms1SEXP, SEXP r_valSEXP, SEXP distances1SEXP, SEXP edge1SEXP, SEXP areaSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< SEXP >::type perms1(perms1SEXP);
+    Rcpp::traits::input_parameter< double >::type r_val(r_valSEXP);
+    Rcpp::traits::input_parameter< SEXP >::type distances1(distances1SEXP);
+    Rcpp::traits::input_parameter< SEXP >::type edge1(edge1SEXP);
+    Rcpp::traits::input_parameter< double >::type area(areaSEXP);
+    rcpp_result_gen = Rcpp::wrap(compute_perms3(perms1, r_val, distances1, edge1, area));
     return rcpp_result_gen;
 END_RCPP
 }
@@ -57,6 +72,7 @@ END_RCPP
 static const R_CallMethodDef CallEntries[] = {
     {"_spatialTIME_cpp_matrix_subsetting", (DL_FUNC) &_spatialTIME_cpp_matrix_subsetting, 3},
     {"_spatialTIME_compute_perms", (DL_FUNC) &_spatialTIME_compute_perms, 5},
+    {"_spatialTIME_compute_perms3", (DL_FUNC) &_spatialTIME_compute_perms3, 5},
     {"_spatialTIME_compute_perms2", (DL_FUNC) &_spatialTIME_compute_perms2, 5},
     {NULL, NULL, 0}
 };
