@@ -14,7 +14,7 @@ ripleys_k2(
   permute = FALSE,
   keep_permutation_distribution = FALSE,
   workers = 1,
-  overwrite = F,
+  overwrite = FALSE,
   xloc = NULL,
   yloc = NULL
 )
