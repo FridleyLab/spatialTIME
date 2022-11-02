@@ -2,18 +2,18 @@
 # Generator token: 10BE3573-1514-4C36-9D1C-5A225CD40393
 
 cpp_matrix_subsetting <- function(m, rows, cols) {
-    .Call(`_spatialTIME_cpp_matrix_subsetting`, m, rows, cols)
+    .Call('_spatialTIME_cpp_matrix_subsetting', PACKAGE = 'spatialTIME', m, rows, cols)
 }
 
 compute_perms <- function(perms1, r_val, distances1, edge1, area) {
-    .Call(`_spatialTIME_compute_perms`, perms1, r_val, distances1, edge1, area)
+    .Call('_spatialTIME_compute_perms', PACKAGE = 'spatialTIME', perms1, r_val, distances1, edge1, area)
 }
 
 compute_perms3 <- function(perms1, r_val, distances1, edge1, area) {
-    .Call(`_spatialTIME_compute_perms3`, perms1, r_val, distances1, edge1, area)
+    .Call('_spatialTIME_compute_perms3', PACKAGE = 'spatialTIME', perms1, r_val, distances1, edge1, area)
 }
 
 compute_perms2 <- function(perms, r_range, distances, edge, area) {
-    .Call(`_spatialTIME_compute_perms2`, perms, r_range, distances, edge, area)
+    .Call('_spatialTIME_compute_perms2', PACKAGE = 'spatialTIME', perms, r_range, distances, edge, area)
 }
 

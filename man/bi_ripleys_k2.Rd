@@ -8,11 +8,11 @@ bi_ripleys_k2(
   mif,
   mnames,
   r_range = 0:100,
-  correction = "none",
+  edge_correction = "none",
   num_permutations = 50,
   keep_permutation_distribution = FALSE,
   overwrite = TRUE,
-  cores = 6,
+  workers = 6,
   big = 1000
 )
 }
@@ -21,7 +21,7 @@ bi_ripleys_k2(
 
 \item{r_range}{vector range of radii to calculate co-localization K}
 
-\item{correction}{character correction method, either "translation" or "none" currently}
+\item{edge_correction}{character edge_correction method, either "translation" or "none" currently}
 
 \item{num_permutations}{integer number of permutations to estimate CSR}
 
@@ -29,7 +29,7 @@ bi_ripleys_k2(
 
 \item{overwrite}{boolean as to whether to replace existing bivariate_Count if exists}
 
-\item{cores}{integer number of CPU cores to use when number of `anchor` or `counted` is greater than 10,000}
+\item{workers}{integer number of CPU workers to use when number of `anchor` or `counted` is greater than 10,000}
 
 \item{big}{integer used as the threshold for subsetting large samples, default is 1000 either i or j}
 
@@ -53,7 +53,7 @@ mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
 x2 = bi_ripleys_k2(mif = x, mnames = mnames_good, 
-                   r_range = 0:100, correction = "translation", 
+                   r_range = 0:100, edge_correction = "translation", 
                    num_permutations = 50, keep_permutation_distribution = FALSE, 
-                   cores = 6, big = 1000)
+                   workers = 6, big = 1000)
 }

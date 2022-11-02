@@ -168,18 +168,18 @@ Currently, the number of permutations is 10, but this should be increased to at 
 ```{r, ripleys, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 x <- ripleys_k2(mif = x, mnames = mnames_good, 
                num_permutations = 10, method = "K",
-               edge_correction = 'translation', r = 0:100,
+               edge_correction = 'translation', r_range = 0:100,
                permute = TRUE,
-               keep_permutation_distribution = FALSE, workers = 1)
+               keep_permutation_distribution = FALSE, overwrite = TRUE, workers = 1)
 
 # This will keeps the colors in evx$ery plot for the remainder of the vignette compatible 
-values = RColorBrewer::brewer.pal(length(unique(x$derived$univariate_Count$Label)), "Accent")
+values = RColorBrewer::brewer.pal(length(unique(x$derived$univariate_Count[[x$sample_id]])), "Accent")
 names(values) = unique(x$derived$univariate_Count$deidentified_sample)
 
 x$derived$univariate_Count  %>%
   filter(Marker != 'PDL1..Opal.540..Positive') %>%
   ggplot(aes(x = r, y = `Observed K`)) +
-  geom_line(aes(color = Label), show.legend = FALSE) +
+  geom_line(aes(color = get(x$sample_id)), show.legend = FALSE) +
   facet_wrap(Marker~., scales = 'free') + theme_bw() + 
   scale_color_manual(values = values)
   
@@ -193,11 +193,11 @@ Positive values for degree of cluster when using `method = 'K'` and `method = 'L
 There is no clear way to select which value of $r$ to use for a particular analysis. Below we illustrate how the degree of clustering can change with the value of $r$. Notice that for values of $r > 20$ that there is very little difference in the ordering between the samples (though the degree of spatial clustering can changes dramatically), while very small values $r$ would have different results.
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
-x$derived$univariate_Count  %>%
+x$derived$univariate_Count %>%
   filter(Marker == 'CD3..CD8.') %>%
   inner_join(x$clinical,.) %>%
   ggplot(aes(shape = status, y = `Degree of Clustering Permutation`, x =r)) +
-  geom_point(aes(color = deidentified_sample)) +
+  geom_point(aes(color = get(mif$sample_id))) +
   theme_bw() + scale_color_manual(values = values)
 ```
 
@@ -206,15 +206,15 @@ x$derived$univariate_Count  %>%
 In the univariate case, we consider each cell of a single cell type and center circles around each cell (reference cell). In the bivariate case, we are interested in how many cells of Type 1 (Counted) are clustered in proximity to Type 2 (Anchor). Here the circles are centered around cell of Type 2 and then the cells of Type 1 are counted.
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
-x <- bi_ripleys_k(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
-                  num_permutations = 10, method = "K",
-                  edge_correction = 'translation', r = seq(0,100,10),
-                  keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE)
+x <- bi_ripleys_k2(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
+                  num_permutations = 10, 
+                  edge_correction = 'translation', r_range = 0:100,
+                  keep_permutation_distribution = FALSE, workers = 1)
 
 x$derived$bivariate_Count  %>%
-  filter(anchor == 'CD3..FOXP3.') %>%
+  filter(Anchor == 'CD3..FOXP3.') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
-  geom_line(aes(color = deidentified_sample), show.legend = TRUE) +
+  geom_line(aes(color = get(mif$sample_id)), show.legend = TRUE) +
   theme_bw() + scale_color_manual(values = values)
 ```
                
@@ -229,14 +229,14 @@ Currently, the number of permutations is 10, but this should be increased to at 
 
 ```{r, NN, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 
-x <- NN_G(mif = x, mnames = mnames_good, num_permutations = 10,
-                edge_correction = 'rs', r = seq(0,100,10),
-                keep_perm_dis = FALSE, workers = 1)
+x <- NN_G2(mif = x, mnames = mnames_good, num_permutations = 10,
+                edge_correction = 'rs', r = 0:100,
+                keep_permutation_distribution = FALSE, workers = 1)
 
 x$derived$univariate_NN  %>%
   filter(Marker != 'PDL1..Opal.540..Positive') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
-  geom_line(aes(color = deidentified_sample)) +
+  geom_line(aes(color = get(x$sample_id))) +
   facet_wrap(Marker~., scales = 'free') + theme_bw() + 
   scale_color_manual(values = values)
   

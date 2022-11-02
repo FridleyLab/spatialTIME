@@ -3,6 +3,7 @@
 S3method(print,mif)
 export("%>%")
 export(NN_G)
+export(NN_G2)
 export(bi_NN_G)
 export(bi_ripleys_k)
 export(bi_ripleys_k2)

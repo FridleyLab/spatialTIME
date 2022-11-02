@@ -3,11 +3,11 @@
 #' @param spatial spatial data frame with columns of XMin, XMax, YMin, YMax
 #' @param mnames vector of column names for phenotypes or data frame of marker combinations
 #' @param r_range vector range of radii to calculate co-localization K
-#' @param correction character correction method, either "translation" or "none" currently
+#' @param edge_correction character edge_correction method, either "translation" or "none" currently
 #' @param num_permutations integer number of permutations to estimate CSR
 #' @param keep_permutation_distribution boolean as to whether to summarise permutations to mean
 #' @param overwrite boolean as to whether to replace existing bivariate_Count if exists
-#' @param cores integer number of CPU cores to use when number of `anchor` or `counted` is greater than 10,000
+#' @param workers integer number of CPU workers to use when number of `anchor` or `counted` is greater than 10,000
 #' @param big integer used as the threshold for subsetting large samples, default is 1000 either i or j
 #'
 #' @return mif object with bivariate ripley's K calculated
@@ -25,17 +25,17 @@
 #'                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
 #'                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
 #' x2 = bi_ripleys_k2(mif = x, mnames = mnames_good, 
-#'                    r_range = 0:100, correction = "translation", 
+#'                    r_range = 0:100, edge_correction = "translation", 
 #'                    num_permutations = 50, keep_permutation_distribution = FALSE, 
-#'                    cores = 6, big = 1000)
+#'                    workers = 6, big = 1000)
 bi_ripleys_k2 = function(mif,
                          mnames,
                          r_range = 0:100,
-                         correction = "none",
+                         edge_correction = "none",
                          num_permutations = 50,
                          keep_permutation_distribution = FALSE,
                          overwrite = TRUE,
-                         cores = 6,
+                         workers = 6,
                          big = 1000){
   #check whether the object assigned to mif is of class mif
   if(!inherits(mif, "mif")){
@@ -136,15 +136,15 @@ bi_ripleys_k2 = function(mif,
             #calculate distances
             dists = spatstat.geom::crossdist(i_tmp, j_tmp)
             #calculate edge correcion
-            if(correction %in% c("trans", "translation")){
+            if(edge_correction %in% c("trans", "translation")){
               edge = spatstat.core::edge.Trans(i_tmp, j_tmp)
             }
-            if(correction %in% c("none")){
+            if(edge_correction %in% c("none")){
               edge = dists
             }
-            #count edge correction matrix for cells within range r in distance matrix
+            #count edge edge_correction matrix for cells within range r in distance matrix
             counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
-            #remove large distance and edge correction matrix to keep ram usage down
+            #remove large distance and edge edge_correction matrix to keep ram usage down
             rm(dists, edge)
             #return counts for tile
             counts
@@ -163,18 +163,18 @@ bi_ripleys_k2 = function(mif,
       if(!(li > big | lj > big)){
         #calculate distance matrix
         dists = spatstat.geom::crossdist(ppi, ppj)
-        #calculate edge correction
-        if(correction %in% c("trans", "translation")){
+        #calculate edge edge_correction
+        if(edge_correction %in% c("trans", "translation")){
           edge = spatstat.core::edge.Trans(ppi, ppj)
         }
-        if(correction %in% c("none")){
+        if(edge_correction %in% c("none")){
           edge = dists
         }
-        #count edge correction matrix for cells within r range in distance matrix
+        #count edge edge_correction matrix for cells within r range in distance matrix
         counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
       }
       
-      #calulate clustering from counted edge corrections with intensities of i and j
+      #calulate clustering from counted edge edge_corrections with intensities of i and j
       K_obs$`Observed K` = (1/(lambdai * lambdaj * area)) * counts
       K_obs$Anchor = anchor
       K_obs$Counted = counted
@@ -231,15 +231,15 @@ bi_ripleys_k2 = function(mif,
               #calculate distances
               dists = spatstat.geom::crossdist(i_tmp, j_tmp)
               #calculate edge correcion
-              if(correction %in% c("trans", "translation")){
+              if(edge_correction %in% c("trans", "translation")){
                 edge = spatstat.core::edge.Trans(i_tmp, j_tmp)
               }
-              if(correction %in% c("none")){
+              if(edge_correction %in% c("none")){
                 edge = dists
               }
-              #count edge correction matrix for cells within range r in distance matrix
+              #count edge edge_correction matrix for cells within range r in distance matrix
               counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
-              #remove large distance and edge correction matrix to keep ram usage down
+              #remove large distance and edge edge_correction matrix to keep ram usage down
               rm(dists, edge)
               #return counts for tile
               counts
@@ -259,20 +259,20 @@ bi_ripleys_k2 = function(mif,
         if(!(li > big | lj > big)){
           #calculate distance matrix
           dists = spatstat.geom::crossdist(ppi, ppj)
-          #calculate edge correction
-          if(correction %in% c("trans", "translation")){
+          #calculate edge edge_correction
+          if(edge_correction %in% c("trans", "translation")){
             edge = spatstat.core::edge.Trans(ppi, ppj)
           }
-          if(correction %in% c("none")){
+          if(edge_correction %in% c("none")){
             edge = dists
           }
-          #count edge correction matrix for cells within r range in distance matrix
+          #count edge edge_correction matrix for cells within r range in distance matrix
           counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
         }
         #calculate permuted K using lambda, area, and positives
         permed$`Permuted K` = (1/(lambdai * lambdaj * area)) * counts
         return(permed)
-      }, mc.cores = cores, mc.preschedule = F, mc.allow.recursive = T) %>%
+      }, mc.cores = workers, mc.preschedule = F, mc.allow.recursive = T) %>%
         do.call(dplyr::bind_rows, .)
       #join the emperical K and the permuted CSR estimate
       final = dplyr::full_join(K_obs,
@@ -286,15 +286,16 @@ bi_ripleys_k2 = function(mif,
     #reorder columns to make more sense
     res = res[,c(1,2,7,5,6,3,4,8)]
     return(res)
-  }, mc.cores = cores, mc.preschedule = F,mc.allow.recursive = T) %>%
-    do.call(dplyr::bind_rows, .)
+  }, mc.cores = workers, mc.preschedule = F,mc.allow.recursive = T) %>%
+    do.call(dplyr::bind_rows, .)%>% #collapse all samples to single data frame
+    rename(!!mif$sample_id := Label)
   #if user doesn't want the permutation distribution, get average of the permutation estimate
   if(!keep_permutation_distribution){
     out = out %>%
       #remove iter since this is the permutation number
       dplyr::select(-iter) %>%
       #group by those used for permuting
-      dplyr::group_by(Label, r, Anchor, Counted) %>%
+      dplyr::group_by(across(mif$sample_id), r, Anchor, Counted) %>%
       #take mean of theoretical, permuted, observed
       dplyr::summarise_all(~mean(., na.rm=TRUE)) %>%
       #calculate the degree of clustering from both the theoretical and permuted
@@ -394,7 +395,7 @@ getBiK = function(i_dat, j_dat, area, r_range, win, correction){
         do.call(rbind.data.frame, .) %>%
         #take column sums and return
         colSums()
-    }, mc.cores = cores, mc.preschedule = FALSE)
+    }, mc.cores = workers, mc.preschedule = FALSE)
     #bind i tile counts and sum
     counts = is %>%
       do.call(rbind.data.frame, .) %>%

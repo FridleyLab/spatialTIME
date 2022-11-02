@@ -178,7 +178,7 @@ ripleys_k2 = function(mif,
         
         if(nrow(dat2) < 3){
           return(data.frame(iter = "Estimator", 
-                            Label = spat[1,"deidentified_sample"],
+                            Label = unique(spat[[mif$sample_id]]),
                             Marker = marker,
                             r = r_range,
                             `Theoretical K` = pi * r_range^2,
@@ -214,12 +214,13 @@ ripleys_k2 = function(mif,
     #return final results
     return(res)
   }, mc.cores = workers, mc.allow.recursive =TRUE, mc.preschedule =FALSE) %>% #set mclapply params
-    do.call(dplyr::bind_rows, .) #collapse all samples to single data frame
+    do.call(dplyr::bind_rows, .) %>% #collapse all samples to single data frame
+    rename(!!mif$sample_id := Label)
   
   if(permute == TRUE & keep_permutation_distribution == F){
     out = out %>%
       dplyr::mutate(iter = "Permuted") %>%
-      dplyr::group_by(iter, Label, Marker, r) %>%
+      dplyr::group_by(iter, across(mif$sample_id), Marker, r) %>%
       dplyr::summarise_all(~mean(., na.rm=T))
   }
   
