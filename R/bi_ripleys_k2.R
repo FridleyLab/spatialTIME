@@ -50,6 +50,7 @@ bi_ripleys_k2 = function(mif,
     r_range = c(0, r_range)
   }
   #split mif into jobs for spatial files
+  #split mif into jobs for spatial files
   out = parallel::mclapply(names(mif$spatial), function(spatial_name){
     #prepare spatial data with x and y location (cell centers)
     spat = mif$spatial[[spatial_name]] %>%
@@ -71,13 +72,19 @@ bi_ripleys_k2 = function(mif,
                              counted = mnames)
     }
     #remove combinations that have 
-    m_combos = m_combos[m_combos$anchor != m_combos$counted,]
+    m_combos = m_combos %>%
+      rowwise() %>%
+      filter(!grepl(gsub(" \\(.*", "+", anchor), gsub(" \\(.*", "+", counted)) &
+               !grepl(gsub(" \\(.*", "+", counted), gsub(" \\(.*", "+", anchor)) &
+               !grepl(gsub("\\+", "\\\\+", anchor), gsub(" \\(.*", "+", counted)) &
+               !grepl(gsub("\\+", "\\\\+", counted), gsub(" \\(.*", "+", anchor))) %>%
+      ungroup()
     #for the combinations of markers, do bivark and permutations
     res = parallel::mclapply(1:nrow(m_combos), function(combo){
       #pull anchor and counted marker from combos data frame
-      anchor = as.character(m_combos[combo, 1])
-      counted = as.character(m_combos[combo, 2])
-      cat(spatial_name, "\t", anchor, "\t", counted, "\n")
+      anchor = m_combos[combo, ] %>% dplyr::pull(anchor) %>% as.character()
+      counted = m_combos[combo, ] %>% dplyr::pull(counted) %>% as.character()
+      cat(spatial_name, "\t", combo, "\t", anchor, "\t", counted, "\n")
       #remove rows that are positive for both counted and anchor
       spat_tmp = spat[!(spat[,anchor] == 1 & spat[,counted] == 1),c("xloc", "yloc", anchor, counted)]
       
@@ -128,12 +135,20 @@ bi_ripleys_k2 = function(mif,
         i_ranges = getTile(slide = i_slides, l = li, size = big)
         j_ranges = getTile(slide = j_slides, l = lj, size = big)
         #count up those within the specified distance
+        #all edge for all dists = 6.354   1.855   8.768
+        #edge for all j but only near i = 2.247   0.970   3.549
+        #edge for only near i and j = 2.403   1.203   1.928
         counts = parallel::mclapply(i_ranges, function(i_section){
           parallel::mclapply(j_ranges, function(j_section){
             #subset to tile
             i_tmp = ppi[i_section]
             j_tmp = ppj[j_section]
             #calculate distances
+            dists = spatstat.geom::crossdist(i_tmp, j_tmp)
+            rmv_i = rowSums(dists < max(r_range)) != 0
+            rmv_j = colSums(dists < max(r_range)) != 0
+            i_tmp = i_tmp[rmv_i]
+            j_tmp = j_tmp[rmv_j]
             dists = spatstat.geom::crossdist(i_tmp, j_tmp)
             #calculate edge correcion
             if(edge_correction %in% c("trans", "translation")){
@@ -142,9 +157,9 @@ bi_ripleys_k2 = function(mif,
             if(edge_correction %in% c("none")){
               edge = dists
             }
-            #count edge edge_correction matrix for cells within range r in distance matrix
+            #count edge correction matrix for cells within range r in distance matrix
             counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
-            #remove large distance and edge edge_correction matrix to keep ram usage down
+            #remove large distance and edge correction matrix to keep ram usage down
             rm(dists, edge)
             #return counts for tile
             counts
@@ -153,29 +168,33 @@ bi_ripleys_k2 = function(mif,
             do.call(rbind.data.frame, .) %>%
             #take column sums and return
             colSums()
-        }) %>%
-        #bind i tile counts and sum
+        }, mc.preschedule = F, mc.allow.recursive = T) %>%
+          #bind i tile counts and sum
           do.call(rbind.data.frame, .) %>%
           colSums() %>%
           unname()
+        #calulate clustering from counted edge corrections with intensities of i and j
+        K_obs$`Observed K` = (1/(lambdai * lambdaj * area)) * counts
       }
       #if there are less than 10,000 j or i just compute matrix
       if(!(li > big | lj > big)){
         #calculate distance matrix
-        dists = spatstat.geom::crossdist(ppi, ppj)
-        #calculate edge edge_correction
-        if(edge_correction %in% c("trans", "translation")){
-          edge = spatstat.core::edge.Trans(ppi, ppj)
-        }
-        if(edge_correction %in% c("none")){
-          edge = dists
-        }
-        #count edge edge_correction matrix for cells within r range in distance matrix
-        counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
+        sp_tmp2 = spat_tmp %>%
+          data.frame(check.names=F)%>%
+          tidyr::gather(Marker, Positive, -xloc, -yloc) %>%
+          dplyr::filter(Positive == 1)
+        pp_obj = spatstat.geom::ppp(x = sp_tmp2$xloc, y = sp_tmp2$yloc, window = win, marks = factor(sp_tmp2$Marker))
+        K_obs = spatstat.core::Kcross(pp_obj,
+                                  i = unique(sp_tmp2$Marker)[1],
+                                  j = unique(sp_tmp2$Marker)[2],
+                                  r = r_range,
+                                  correction = edge_correction) %>%
+          data.frame() %>%
+          dplyr::rename("Theoretical K" = 2,
+                        "Observed K" = 3) %>%
+          dplyr::full_join(K_obs, ., by = c("r", "Theoretical K"))
       }
       
-      #calulate clustering from counted edge edge_corrections with intensities of i and j
-      K_obs$`Observed K` = (1/(lambdai * lambdaj * area)) * counts
       K_obs$Anchor = anchor
       K_obs$Counted = counted
       #randomly sample the rows of possible cell locations for permuting
@@ -230,6 +249,11 @@ bi_ripleys_k2 = function(mif,
               j_tmp = ppj[j_section]
               #calculate distances
               dists = spatstat.geom::crossdist(i_tmp, j_tmp)
+              rmv_i = rowSums(dists < max(r_range)) != 0
+              rmv_j = colSums(dists < max(r_range)) != 0
+              i_tmp = i_tmp[rmv_i]
+              j_tmp = j_tmp[rmv_j]
+              dists = spatstat.geom::crossdist(i_tmp, j_tmp)
               #calculate edge correcion
               if(edge_correction %in% c("trans", "translation")){
                 edge = spatstat.core::edge.Trans(i_tmp, j_tmp)
@@ -237,9 +261,9 @@ bi_ripleys_k2 = function(mif,
               if(edge_correction %in% c("none")){
                 edge = dists
               }
-              #count edge edge_correction matrix for cells within range r in distance matrix
+              #count edge correction matrix for cells within range r in distance matrix
               counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
-              #remove large distance and edge edge_correction matrix to keep ram usage down
+              #remove large distance and edge correction matrix to keep ram usage down
               rm(dists, edge)
               #return counts for tile
               counts
@@ -254,35 +278,36 @@ bi_ripleys_k2 = function(mif,
             do.call(rbind.data.frame, .) %>%
             colSums() %>%
             unname()
+          #calculate permuted K using lambda, area, and positives
+          permed$`Permuted K` = (1/(lambdai * lambdaj * area)) * counts
         }
-        #if there are less than 10,000 j or i just compute matrix
         if(!(li > big | lj > big)){
           #calculate distance matrix
-          dists = spatstat.geom::crossdist(ppi, ppj)
-          #calculate edge edge_correction
-          if(edge_correction %in% c("trans", "translation")){
-            edge = spatstat.core::edge.Trans(ppi, ppj)
-          }
-          if(edge_correction %in% c("none")){
-            edge = dists
-          }
-          #count edge edge_correction matrix for cells within r range in distance matrix
-          counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
+          dat2 = data.frame(dat)
+          dat2$Marker = label
+          pp_obj = spatstat.geom::ppp(x = dat2$xloc, y = dat2$yloc, window = win, marks = factor(dat2$Marker))
+          permed = spatstat.core::Kcross(pp_obj,
+                                         i = unique(dat2$Marker)[1],
+                                         j = unique(dat2$Marker)[2],
+                                         r = r_range,
+                                         correction = edge_correction) %>%
+            data.frame() %>%
+            dplyr::rename("Theoretical K" = 2,
+                          "Permuted K" = 3) %>%
+            dplyr::full_join(permed, ., by = c("r", "Theoretical K"))
         }
-        #calculate permuted K using lambda, area, and positives
-        permed$`Permuted K` = (1/(lambdai * lambdaj * area)) * counts
         return(permed)
-      }, mc.cores = workers, mc.preschedule = F, mc.allow.recursive = T) %>%
+      }, mc.preschedule = F, mc.allow.recursive = T) %>%
         do.call(dplyr::bind_rows, .)
       #join the emperical K and the permuted CSR estimate
       final = dplyr::full_join(K_obs,
-                               kpermed, by = c("r", "Theoretical K"))
+                               kpermed, by = c("r", "Theoretical K")) %>%
+        #add the image label to the data frame
+        dplyr::mutate(Label = spatial_name, .before = 1)
       
       return(final)
-    }) %>%
-      do.call(dplyr::bind_rows, .) %>%
-      #add the image label to the data frame
-      dplyr::mutate(Label = spatial_name, .before = 1)
+    }, mc.cores = workers, mc.preschedule = F,mc.allow.recursive = T) %>%
+      do.call(dplyr::bind_rows, .)
     #reorder columns to make more sense
     res = res[,c(1,2,7,5,6,3,4,8)]
     return(res)
@@ -342,82 +367,4 @@ getTile = function(slide, l, size){
     v[w] = TRUE
     v
   })
-}
-
-getBiK = function(i_dat, j_dat, area, r_range, win, correction){
-  #point pattern for anchor for distance matrix
-  ppi = spatstat.geom::ppp(x = i_dat[,1],
-                           y = i_dat[,2],
-                           window = win)
-  #point pattern for counted for distance matrix
-  ppj = spatstat.geom::ppp(x = j_dat[,1],
-                           y = j_dat[,2],
-                           window = win)
-  #ns
-  li = nrow(i_dat)
-  lj = nrow(j_dat)
-  #find intensity of each marker
-  lambdai = li/area
-  lambdaj = lj/area
-  
-  #if the data are too large, distance matrix calculating will fail
-  #split the matrix into a tiles to count cells within range
-  if(li > big0 | lj > big0){
-    #find the number of tiles of distance matrix in columns and rows
-    i_slides = floor(li / big0)
-    j_slides = floor(lj / big0)
-    #produce vectors of length ns, create T/F vector of which to subset
-    i_ranges = getTile(slide = i_slides, l = li, size = big)
-    j_ranges = getTile(slide = j_slides, l = lj, size = big)
-    #count up those within the specified distance
-    is = parallel::mclapply(i_ranges, function(i_section){
-      parallel::mclapply(j_ranges, function(j_section){
-        #subset to tile
-        i_tmp = ppi[i_section]
-        j_tmp = ppj[j_section]
-        #calculate distances
-        dists = spatstat.geom::crossdist(i_tmp, j_tmp)
-        #calculate edge correcion
-        if(correction %in% c("trans", "translation")){
-          edge = spatstat.core::edge.Trans(i_tmp, j_tmp)
-        }
-        if(correction %in% c("none")){
-          edge = dists
-        }
-        #count edge correction matrix for cells within range r in distance matrix
-        counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
-        #remove large distance and edge correction matrix to keep ram usage down
-        rm(dists, edge)
-        #return counts for tile
-        counts
-      }) %>% #use 1 core per tile
-        #bind all j tiles to data frame
-        do.call(rbind.data.frame, .) %>%
-        #take column sums and return
-        colSums()
-    }, mc.cores = workers, mc.preschedule = FALSE)
-    #bind i tile counts and sum
-    counts = is %>%
-      do.call(rbind.data.frame, .) %>%
-      colSums() %>%
-      unname()
-  }
-  #if there are less than 10,000 j or i just compute matrix
-  if(!(li > big0 | lj > big0)){
-    #calculate distance matrix
-    dists = spatstat.geom::crossdist(ppi, ppj)
-    #calculate edge correction
-    if(correction %in% c("trans", "translation")){
-      edge = spatstat.core::edge.Trans(ppi, ppj)
-    }
-    if(correction %in% c("none")){
-      edge = dists
-    }
-    #count edge correction matrix for cells within r range in distance matrix
-    counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
-  }
-  
-  #calulate clustering from counted edge corrections with intensities of i and j
-  K = (1/(lambdai * lambdaj * area)) * counts
-  K
 }

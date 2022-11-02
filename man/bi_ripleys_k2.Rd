@@ -13,7 +13,7 @@ bi_ripleys_k2(
   keep_permutation_distribution = FALSE,
   overwrite = TRUE,
   workers = 6,
-  big = 1000
+  big = 10000
 )
 }
 \arguments{

@@ -197,7 +197,7 @@ x$derived$univariate_Count %>%
   filter(Marker == 'CD3..CD8.') %>%
   inner_join(x$clinical,.) %>%
   ggplot(aes(shape = status, y = `Degree of Clustering Permutation`, x =r)) +
-  geom_point(aes(color = get(mif$sample_id))) +
+  geom_point(aes(color = get(x$sample_id))) +
   theme_bw() + scale_color_manual(values = values)
 ```
 
@@ -214,7 +214,7 @@ x <- bi_ripleys_k2(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."),
 x$derived$bivariate_Count  %>%
   filter(Anchor == 'CD3..FOXP3.') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
-  geom_line(aes(color = get(mif$sample_id)), show.legend = TRUE) +
+  geom_line(aes(color = get(x$sample_id)), show.legend = TRUE) +
   theme_bw() + scale_color_manual(values = values)
 ```
                
