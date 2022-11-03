@@ -82,7 +82,7 @@ bi_ripleys_k2 = function(mif,
                !grepl(gsub("\\+", "\\\\+", counted), gsub(" \\(.*", "+", anchor))) %>%
       ungroup()
     #for the combinations of markers, do bivark and permutations
-    res = lapply(1:nrow(m_combos), function(combo){
+    res = parallel::mclapply(1:nrow(m_combos), function(combo){
       #pull anchor and counted marker from combos data frame
       anchor = m_combos[combo, ] %>% dplyr::pull(anchor) %>% as.character()
       counted = m_combos[combo, ] %>% dplyr::pull(counted) %>% as.character()
