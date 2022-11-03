@@ -145,7 +145,7 @@ bi_ripleys_k2 = function(mif,
             j_tmp = ppj[j_section]
             
             #if the correction method is set to border, then run the num and den from spatstat Kmulti
-            if(correction %in% c("border")){
+            if(edge_correction %in% c("border")){
               bI = spatstat.geom::bdist.points(i_tmp)
               bcloseI = bI[spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$i]
               RS = spatstat.core::Kount(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
@@ -164,7 +164,7 @@ bi_ripleys_k2 = function(mif,
               return(rep(0, length(r_range)))
             }
             #calculate edge correcion
-            if(correction %in% c("trans", "translation")){
+            if(edge_correction %in% c("trans", "translation")){
               edge = spatstat.core::edge.Trans(i_tmp, j_tmp)
               #count edge correction matrix for cells within range r in distance matrix
               counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
@@ -173,14 +173,14 @@ bi_ripleys_k2 = function(mif,
               #return counts for tile
               return(counts)
             }
-            if(correction %in% c("none")){
+            if(edge_correction %in% c("none")){
               counts = cumsum(spatstat.geom::whist(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
                                                    spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
               return(counts)
             }
           }) 
           
-          if(correction == "border"){
+          if(edge_correction == "border"){
             num = lapply(j_out, function(j_big){
               j_big[[1]]
             }) %>%
@@ -197,7 +197,7 @@ bi_ripleys_k2 = function(mif,
             colSums()
         }, mc.preschedule = F, mc.allow.recursive = T)
         
-        if(correction == "border"){
+        if(edge_correction == "border"){
           num = lapply(counts, function(j_big){
             j_big[[1]]
           }) %>%
@@ -230,7 +230,7 @@ bi_ripleys_k2 = function(mif,
                                       i = unique(sp_tmp2$Marker)[1],
                                       j = unique(sp_tmp2$Marker)[2],
                                       r = r_range,
-                                      correction = correction) %>%
+                                      correction = edge_correction) %>%
           data.frame() %>%
           dplyr::rename("Theoretical K" = 2,
                         "Observed K" = 3) %>%
@@ -292,7 +292,7 @@ bi_ripleys_k2 = function(mif,
               i_tmp = ppi[i_section]
               j_tmp = ppj[j_section]
               
-              if(correction %in% c("border")){
+              if(edge_correction %in% c("border")){
                 bI = spatstat.geom::bdist.points(i_tmp)
                 bcloseI = bI[spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$i]
                 RS = spatstat.core::Kount(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
@@ -311,7 +311,7 @@ bi_ripleys_k2 = function(mif,
                 return(rep(0, length(r_range)))
               }
               #calculate edge correcion
-              if(correction %in% c("trans", "translation")){
+              if(edge_correction %in% c("trans", "translation")){
                 edge = spatstat.core::edge.Trans(i_tmp, j_tmp)
                 #count edge correction matrix for cells within range r in distance matrix
                 counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
@@ -320,14 +320,14 @@ bi_ripleys_k2 = function(mif,
                 #return counts for tile
                 return(counts)
               }
-              if(correction %in% c("none")){
+              if(edge_correction %in% c("none")){
                 counts = cumsum(spatstat.geom::whist(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
                                                      spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
                 return(counts)
               }
             }) 
             
-            if(correction == "border"){
+            if(edge_correction == "border"){
               num = lapply(j_out, function(j_big){
                 j_big[[1]]
               }) %>%
@@ -344,7 +344,7 @@ bi_ripleys_k2 = function(mif,
               colSums()
           }, mc.preschedule = F, mc.allow.recursive = T)
           
-          if(correction == "border"){
+          if(edge_correction == "border"){
             num = lapply(counts, function(j_big){
               j_big[[1]]
             }) %>%
@@ -372,7 +372,7 @@ bi_ripleys_k2 = function(mif,
                                          i = unique(dat2$Marker)[1],
                                          j = unique(dat2$Marker)[2],
                                          r = r_range,
-                                         correction = correction) %>%
+                                         correction = edge_correction) %>%
             data.frame() %>%
             dplyr::rename("Theoretical K" = 2,
                           "Permuted K" = 3) %>%
