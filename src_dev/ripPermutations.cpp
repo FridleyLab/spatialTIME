@@ -20,7 +20,24 @@ NumericMatrix cpp_matrix_subsetting(NumericMatrix m, NumericVector rows, Numeric
   return(out);
 }
 
-// [[Rcpp::export]]
+//' Compute the permutations of permuations of a distance matrix
+//' 
+//' @param perm1 a numeric matrix containing rows in `distances1` and `edge1` to use as positive cell locations
+//' @param r_val a single r value which to count within for Ripley's K
+//' @param distances1,edge1 matrices containing equal columns and rows for distances between cells and edge correction corresponding to cell pairs
+//' @param area a single value that contains the area of the window around points
+//' 
+//' @return a vector of K statistics of length nrow(perms1)
+//' @export
+//' 
+//' @examples
+//' perms1 = as.matrix(sample(1:10, 5, replace = F))
+//' r_val = 1
+//' distances1 = matrix(nrow = 10, data = abs(rnorm(100)))
+//' edge1 = distances1 #no edge correction
+//' area = 100
+//' K = compute_perms(perms1, r_val, distances1, edge1, area)
+// [[Rcpp::export]] ////////// to make visible to package, put (rng = false) after explort before ]
 NumericVector compute_perms(SEXP perms1, double r_val, SEXP distances1, SEXP edge1, double area){
   NumericMatrix perms(perms1), distances(distances1), edge(edge1), subset_distances, subset_edge;
   int n = perms.cols();

@@ -8,20 +8,21 @@ bi_ripleys_k2(
   mif,
   mnames,
   r_range = 0:100,
-  edge_correction = "none",
+  edge_correction = "translation",
   num_permutations = 50,
   keep_permutation_distribution = FALSE,
   overwrite = TRUE,
   workers = 6,
-  big = 10000
+  big = 1000,
+  nlarge = 1000
 )
 }
 \arguments{
 \item{mnames}{vector of column names for phenotypes or data frame of marker combinations}
 
-\item{r_range}{vector range of radii to calculate co-localization K}
+\item{r_range}{vector range of radii to calculate co-localization *K*}
 
-\item{edge_correction}{character edge_correction method, either "translation" or "none" currently}
+\item{edge_correction}{character edge_correction method, one of "translation", "border", "or none"}
 
 \item{num_permutations}{integer number of permutations to estimate CSR}
 
@@ -31,7 +32,9 @@ bi_ripleys_k2(
 
 \item{workers}{integer number of CPU workers to use when number of `anchor` or `counted` is greater than 10,000}
 
-\item{big}{integer used as the threshold for subsetting large samples, default is 1000 either i or j}
+\item{big}{integer used as the threshold for subsetting large samples, default is 1000 either *i* or *j*}
+
+\item{nlarge}{number of cells in either *i* or *j* to flip to no edge correction - at small (relative to whole spatial region) *r* values differences in results between correction methods is negligible so running a few samples is recommended. Perhaps compute outweighs small differences in correction methods.}
 
 \item{spatial}{spatial data frame with columns of XMin, XMax, YMin, YMax}
 }

@@ -10,6 +10,18 @@ Rcpp::Rostream<true>&  Rcpp::Rcout = Rcpp::Rcpp_cout_get();
 Rcpp::Rostream<false>& Rcpp::Rcerr = Rcpp::Rcpp_cerr_get();
 #endif
 
+// getWindow
+NumericVector getWindow(int x, int size);
+RcppExport SEXP _spatialTIME_getWindow(SEXP xSEXP, SEXP sizeSEXP) {
+BEGIN_RCPP
+    Rcpp::RObject rcpp_result_gen;
+    Rcpp::RNGScope rcpp_rngScope_gen;
+    Rcpp::traits::input_parameter< int >::type x(xSEXP);
+    Rcpp::traits::input_parameter< int >::type size(sizeSEXP);
+    rcpp_result_gen = Rcpp::wrap(getWindow(x, size));
+    return rcpp_result_gen;
+END_RCPP
+}
 // cpp_matrix_subsetting
 NumericMatrix cpp_matrix_subsetting(NumericMatrix m, NumericVector rows, NumericVector cols);
 RcppExport SEXP _spatialTIME_cpp_matrix_subsetting(SEXP mSEXP, SEXP rowsSEXP, SEXP colsSEXP) {
@@ -28,7 +40,6 @@ NumericVector compute_perms(SEXP perms1, double r_val, SEXP distances1, SEXP edg
 RcppExport SEXP _spatialTIME_compute_perms(SEXP perms1SEXP, SEXP r_valSEXP, SEXP distances1SEXP, SEXP edge1SEXP, SEXP areaSEXP) {
 BEGIN_RCPP
     Rcpp::RObject rcpp_result_gen;
-    Rcpp::RNGScope rcpp_rngScope_gen;
     Rcpp::traits::input_parameter< SEXP >::type perms1(perms1SEXP);
     Rcpp::traits::input_parameter< double >::type r_val(r_valSEXP);
     Rcpp::traits::input_parameter< SEXP >::type distances1(distances1SEXP);
@@ -70,6 +81,7 @@ END_RCPP
 }
 
 static const R_CallMethodDef CallEntries[] = {
+    {"_spatialTIME_getWindow", (DL_FUNC) &_spatialTIME_getWindow, 2},
     {"_spatialTIME_cpp_matrix_subsetting", (DL_FUNC) &_spatialTIME_cpp_matrix_subsetting, 3},
     {"_spatialTIME_compute_perms", (DL_FUNC) &_spatialTIME_compute_perms, 5},
     {"_spatialTIME_compute_perms3", (DL_FUNC) &_spatialTIME_compute_perms3, 5},
