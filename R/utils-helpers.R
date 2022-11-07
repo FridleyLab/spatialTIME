@@ -1,7 +1,7 @@
 K_out = function(data, marker, id, iter, correction,r_value, win){
   #Does the actual computation of Ripley' K
   K_obs = spatstat.geom::ppp(x = data$xloc, y = data$yloc, window = win) %>%
-    spatstat.core::Kest(r = r_value, correction = correction) %>%
+    spatstat.explore::Kest(r = r_value, correction = correction) %>%
     data.frame() %>%
     dplyr::filter(r != 0) %>%
     dplyr::mutate(Marker = marker,
@@ -182,7 +182,7 @@ bi_K = function(data, mark_pair, r, correction, id, iter, win){
       dplyr::filter(r>0)
   }else{
     X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win, marks = data_new$Marker)
-    K = spatstat.core::Kcross(r =r, X = X, i = levels(data_new$Marker)[1], 
+    K = spatstat.explore::Kcross(r =r, X = X, i = levels(data_new$Marker)[1], 
                j = levels(data_new$Marker)[2], correction = 'translation') %>% #Hard coded
       data.frame() %>%
       dplyr::filter(r!=0) %>%
@@ -346,7 +346,7 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
 G_out = function(data, marker, id, iter, correction,r_value, win){
   #Does the actual computation of Ripley' K
   G_obs = spatstat.geom::ppp(x = data$xloc, y = data$yloc, window = win) %>%
-    spatstat.core::Gest(r = r_value, correction = correction) %>%
+    spatstat.explore::Gest(r = r_value, correction = correction) %>%
     data.frame() %>%
     dplyr::filter(r != 0) %>%
     dplyr::mutate(Marker = marker,
@@ -485,7 +485,7 @@ bi_G = function(data, mark_pair, r, correction, id, iter, win){
   }else{
     X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win,
                            marks = data_new$Marker)
-    G = spatstat.core::Gcross(r = r, X = X, i = levels(data_new$Marker)[1], 
+    G = spatstat.explore::Gcross(r = r, X = X, i = levels(data_new$Marker)[1], 
                j = levels(data_new$Marker)[2], correction = correction) %>% 
       data.frame() %>%
       dplyr::filter(r!=0) %>%
