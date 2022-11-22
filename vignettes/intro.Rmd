@@ -27,9 +27,18 @@ set.seed(126)
 library(spatialTIME)
 library(dplyr)
 library(ggplot2)
-library(viridis)
+library(gridExtra)
+library(pheatmap)
 library(tidyr)
 library(tidyselect)
+library(RColorBrewer)
+
+getColors = function(n){
+  #https://stackoverflow.com/questions/15282580/how-to-generate-a-number-of-most-distinctive-colors-in-r
+  qual_col_pals = brewer.pal.info[brewer.pal.info$category == 'qual',]
+  col_vector = unlist(mapply(brewer.pal, qual_col_pals$maxcolors, rownames(qual_col_pals)))
+  sample(col_vector, n)
+}
 ```
 
 # Background for Tissue Microarray (TMA) Data 
@@ -92,7 +101,7 @@ mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
 # Used to make the legends in both plots below be in same order and use the 
 # same coloring scheme for the purpose making a common legend
 
-values = vizier::turbo(length(mnames_bad))
+values = getColors(length(mnames_bad))
 names(values) = mnames_bad
 
 #add an element in the `derived` object position
@@ -106,7 +115,7 @@ bad_names <- x[["derived"]][["spatial_plots"]][[4]] +
                      labels = mnames_bad %>%
                        gsub("..Opal.*", "+", .) %>% 
                        gsub("\\.\\.", "+", .) %>% 
-                       gsub("\\.", "+", .))
+                       gsub("\\.", "+", .)) 
 
 mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
@@ -129,7 +138,7 @@ x$sample %>% filter(deidentified_sample == 'TMA3_[9,K].tif') %>% select(c(2, 4:1
 ```
 
 ```{r}
-gridExtra::grid.arrange(bad_names, good_names, ncol=2)
+grid.arrange(bad_names, good_names, ncol=2)
 ```
 # Estimating the degree of spatial clustering with Count Based Methods
 
@@ -172,7 +181,7 @@ x <- ripleys_k(mif = x, mnames = mnames_good,
                keep_perm_dis = FALSE, workers = 1)
 
 # This will keeps the colors in evx$ery plot for the remainder of the vignette compatible 
-values = vizier::turbo(length(unique(x$derived$univariate_Count$deidentified_sample)))
+values = getColors(length(unique(x$derived$univariate_Count$deidentified_sample)))
 names(values) = unique(x$derived$univariate_Count$deidentified_sample)
 
 x$derived$univariate_Count  %>%
@@ -354,7 +363,7 @@ rownames(annotation) = annotation$deidentified_sample
 annotation = annotation %>%
   select(status)
   
-pheatmap::pheatmap(Rip_K_matrix, treeheight_row = 0, treeheight_col = 0, 
+pheatmap(Rip_K_matrix, treeheight_row = 0, treeheight_col = 0, 
                    cluster_cols = FALSE, annotation = annotation)
 
 

@@ -27,8 +27,8 @@ Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.2.2
 Imports: magrittr, dplyr, tidyr, ggplot2, scales,
         grDevices, purrr, rlang, plyr, spatstat.geom,
-        spatstat.explore, RColorBrewer, stats, furrr, 
-        future, tidyselect, crayon, pheatmap, viridis, vizier
+        spatstat.explore, RColorBrewer, furrr, gridExtra,
+        future, tidyselect, crayon, pheatmap
 Depends: R (>= 3.5.0)
 Suggests: knitr, rmarkdown, testthat
 VignetteBuilder: knitr

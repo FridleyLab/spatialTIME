@@ -204,10 +204,10 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
   }
   
   #Check if exhaustive is FALSE, then markers must be a data.frame
-  if(exhaustive == FALSE & class(markers) != 'data.frame'){
+  if(exhaustive == FALSE & !inherits(markers, 'data.frame')){
     stop("If exhaustive == FALSE, then markers must be a data.frame.")
   }
-  if(exhaustive == TRUE & class(markers) != 'character'){
+  if(exhaustive == TRUE & !inherits(markers, 'character')){
     stop("If exhaustive == TRUE, then markers must be a character vector")
   }
   
@@ -507,10 +507,10 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   }
   
   #Check if exhaustive is FALSE, then markers must be a data.frame
-  if(exhaustive == FALSE & class(markers) != 'data.frame'){
+  if(exhaustive == FALSE & !inherits(markers, 'data.frame')){
     stop("If exhaustive == FALSE, then markers must be a data.frame.")
   }
-  if(exhaustive == TRUE & class(markers) != 'character'){
+  if(exhaustive == TRUE & !inherits(markers, 'character')){
     stop("If exhaustive == TRUE, then markers must be a character vector")
   }
 
