@@ -13,3 +13,5 @@
 ^R/merge_for_jordan\.R$
 ^R/simulate_mif\.R$
 ^man/simulate_mif\.Rd$
+^NAMESPACE_bkup
+^bugs
