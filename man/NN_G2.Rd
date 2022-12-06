@@ -10,10 +10,11 @@ NN_G2(
   r_range = 0:100,
   num_permutations = 50,
   edge_correction = "rs",
-  permute = TRUE,
+  permute = FALSE,
   keep_permutation_distribution = FALSE,
   workers = 1,
   overwrite = FALSE,
+  big = 1000,
   xloc = NULL,
   yloc = NULL
 )

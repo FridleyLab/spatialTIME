@@ -10,6 +10,7 @@ bi_ripleys_k2(
   r_range = 0:100,
   edge_correction = "translation",
   num_permutations = 50,
+  permute = FALSE,
   keep_permutation_distribution = FALSE,
   overwrite = TRUE,
   workers = 6,

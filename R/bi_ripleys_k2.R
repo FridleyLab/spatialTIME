@@ -93,7 +93,8 @@ bi_ripleys_k2 = function(mif,
                            win = win, 
                            big = big, 
                            r_range = r_range,
-                           edge_correction = edge_correction)
+                           edge_correction = edge_correction,
+                           cores = workers)
     }
     
     #for the combinations of markers, do bivark and permutations
@@ -140,7 +141,8 @@ bi_ripleys_k2 = function(mif,
                                       counted = counted, 
                                       area = area, win = win, big = big, 
                                       r_range = r_range,
-                                      edge_correction = edge_correction)
+                                      edge_correction = edge_correction,
+                                      cores = workers)
       
       K_obs$Anchor = anchor
       K_obs$Counted = counted
@@ -175,7 +177,8 @@ bi_ripleys_k2 = function(mif,
                                            counted = counted, 
                                            area = area, win = win, big = big, 
                                            r_range = r_range,
-                                           edge_correction = edge_correction)
+                                           edge_correction = edge_correction,
+                                           cores = workers)
           return(permed)
         }, mc.preschedule = F, mc.allow.recursive = T) %>%
           do.call(dplyr::bind_rows, .)
@@ -216,11 +219,17 @@ bi_ripleys_k2 = function(mif,
       dplyr::summarise_all(~mean(., na.rm=TRUE)) %>%
       #calculate the degree of clustering from both the theoretical and permuted
       dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                    `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
+                    `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+                    `Exact K` = NA) %>%
+      dplyr::mutate(iter = num_permutations, .before = Anchor)
   }
   #if overwrite is true, replace the bivariate count in the derived slot
   if(overwrite){
     mif$derived$bivariate_Count = out %>%
+      #calculate the degree of clustering from both the theoretical and permuted
+      dplyr::mutate(`Degree of Clustering Permutation` = case_when(FALSE == TRUE ~ `Observed K` - `Permuted K`,
+                                                                   TRUE ~ `Observed K` - `Exact K`),
+                    `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`) %>%
       #add run number to differentiate between bivariate compute runs
       dplyr::mutate(Run = 1)
   }
@@ -229,6 +238,10 @@ bi_ripleys_k2 = function(mif,
     #bind old and new bivar runs together, incrementing Run
     mif$derived$bivariate_Count = mif$derived$bivariate_Count%>%
       dplyr::bind_rows(out %>%
+                         #calculate the degree of clustering from both the theoretical and permuted
+                         dplyr::mutate(`Degree of Clustering Permutation` = case_when(FALSE == TRUE ~ `Observed K` - `Permuted K`,
+                                                                                      TRUE ~ `Observed K` - `Exact K`),
+                                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`) %>%
                          dplyr::mutate(Run = ifelse(exists("bivariate_Count", mif$derived),
                                                     max(mif$derived$bivariate_Count$Run) + 1,
                                                     1)))

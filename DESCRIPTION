@@ -1,6 +1,6 @@
 Package: spatialTIME
 Title: Spatial Analysis of Vectra Immunoflourescent Data
-Version: 1.3.2-1
+Version: 1.3.3-1
 Authors@R: 
      c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
@@ -36,7 +36,7 @@ BugReports: https://github.com/FridleyLab/spatialTIME/issues
 NeedsCompilation: no
 Packaged: 2021-08-19 22:31:18 UTC; 4468179
 Config/testthat/edition: 3
-RoxygenNote: 7.2.1
+RoxygenNote: 7.2.2
 Depends: 
     R (>= 2.10)
 LazyData: true

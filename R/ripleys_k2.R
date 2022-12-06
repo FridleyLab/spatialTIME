@@ -81,9 +81,9 @@ ripleys_k2 = function(mif,
       
       #calculate the edge corrections
       if(edge_correction %in% c("translation", "trans")){
-        edge = spatstat.core::edge.Trans(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win), W = win)
+        edge = spatstat.explore::edge.Trans(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win), W = win)
       } else if(edge_correction %in% c("isotropic", "iso")){
-        edge = spatstat.core::edge.Ripley(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win))
+        edge = spatstat.explore::edge.Ripley(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win))
       } else if(edge_correction == "none"){
         edge = matrix(nrow = nrow(spat), ncol = nrow(spat), data = 1)
       }
@@ -145,7 +145,7 @@ ripleys_k2 = function(mif,
         dat2 = dat %>% dplyr::filter(get(marker) != 0)
         #calculate the observed K
         kobs = spatstat.geom::ppp(dat2$xloc, dat2$yloc, window = win) %>%
-          spatstat.core::Kest(r = r_range, correction = edge_correction) %>%
+          spatstat.explore::Kest(r = r_range, correction = edge_correction) %>%
           data.frame() %>%
           dplyr::rename("Theoretical K" = 2, "Observed K" = 3) %>%
           dplyr::mutate(Label = unique(spat[[mif$sample_id]]),
@@ -154,7 +154,7 @@ ripleys_k2 = function(mif,
         kperms = parallel::mclapply(seq(num_permutations), function(perm){
           dat2 = dat[sample(seq(nrow(dat)), sum(dat[[marker]]), replace=F),]
           spatstat.geom::ppp(dat2$xloc, dat2$yloc, window = win) %>%
-            spatstat.core::Kest(r = r_range, correction = edge_correction) %>%
+            spatstat.explore::Kest(r = r_range, correction = edge_correction) %>%
             data.frame() %>%
             dplyr::rename("Theoretical K" = 2, "Permuted K" = 3) %>%
             dplyr::mutate(Label = unique(spat[[mif$sample_id]]),
@@ -188,7 +188,7 @@ ripleys_k2 = function(mif,
         }
         #calculate the observed K
         kobs = spatstat.geom::ppp(dat2$xloc, dat2$yloc, window = win) %>%
-          spatstat.core::Kest(r = r_range, correction = edge_correction) %>%
+          spatstat.explore::Kest(r = r_range, correction = edge_correction) %>%
           data.frame() %>%
           dplyr::rename("Theoretical K" = 2, "Observed K" = 3) %>%
           dplyr::mutate(Label = unique(spat[[mif$sample_id]]),

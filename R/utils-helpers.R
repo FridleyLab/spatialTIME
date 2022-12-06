@@ -1,7 +1,7 @@
 K_out = function(data, marker, id, iter, correction,r_value, win){
   #Does the actual computation of Ripley' K
   K_obs = spatstat.geom::ppp(x = data$xloc, y = data$yloc, window = win) %>%
-    spatstat.core::Kest(r = r_value, correction = correction) %>%
+    spatstat.explore::Kest(r = r_value, correction = correction) %>%
     data.frame() %>%
     dplyr::filter(r != 0) %>%
     dplyr::mutate(Marker = marker,
@@ -196,7 +196,7 @@ bi_K = function(data, mark_pair, r, correction, id, iter, win){
       dplyr::filter(r>0)
   }else{
     X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win, marks = data_new$Marker)
-    K = spatstat.core::Kcross(r =r, X = X, i = levels(data_new$Marker)[1], 
+    K = spatstat.explore::Kcross(r =r, X = X, i = levels(data_new$Marker)[1], 
                j = levels(data_new$Marker)[2], correction = 'translation') %>% #Hard coded
       data.frame() %>%
       dplyr::filter(r!=0) %>%
@@ -360,7 +360,7 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
 G_out = function(data, marker, id, iter, correction,r_value, win){
   #Does the actual computation of Ripley' K
   G_obs = spatstat.geom::ppp(x = data$xloc, y = data$yloc, window = win) %>%
-    spatstat.core::Gest(r = r_value, correction = correction) %>%
+    spatstat.explore::Gest(r = r_value, correction = correction) %>%
     data.frame() %>%
     dplyr::filter(r != 0) %>%
     dplyr::mutate(Marker = marker,
@@ -499,7 +499,7 @@ bi_G = function(data, mark_pair, r, correction, id, iter, win){
   }else{
     X = spatstat.geom::ppp(x = data_new$xloc, y = data_new$yloc, window = win,
                            marks = data_new$Marker)
-    G = spatstat.core::Gcross(r = r, X = X, i = levels(data_new$Marker)[1], 
+    G = spatstat.explore::Gcross(r = r, X = X, i = levels(data_new$Marker)[1], 
                j = levels(data_new$Marker)[2], correction = correction) %>% 
       data.frame() %>%
       dplyr::filter(r!=0) %>%
@@ -790,7 +790,7 @@ get_kperm = function(pp_obj,
                      ...){
   
   n = pp_obj$n
-  K = spatstat.core::Kest(pp_obj, r = r_vec, ...)
+  K = spatstat.explore::Kest(pp_obj, r = r_vec, ...)
   sumW = K * n * (n-1)
   
   if(is.null(mark2)){
@@ -837,7 +837,7 @@ getTile = function(slide, l, size){
   })
 }
 
-calculateK = function(i_dat, j_dat, anchor, counted, area, win, big, r_range, edge_correction){
+calculateK = function(i_dat, j_dat, anchor, counted, area, win, big, r_range, edge_correction, cores){
   li = nrow(i_dat)
   lj = nrow(j_dat)
   #find intensity of each marker
@@ -869,7 +869,7 @@ calculateK = function(i_dat, j_dat, anchor, counted, area, win, big, r_range, ed
         if(edge_correction %in% c("border")){
           bI = spatstat.geom::bdist.points(i_tmp)
           bcloseI = bI[spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$i]
-          RS = spatstat.core::Kount(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
+          RS = spatstat.explore::Kount(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
                                     spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$i,
                                     bI, spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range)))
           return(RS)
@@ -886,7 +886,7 @@ calculateK = function(i_dat, j_dat, anchor, counted, area, win, big, r_range, ed
         }
         #calculate edge correcion
         if(edge_correction %in% c("trans", "translation")){
-          edge = spatstat.core::edge.Trans(i_tmp, j_tmp)
+          edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
           #count edge correction matrix for cells within range r in distance matrix
           counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
           #remove large distance and edge correction matrix to keep ram usage down
@@ -916,7 +916,7 @@ calculateK = function(i_dat, j_dat, anchor, counted, area, win, big, r_range, ed
         do.call(rbind.data.frame, .) %>%
         #take column sums and return
         colSums()
-    }, mc.preschedule = F, mc.allow.recursive = T)
+    },mc.cores = cores, mc.preschedule = F, mc.allow.recursive = T)
     
     if(edge_correction == "border"){
       num = lapply(counts, function(j_big){
