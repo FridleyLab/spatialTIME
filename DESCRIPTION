@@ -23,7 +23,7 @@ Description: Visualization and analysis  of Vectra Immunoflourescent
 License: GPL (>= 2)
 Imports: Rcpp (>= 1.0.9), magrittr, dplyr, tidyr, ggplot2, scales,
         grDevices, purrr, rlang, plyr, spatstat.geom,
-        spatstat.core, RColorBrewer, furrr, future, 
+        spatstat.explore, RColorBrewer, furrr, future, 
         tidyselect, crayon, dixon, stats, flux
 LinkingTo: Rcpp
 Suggests: 
