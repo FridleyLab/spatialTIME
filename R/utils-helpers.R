@@ -783,7 +783,7 @@ dix_s_c = function(data, markers, classifier_label, num_permutations, xloc, yloc
 }
 
 #special thanks to Simon Vandekar and Julia Wrobel
-get_kperm = function(pp_obj,
+get_exactK = function(pp_obj,
                      mark1,
                      mark2 = NULL,
                      r_vec = NULL,

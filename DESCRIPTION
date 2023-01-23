@@ -36,7 +36,7 @@ BugReports: https://github.com/FridleyLab/spatialTIME/issues
 NeedsCompilation: no
 Packaged: 2021-08-19 22:31:18 UTC; 4468179
 Config/testthat/edition: 3
-RoxygenNote: 7.2.2
+RoxygenNote: 7.2.3
 Depends: 
     R (>= 2.10)
 LazyData: true

@@ -99,6 +99,7 @@ ripleys_k2 = function(mif,
                          Marker = marker,
                          `Observed K` = NA,
                          `Permuted K` = NA,
+                         `Exact CSR` = NA,
                          check.names =FALSE)
           d = dplyr::full_join(d, expand.grid(iter = as.character(seq(num_permutations)),
                                               r = r_range), by = "iter") %>%
@@ -121,6 +122,7 @@ ripleys_k2 = function(mif,
                             r = r_range,
                             `Theoretical K` = theo,
                             `Permuted K` = permed,
+                            `Exact CSR` = NA,
                             check.names = F))
         }, mc.allow.recursive = TRUE) %>%
           do.call(dplyr::bind_rows, .)
@@ -131,11 +133,12 @@ ripleys_k2 = function(mif,
                                  perms, by = c("r", "Theoretical K"))
         final$Marker = marker
         final$Label = spat[1,1] #hard coded for example
-        final[,c(7, 6, 4,1,2,3,5)]
+        final[,c(4,8, 7, 1,2,3,5,6)]
       }, mc.allow.recursive = TRUE) %>% #collapse all markers for spat
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+                      `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
     } else if(permute == TRUE & nrow(spat)>10000){ #if we need perm distribution but too many cells
       res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
@@ -161,13 +164,16 @@ ripleys_k2 = function(mif,
                           Marker = marker,.before=1) %>%
             dplyr::mutate(iter = as.character(perm), .before = 1)
         }, mc.allow.recursive = TRUE) %>%
-          do.call(dplyr::bind_rows, .)
+          do.call(dplyr::bind_rows, .) %>% 
+          mutate(`Exact CSR` = NA)
         K = dplyr::full_join(kobs, kperms,
-                             by = c("Label", "Marker", "r", "Theoretical K"))
+                             by = c("Label", "Marker", "r", "Theoretical K")) %>%
+          relocate(iter, .before = 1)
       }, mc.allow.recursive = TRUE) %>%
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+                      `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
     } else if(permute ==FALSE){
       res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
@@ -184,6 +190,7 @@ ripleys_k2 = function(mif,
                             `Theoretical K` = pi * r_range^2,
                             `Observed K` = NA,
                             `Permuted K` = NA,
+                            `Exact CSR` = NA,
                             check.names =FALSE))
         }
         #calculate the observed K
@@ -200,16 +207,18 @@ ripleys_k2 = function(mif,
           tidyr::gather("marks", "positive", -c(1:3)) %>%
           dplyr::filter(positive == 1 )
         pp_obj = spatstat.geom::ppp(x = spat2$xloc, y = spat2$yloc, window = win, marks = spat2$marks)
-        k_est = get_kperm(pp_obj, mark1 = marker, r_vec = r_range, correction = edge_correction) %>%
-          dplyr::rename("Permuted K" = 2) %>%
-          dplyr::mutate(r = round(r))
+        k_est = spatialTIME:::get_exactK(pp_obj, mark1 = marker, r_vec = r_range, correction = edge_correction) %>%
+          dplyr::rename("Exact CSR" = 2) %>%
+          dplyr::mutate(r = round(r),
+                        `Permuted K` = NA, .before = `Exact CSR`)
         final = dplyr::full_join(kobs, k_est) %>%
           dplyr::mutate(iter = "Estimater", .before = 1)
         return(final)
       }, mc.allow.recursive = TRUE) %>% #collapse all markers for spat
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`)
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+                      `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
     }
     #return final results
     return(res)
