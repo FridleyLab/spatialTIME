@@ -660,8 +660,7 @@ bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' requiring a column that distinguishes between different groups i.e. tumor and 
 #' stroma
 #' @param mif An MIF object
-#' @param mnames Character vector of marker names to estimate degree of 
-#' nearest neighbor distribution
+#' @param mnames vector of markers corresponding to spatial columns to check Dixon's S between
 #' @param num_permutations Numeric value indicating the number of permutations used. 
 #'  Default is 1000.
 #' @param type a character string for the type that is wanted in the output which can
@@ -673,7 +672,6 @@ bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' XMin and XMax will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
 #' YMin and YMax will be used 
-#' @param classifier_label column name used for tissue segmentation
 #' @importFrom magrittr %>%
 #' 
 #' @return Returns a data frame for Z-statistic
@@ -710,16 +708,21 @@ bi_NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' 
 #' @export
 
-dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 1000, type = c("Z", "C"),
+dixons_s = function(mif, mnames, num_permutations = 1000, type = c("Z", "C"),
                     workers = 1, overwrite = FALSE, xloc = NULL, yloc = NULL){
   #dix_s_z
   #dix_s_c
   #make sure to assign the spatial data name to the output of dix_s_z and dix_s_c
   #check classifier label
-  if(is.null(classifier_label)){
-    stop("Please enter a column name for the separation classifier")
-  }
+  
   data = mif$spatial
+  mnames = mnames %>%
+    expand.grid(., .) %>%
+    dplyr::filter(Var1 != Var2) %>% 
+    dplyr::rowwise() %>%
+    dplyr::mutate(Var3 = paste0(sort(c(Var1, Var2)), collapse = ",")) %>%
+    distinct(Var3, .keep_all = TRUE) %>%
+    select(1, 2)
   
   future::plan(future::multisession, workers = workers)
   if(overwrite == FALSE){
@@ -728,9 +731,8 @@ dixons_s = function(mif, mnames, classifier_label = NULL, num_permutations = 100
                                      furrr::future_map(.x = 1:length(data),
                                                        ~{
                                                          dix_s_z(data = data[[.x]], num_permutations = num_permutations,
-                                                                 markers = mnames, classifier_label = classifier_label, 
-                                                                 xloc = xloc, yloc = yloc) %>%
-                                                           mutate(Image.Tag = names(data)[.x])
+                                                                 markers = mnames, xloc = xloc, yloc = yloc) %>%
+                                                           dplyr::mutate(Image.Tag = names(data)[.x])
                                                        }, .options = furrr::furrr_options(seed = TRUE),
                                                        .progress = TRUE) %>%
                                        plyr::ldply())

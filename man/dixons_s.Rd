@@ -7,7 +7,6 @@
 dixons_s(
   mif,
   mnames,
-  classifier_label = NULL,
   num_permutations = 1000,
   type = c("Z", "C"),
   workers = 1,
@@ -19,10 +18,7 @@ dixons_s(
 \arguments{
 \item{mif}{An MIF object}
 
-\item{mnames}{Character vector of marker names to estimate degree of 
-nearest neighbor distribution}
-
-\item{classifier_label}{column name used for tissue segmentation}
+\item{mnames}{vector of markers corresponding to spatial columns to check Dixon's S between}
 
 \item{num_permutations}{Numeric value indicating the number of permutations used. 
 Default is 1000.}
