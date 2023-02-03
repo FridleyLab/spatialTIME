@@ -95,7 +95,7 @@ ripleys_k2 = function(mif,
         #if there are less than 3 cells then just return NA table because cannot calculate
         if(length(pos) < 3){
           d = data.frame(iter = as.character(seq(num_permutations)),
-                         Label = spat[1,"deidentified_sample"],
+                         Label = spat[1,mif$sample_id],
                          Marker = marker,
                          `Observed K` = NA,
                          `Permuted K` = NA,

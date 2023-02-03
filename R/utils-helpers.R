@@ -680,7 +680,7 @@ dix_s_z = function(data, markers, num_permutations, xloc, yloc){
                            dat = dplyr::bind_cols(dat, ns_mat)
                            #if there less than 2 in all classifiers
                          } else if(TRUE %in% ((tmp %>% dplyr::group_by(Marker) %>% dplyr::summarise(dplyr::n()) %>%
-                                               dplyr::pull(2, 1)) < 2)){
+                                               dplyr::pull(2, 1)) < 3)){
                            dat = expand.grid("From" = marker, "To" = marker) %>%
                              dplyr::bind_cols(data.frame("    Obs.Count" = rep(NA, nrow(.)),
                                                   "    Exp. Count" = rep(NA, nrow(.)),
@@ -706,19 +706,24 @@ dix_s_z = function(data, markers, num_permutations, xloc, yloc){
     #bind the resulting dfs together
     do.call(dplyr::bind_rows, .)
   
-  marker_combination = dixon_s %>% 
-    dplyr::mutate(grouping = rep(1:(nrow(.)/4), each = 4)) %>%
-    dplyr::group_by(grouping) %>% dplyr::select(1:2, grouping) %>% dplyr::slice(2)
+  marker_combination = dixon_s %>% dplyr::mutate(grouping = rep(1:(nrow(.)/4),  each = 4)) %>%
+    dplyr::group_by(grouping) %>% 
+    dplyr::arrange(From, To, .by_group = T) %>%
+    dplyr::select(1:2, grouping) %>% 
+    dplyr::slice(2)
   Obs_table = dixon_s %>% 
-    dplyr::mutate(grouping = rep(1:(nrow(.)/4), each = 4)) %>% dplyr::select(grouping, `    Obs.Count`) %>%
-    dplyr::mutate(Key = rep(c("Naa", "Nab", "Nba", "Nbb"), nrow(.)/4)) %>%
+    dplyr::mutate(grouping = rep(1:(nrow(.)/4), each = 4)) %>%
+    dplyr::group_by(grouping) %>% 
+    dplyr::arrange(From, To, .by_group = T) %>% 
+    dplyr::select(grouping, `    Obs.Count`) %>%
+    dplyr::mutate(Key = c("Naa", "Nab", "Nba", "Nbb")) %>%
     dplyr::mutate(`    Obs.Count` = ifelse(is.na(`    Obs.Count`), 0, `    Obs.Count`)) %>%
     tidyr::spread("Key", "    Obs.Count") %>%
     dplyr::mutate(Na = Naa + Nab, Nb = Nba + Nbb,
            S_A_star = log(((Naa+1)/(Nab+1))/((Na+1)/(Nb+2))),
            S_B_star = log(((Nbb+1)/(Nba+1))/((Nb+1)/(Na+2))))
   final_table = dplyr::full_join(marker_combination, Obs_table, by = "grouping")
-  return("Adjusted Dixon" = final_table)
+  return("Adjusted Dixon" = dixon_s)
 }
 
 #calculate dixons s C table
