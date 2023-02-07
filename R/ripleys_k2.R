@@ -229,7 +229,7 @@ ripleys_k2 = function(mif,
     return(res)
   }, mc.cores = workers, mc.allow.recursive =TRUE, mc.preschedule =FALSE) %>% #set mclapply params
     do.call(dplyr::bind_rows, .) %>% #collapse all samples to single data frame
-    rename(!!mif$sample_id := Label)
+    dplyr::rename(!!mif$sample_id := Label)
   
   if(permute == TRUE & keep_permutation_distribution == F){
     out = out %>%
