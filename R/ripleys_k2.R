@@ -68,6 +68,11 @@ ripleys_k2 = function(mif,
       spat = spat %>%
         dplyr::mutate(xloc = (XMax + XMin)/2,
                       yloc = (YMax + YMin)/2)
+    } else {
+      #rename columns to follow xloc and yloc names
+      spat = spat %>%
+        dplyr::rename("xloc" = !!xloc, 
+                      "yloc" = !!yloc)
     }
     #select only needed columns
     spat = spat %>%
