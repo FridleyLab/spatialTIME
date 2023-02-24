@@ -72,16 +72,9 @@ bi_ripleys_k2 = function(mif,
     }
     if(inherits(mnames, "character")){
       m_combos = expand.grid(anchor = mnames,
-                             counted = mnames)
+                             counted = mnames) %>%
+        dplyr::filter(anchor != counted)
     }
-    #remove combinations that have 
-    m_combos = m_combos %>%
-      rowwise() %>%
-      filter(!grepl(gsub(" \\(.*", "+", anchor), gsub(" \\(.*", "+", counted)) &
-               !grepl(gsub(" \\(.*", "+", counted), gsub(" \\(.*", "+", anchor)) &
-               !grepl(gsub("\\+", "\\\\+", anchor), gsub(" \\(.*", "+", counted)) &
-               !grepl(gsub("\\+", "\\\\+", counted), gsub(" \\(.*", "+", anchor))) %>%
-      ungroup()
     #calculating exact K works now!
     if(!permute){
       #calculate exact K
@@ -227,9 +220,9 @@ bi_ripleys_k2 = function(mif,
   if(overwrite){
     mif$derived$bivariate_Count = out %>%
       #calculate the degree of clustering from both the theoretical and permuted
-      dplyr::mutate(`Degree of Clustering Permutation` = case_when(FALSE == TRUE ~ `Observed K` - `Permuted K`,
-                                                                   TRUE ~ `Observed K` - `Exact K`),
-                    `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`) %>%
+      dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+                    `Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
+                    `Degree of Clustering Exact` = `Observed K` - `Exact K`) %>%
       #add run number to differentiate between bivariate compute runs
       dplyr::mutate(Run = 1)
   }
@@ -239,9 +232,9 @@ bi_ripleys_k2 = function(mif,
     mif$derived$bivariate_Count = mif$derived$bivariate_Count%>%
       dplyr::bind_rows(out %>%
                          #calculate the degree of clustering from both the theoretical and permuted
-                         dplyr::mutate(`Degree of Clustering Permutation` = case_when(FALSE == TRUE ~ `Observed K` - `Permuted K`,
-                                                                                      TRUE ~ `Observed K` - `Exact K`),
-                                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`) %>%
+                         dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+                                       `Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
+                                       `Degree of Clustering Exact` = `Observed K` - `Exact K`) %>%
                          dplyr::mutate(Run = ifelse(exists("bivariate_Count", mif$derived),
                                                     max(mif$derived$bivariate_Count$Run) + 1,
                                                     1)))

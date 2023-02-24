@@ -169,7 +169,7 @@ Currently, the number of permutations is 10, but this should be increased to at 
 x <- ripleys_k2(mif = x, mnames = mnames_good, 
                num_permutations = 10, method = "K",
                edge_correction = 'translation', r_range = 0:100,
-               permute = TRUE,
+               permute = FALSE,
                keep_permutation_distribution = FALSE, overwrite = TRUE, workers = 1)
 
 # This will keeps the colors in evx$ery plot for the remainder of the vignette compatible 
@@ -206,14 +206,16 @@ x$derived$univariate_Count %>%
 In the univariate case, we consider each cell of a single cell type and center circles around each cell (reference cell). In the bivariate case, we are interested in how many cells of Type 1 (Counted) are clustered in proximity to Type 2 (Anchor). Here the circles are centered around cell of Type 2 and then the cells of Type 1 are counted.
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
-x <- bi_ripleys_k2(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
+x <- bi_ripleys_k2(mif = x, mnames = mnames_good, 
                   num_permutations = 10, 
+                  permute=FALSE,
                   edge_correction = 'translation', r_range = 0:100,
                   keep_permutation_distribution = FALSE, workers = 1)
 
 x$derived$bivariate_Count  %>%
-  filter(Anchor == 'CD3..FOXP3.') %>%
-  ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
+  filter(Anchor == 'CD3..FOXP3.',
+         Counted == 'CD3..CD8.') %>%
+  ggplot(aes(x = r, y = `Degree of Clustering Exact`)) +
   geom_line(aes(color = get(x$sample_id)), show.legend = TRUE) +
   theme_bw() + scale_color_manual(values = values)
 ```
