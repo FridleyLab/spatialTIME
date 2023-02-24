@@ -39,7 +39,9 @@ bi_ripleys_k2 = function(mif,
                          overwrite = TRUE,
                          workers = 6,
                          big = 1000,
-                         nlarge = 1000){
+                         nlarge = 1000,
+                         xloc = NULL,
+                         yloc = NULL){
   #check whether the object assigned to mif is of class mif
   if(!inherits(mif, "mif")){
     stop("Please use a mIF object for mif")
@@ -56,9 +58,17 @@ bi_ripleys_k2 = function(mif,
   #split mif into jobs for spatial files
   out = parallel::mclapply(names(mif$spatial), function(spatial_name){
     #prepare spatial data with x and y location (cell centers)
-    spat = mif$spatial[[spatial_name]] %>%
-      dplyr::mutate(xloc = (XMin + XMax)/2,
-                    yloc = (YMin + YMax)/2)
+    spat = mif$spatial[[spatial_name]]
+    
+    if(is.null(xloc) & is.null(yloc)){
+      spat = spat %>%
+        dplyr::mutate(xloc = (XMin + XMax)/2,
+                      yloc = (YMin + YMax)/2)
+    } else {
+      spat = spat %>%
+        dplyr::rename('xloc' := xloc,
+                      'yloc' := yloc)
+    }
     #find the window of the point process
     win = spatstat.geom::convexhull.xy(spat$xloc, spat$yloc)
     #calculate area of the window
