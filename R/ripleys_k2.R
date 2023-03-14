@@ -48,7 +48,8 @@ ripleys_k2 = function(mif,
                      workers = 1,
                      overwrite = FALSE,
                      xloc = NULL,
-                     yloc = NULL){
+                     yloc = NULL,
+                     big = 1e6){
   
   if(keep_permutation_distribution == TRUE & permute == FALSE){
     stop("Conflicting `perm` and `keep_permutation_distribution` parameters. Using estimate\n
@@ -179,8 +180,8 @@ ripleys_k2 = function(mif,
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
                       `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
-    } else if(permute ==FALSE){
-      res = parallel::mclapply(mnames, function(marker){
+    } else if(permute == FALSE){
+      marker_res = parallel::mclapply(mnames, function(marker){
         #select the center of cells and marker column
         dat = spat %>%
           dplyr::select(xloc, yloc, !!marker)
@@ -194,8 +195,6 @@ ripleys_k2 = function(mif,
                             r = r_range,
                             `Theoretical K` = pi * r_range^2,
                             `Observed K` = NA,
-                            `Permuted K` = NA,
-                            `Exact CSR` = NA,
                             check.names =FALSE))
         }
         #calculate the observed K
@@ -206,24 +205,60 @@ ripleys_k2 = function(mif,
           dplyr::mutate(Label = unique(spat[[mif$sample_id]]),
                         Marker = marker, .before=1,
                         r = round(r))
-        spat2 = spat %>%
-          dplyr::select(1:3, !!marker) %>%
-          dplyr::mutate(background = ifelse(get(marker) == 1, 0, 1)) %>%
-          tidyr::gather("marks", "positive", -c(1:3)) %>%
-          dplyr::filter(positive == 1 )
-        pp_obj = spatstat.geom::ppp(x = spat2$xloc, y = spat2$yloc, window = win, marks = spat2$marks)
-        k_est = spatialTIME:::get_exactK(pp_obj, mark1 = marker, r_vec = r_range, correction = edge_correction) %>%
+        return(kobs)
+      }, mc.allow.recursive = TRUE) %>% #collapse all markers for spat
+        do.call(dplyr::bind_rows, .)
+      
+      
+      # spat2 = spat %>%
+      #   dplyr::select(1:3, !!marker) %>%
+      #   dplyr::mutate(background = ifelse(get(marker) == 1, 0, 1)) %>%
+      #   tidyr::gather("marks", "positive", -c(1:3)) %>%
+      #   dplyr::filter(positive == 1 )
+      if(nrow(spat) < big){
+        pp_obj = spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win)
+        k_est = spatstat.explore::Kest(pp_obj, r = r_range, correction = edge_correction)
+        gc(full=T)
+        k_est2 = k_est %>%
+          data.frame(check.names = F) %>%
+          dplyr::select(1,3) %>%
           dplyr::rename("Exact CSR" = 2) %>%
           dplyr::mutate(r = round(r),
                         `Permuted K` = NA, .before = `Exact CSR`)
-        final = dplyr::full_join(kobs, k_est) %>%
-          dplyr::mutate(iter = "Estimater", .before = 1)
-        return(final)
-      }, mc.allow.recursive = TRUE) %>% #collapse all markers for spat
-        do.call(dplyr::bind_rows, .) %>%
-        dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
+      } else {
+        ns = nrow(spat)
+        slide = ceiling(ns / big)
+        ranges = spatialTIME:::getTile(slide = slide, l = ns, size = big)
+        counts = parallel::mclapply(ranges, function(i_range){
+          parallel::mclapply(ranges, function(j_range){
+            i_tmp = spatstat.geom::ppp(x = spat$xloc[i_range], y = spat$yloc[i_range], window = win)
+            j_tmp = spatstat.geom::ppp(x = spat$xloc[j_range], y = spat$yloc[j_range], window = win)
+            dists = spatstat.geom::crossdist(i_tmp, j_tmp)
+            dists[dists == 0 | dists > max(r_range)] = NA
+            if(edge_correction == "none"){
+              counts = cumsum(spatstat.geom::whist(dists, 
+                                                   spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
+            } else {
+              edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
+              counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
+            }
+            return(counts)
+          }, mc.allow.recursive = TRUE)%>%
+            do.call(cbind, .) %>%
+            rowSums()
+        }, mc.allow.recursive = TRUE)
+        k = (counts * spatstat.geom::area(win))/(ns * (ns-1))
+        k_est2 = data.frame(r = r_range,
+                            `Permuted K` = NA,
+                            `Exact CSR` = k, check.names = F)
+      }
+      
+      res = dplyr::full_join(marker_res, k_est2) %>%
+        dplyr::mutate(iter = "Estimater", .before = 1) %>%
+        dplyr::mutate(`Degree of Clustering Permutation` = NA,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
                       `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
+      
     }
     #return final results
     return(res)
