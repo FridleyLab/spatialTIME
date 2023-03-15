@@ -49,7 +49,7 @@ ripleys_k2 = function(mif,
                      overwrite = FALSE,
                      xloc = NULL,
                      yloc = NULL,
-                     big = 1e6){
+                     big = 10000){
   
   if(keep_permutation_distribution == TRUE & permute == FALSE){
     stop("Conflicting `perm` and `keep_permutation_distribution` parameters. Using estimate\n
@@ -242,11 +242,15 @@ ripleys_k2 = function(mif,
               edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
               counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
             }
+            rm(dists)
+            gc(full=T)
             return(counts)
           }, mc.allow.recursive = TRUE)%>%
             do.call(cbind, .) %>%
             rowSums()
-        }, mc.allow.recursive = TRUE)
+        }, mc.allow.recursive = TRUE) %>%
+          do.call(cbind, .) %>%
+          rowSums()
         k = (counts * spatstat.geom::area(win))/(ns * (ns-1))
         k_est2 = data.frame(r = r_range,
                             `Permuted K` = NA,

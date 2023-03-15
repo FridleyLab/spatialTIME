@@ -15,7 +15,9 @@ bi_ripleys_k2(
   overwrite = TRUE,
   workers = 6,
   big = 1000,
-  nlarge = 1000
+  nlarge = 1000,
+  xloc = NULL,
+  yloc = NULL
 )
 }
 \arguments{
