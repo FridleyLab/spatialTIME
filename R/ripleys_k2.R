@@ -13,6 +13,15 @@
 #' @param overwrite whether to overwrite the `univariate_Count` slot within `mif$derived`
 #' @param xloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
 #' @param yloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
+#' @param big the number of cells at which to flip from an edge correction method other than 'none' to 'none' due to size
+#' 
+#' @description ripleys_k2() calculates the emperical Ripley's K measurement for the cell types specified by mnames in the mIF object. 
+#' 
+#' Some things to be aware of, when computing the exact Ripley's K estimate, if your spatial file is greater than 
+#' the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time. 
+#' Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating 
+#' edge correction for these spatial files will not succeed when attempting to force an edge correction on it.
+#' 
 #' @return object of class `mif`
 #' @export
 #'
@@ -74,6 +83,9 @@ ripleys_k2 = function(mif,
       spat = spat %>%
         dplyr::rename("xloc" = !!xloc, 
                       "yloc" = !!yloc)
+    }
+    if(nrow(spat) > big){
+      edge_correction = 'none'
     }
     #select only needed columns
     spat = spat %>%
@@ -231,24 +243,26 @@ ripleys_k2 = function(mif,
         ranges = spatialTIME:::getTile(slide = slide, l = ns, size = big)
         counts = parallel::mclapply(ranges, function(i_range){
           parallel::mclapply(ranges, function(j_range){
-            i_tmp = spatstat.geom::ppp(x = spat$xloc[i_range], y = spat$yloc[i_range], window = win)
-            j_tmp = spatstat.geom::ppp(x = spat$xloc[j_range], y = spat$yloc[j_range], window = win)
-            dists = spatstat.geom::crossdist(i_tmp, j_tmp)
-            dists[dists == 0 | dists > max(r_range)] = NA
-            if(edge_correction == "none"){
-              counts = cumsum(spatstat.geom::whist(dists, 
-                                                   spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
-            } else {
-              edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
-              counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
-            }
-            rm(dists)
-            gc(full=T)
+              i_tmp = spatstat.geom::ppp(x = spat$xloc[i_range], y = spat$yloc[i_range], window = win)
+              j_tmp = spatstat.geom::ppp(x = spat$xloc[j_range], y = spat$yloc[j_range], window = win)
+              dists = spatstat.geom::crossdist(i_tmp, j_tmp)
+              dists[dists == 0 | dists > max(r_range)] = NA
+            
+              if(edge_correction == "none"){
+                counts = cumsum(spatstat.geom::whist(dists, 
+                                                     spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
+              } else {            
+                
+                edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
+                counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
+              }
+              rm(dists)
             return(counts)
-          }, mc.allow.recursive = TRUE)%>%
+          }, mc.allow.recursive = TRUE, mc.cores = workers)%>%
             do.call(cbind, .) %>%
             rowSums()
-        }, mc.allow.recursive = TRUE) %>%
+        }, mc.allow.recursive = TRUE)
+        counts = counts %>%
           do.call(cbind, .) %>%
           rowSums()
         k = (counts * spatstat.geom::area(win))/(ns * (ns-1))
@@ -267,7 +281,8 @@ ripleys_k2 = function(mif,
     #return final results
     return(res)
   }, mc.cores = workers, mc.allow.recursive =TRUE, mc.preschedule =FALSE) %>% #set mclapply params
-    do.call(dplyr::bind_rows, .) %>% #collapse all samples to single data frame
+    do.call(dplyr::bind_rows, .)
+  out = out%>% #collapse all samples to single data frame
     dplyr::rename(!!mif$sample_id := Label)
   
   if(permute == TRUE & keep_permutation_distribution == F){

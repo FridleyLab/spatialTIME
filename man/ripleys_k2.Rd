@@ -16,7 +16,8 @@ ripleys_k2(
   workers = 1,
   overwrite = FALSE,
   xloc = NULL,
-  yloc = NULL
+  yloc = NULL,
+  big = 1e+06
 )
 }
 \arguments{
