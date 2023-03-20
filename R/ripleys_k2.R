@@ -142,7 +142,7 @@ ripleys_k2 = function(mif,
                             `Permuted K` = permed,
                             `Exact CSR` = NA,
                             check.names = F))
-        }, mc.allow.recursive = TRUE) %>%
+        }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
           do.call(dplyr::bind_rows, .)
         final = dplyr::full_join(data.frame(r = r_range,
                                             `Theoretical K` = theo,
@@ -152,7 +152,7 @@ ripleys_k2 = function(mif,
         final$Marker = marker
         final$Label = spat[1,1] #hard coded for example
         final[,c(4,8, 7, 1,2,3,5,6)]
-      }, mc.allow.recursive = TRUE) %>% #collapse all markers for spat
+      }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>% #collapse all markers for spat
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
@@ -181,13 +181,13 @@ ripleys_k2 = function(mif,
             dplyr::mutate(Label = unique(spat[[mif$sample_id]]),
                           Marker = marker,.before=1) %>%
             dplyr::mutate(iter = as.character(perm), .before = 1)
-        }, mc.allow.recursive = TRUE) %>%
+        }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
           do.call(dplyr::bind_rows, .) %>% 
           mutate(`Exact CSR` = NA)
         K = dplyr::full_join(kobs, kperms,
                              by = c("Label", "Marker", "r", "Theoretical K")) %>%
           relocate(iter, .before = 1)
-      }, mc.allow.recursive = TRUE) %>%
+      }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
@@ -218,7 +218,7 @@ ripleys_k2 = function(mif,
                         Marker = marker, .before=1,
                         r = round(r))
         return(kobs)
-      }, mc.allow.recursive = TRUE) %>% #collapse all markers for spat
+      }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>% #collapse all markers for spat
         do.call(dplyr::bind_rows, .)
       
       
@@ -258,10 +258,10 @@ ripleys_k2 = function(mif,
               }
               rm(dists)
             return(counts)
-          }, mc.allow.recursive = TRUE, mc.cores = workers)%>%
+          }, mc.allow.recursive = TRUE, mc.preschedule = FALSE)%>%
             do.call(cbind, .) %>%
             rowSums()
-        }, mc.allow.recursive = TRUE)
+        }, mc.allow.recursive = TRUE, mc.preschedule = FALSE)
         counts = counts %>%
           do.call(cbind, .) %>%
           rowSums()
