@@ -37,7 +37,7 @@
 #'   colnames() %>%
 #'   grep("Pos|CD", ., value =TRUE) %>%
 #'   grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
-#' x2 = ripleys_k2(mif = x, 
+#' x2 = ripleys_k(mif = x, 
 #'   mnames = mnames, 
 #'    r_range = seq(0, 100, 1), 
 #'     num_permutations = 100,
@@ -46,7 +46,7 @@
 #'       keep_perm_dis =FALSE, 
 #'       workers = 1, 
 #'        overwrite =TRUE)
-ripleys_k2 = function(mif, 
+ripleys_k = function(mif, 
                      mnames,
                      r_range = seq(0, 100, 1), 
                      num_permutations = 50, 
