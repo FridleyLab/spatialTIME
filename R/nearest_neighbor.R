@@ -59,7 +59,6 @@
 #' # of  10,20,...,100 (zero must be included in the input).
 #' 
 #' 
-#'@export
 
 compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
                            num_permutations = 50, edge_correction = c("translation"),
@@ -318,9 +317,8 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
 #' edge_correction = 'translation', r = seq(0,100,10),
 #' keep_perm_dis = FALSE, workers = 1)
 #' 
-#'@export
 
-ripleys_k = function(mif, mnames, r_range = seq(0, 100, 50),
+ripleys_k_old = function(mif, mnames, r_range = seq(0, 100, 50),
                         num_permutations = 50, edge_correction = "translation",
                         method = 'K',keep_perm_dis = FALSE, workers = 1,
                         overwrite = FALSE, xloc = NULL, yloc = NULL){
@@ -414,10 +412,9 @@ ripleys_k = function(mif, mnames, r_range = seq(0, 100, 50),
 #' num_permutations = 1, edge_correction = 'translation', r = seq(0,100,10),
 #' keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE) 
 #' 
-#' @export
 
 
-bi_ripleys_k <- function(mif,
+bi_ripleys_k_old <- function(mif,
                             mnames, 
                             r_range = seq(0, 100, 50),
                             num_permutations = 50,
