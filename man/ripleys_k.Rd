@@ -52,9 +52,17 @@ permutation calculation}
 object of class `mif`
 }
 \description{
-ripleys_k2() calculates the emperical Ripley's K measurement for the cell types specified by mnames in the mIF object. 
+ripleys_k() calculates the emperical Ripley's K measurement for the cell types specified by mnames in the mIF object. This
+is very useful when exploring the spatial clustering of single cell types on TMA cores or ROI spots following proccessing
+with a program such as HALO for cell phenotyping.
 
-Some things to be aware of, when computing the exact Ripley's K estimate, if your spatial file is greater than 
+In the `ripleys_k` function, there is the ability to perform permutations in order to assess whether the clustering
+of a cell type is significant, or the ability to derive the exact CSR and forgo permutations for much faster sample
+processing. Permutations can be helpful if the significance of clustering wasnts to be identified - run 1000 permutations 
+and if observed is outside 95-percentile then significant clustering. We, however, recommend using the exact CSR estimate
+due to speed.
+
+Some things to be aware of when computing the exact Ripley's K estimate, if your spatial file is greater than 
 the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time. 
 Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating 
 edge correction for these spatial files will not succeed when attempting to force an edge correction on it.
@@ -72,12 +80,13 @@ mnames = x$spatial[[1]] \%>\%
   grep("Pos|CD", ., value =TRUE) \%>\%
   grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
 x2 = ripleys_k(mif = x, 
-  mnames = mnames, 
-   r_range = seq(0, 100, 1), 
-    num_permutations = 100,
-     edge_correction = "translation", 
-      method = "K", 
-      keep_perm_dis =FALSE, 
-      workers = 1, 
-       overwrite =TRUE)
+  mnames = mnames[1], 
+  r_range = seq(0, 100, 1), 
+  num_permutations = 100,
+  edge_correction = "translation", 
+  method = "K", 
+  permute = FALSE,
+  keep_permutation_distribution =FALSE, 
+  workers = 1, 
+  overwrite =TRUE)
 }

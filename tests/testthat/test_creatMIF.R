@@ -1,5 +1,5 @@
 library(spatialTIME)
-library(tidyverse)
+library(dplyr)
 
 example_clinical_new = example_clinical %>% 
   mutate(deidentified_id = as.character(deidentified_id))

@@ -15,9 +15,18 @@
 #' @param yloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
 #' @param big the number of cells at which to flip from an edge correction method other than 'none' to 'none' due to size
 #' 
-#' @description ripleys_k2() calculates the emperical Ripley's K measurement for the cell types specified by mnames in the mIF object. 
+#' @description 
+#' ripleys_k() calculates the emperical Ripley's K measurement for the cell types specified by mnames in the mIF object. This
+#' is very useful when exploring the spatial clustering of single cell types on TMA cores or ROI spots following proccessing
+#' with a program such as HALO for cell phenotyping.
 #' 
-#' Some things to be aware of, when computing the exact Ripley's K estimate, if your spatial file is greater than 
+#' In the `ripleys_k` function, there is the ability to perform permutations in order to assess whether the clustering
+#' of a cell type is significant, or the ability to derive the exact CSR and forgo permutations for much faster sample
+#' processing. Permutations can be helpful if the significance of clustering wasnts to be identified - run 1000 permutations 
+#' and if observed is outside 95-percentile then significant clustering. We, however, recommend using the exact CSR estimate
+#' due to speed.
+#' 
+#' Some things to be aware of when computing the exact Ripley's K estimate, if your spatial file is greater than 
 #' the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time. 
 #' Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating 
 #' edge correction for these spatial files will not succeed when attempting to force an edge correction on it.
@@ -38,21 +47,22 @@
 #'   grep("Pos|CD", ., value =TRUE) %>%
 #'   grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
 #' x2 = ripleys_k(mif = x, 
-#'   mnames = mnames, 
-#'    r_range = seq(0, 100, 1), 
-#'     num_permutations = 100,
-#'      edge_correction = "translation", 
-#'       method = "K", 
-#'       keep_perm_dis =FALSE, 
-#'       workers = 1, 
-#'        overwrite =TRUE)
+#'   mnames = mnames[1], 
+#'   r_range = seq(0, 100, 1), 
+#'   num_permutations = 100,
+#'   edge_correction = "translation", 
+#'   method = "K", 
+#'   permute = FALSE,
+#'   keep_permutation_distribution =FALSE, 
+#'   workers = 1, 
+#'   overwrite =TRUE)
 ripleys_k = function(mif, 
                      mnames,
                      r_range = seq(0, 100, 1), 
                      num_permutations = 50, 
                      edge_correction = "translation",
                      method = "K", 
-                     permute = FALSE, #redo for permutation or estimate
+                     permute = FALSE,
                      keep_permutation_distribution = FALSE,
                      workers = 1,
                      overwrite = FALSE,
@@ -116,12 +126,12 @@ ripleys_k = function(mif,
                          Label = spat[1,mif$sample_id],
                          Marker = marker,
                          `Observed K` = NA,
-                         `Permuted K` = NA,
+                         `Permuted CSR` = NA,
                          `Exact CSR` = NA,
                          check.names =FALSE)
           d = dplyr::full_join(d, expand.grid(iter = as.character(seq(num_permutations)),
                                               r = r_range), by = "iter") %>%
-            dplyr::mutate(`Theoretical K` = pi * r^2)
+            dplyr::mutate(`Theoretical CSR` = pi * r^2)
           return(d)
         }
         
@@ -138,24 +148,24 @@ ripleys_k = function(mif,
           theo = pi * r_range^2
           return(data.frame(iter = as.character(x),
                             r = r_range,
-                            `Theoretical K` = theo,
-                            `Permuted K` = permed,
+                            `Theoretical CSR` = theo,
+                            `Permuted CSR` = permed,
                             `Exact CSR` = NA,
-                            check.names = F))
+                            check.names = FALSE))
         }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
           do.call(dplyr::bind_rows, .)
         final = dplyr::full_join(data.frame(r = r_range,
-                                            `Theoretical K` = theo,
+                                            `Theoretical CSR` = theo,
                                             `Observed K` = obs,
-                                            check.names = F),
-                                 perms, by = c("r", "Theoretical K"))
+                                            check.names = FALSE),
+                                 perms, by = c("r", "Theoretical CSR"))
         final$Marker = marker
         final$Label = spat[1,1] #hard coded for example
         final[,c(4,8, 7, 1,2,3,5,6)]
       }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>% #collapse all markers for spat
         do.call(dplyr::bind_rows, .) %>%
-        dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+        dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
                       `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
     } else if(permute == TRUE & nrow(spat)>10000){ #if we need perm distribution but too many cells
       res = parallel::mclapply(mnames, function(marker){
@@ -168,16 +178,16 @@ ripleys_k = function(mif,
         kobs = spatstat.geom::ppp(dat2$xloc, dat2$yloc, window = win) %>%
           spatstat.explore::Kest(r = r_range, correction = edge_correction) %>%
           data.frame() %>%
-          dplyr::rename("Theoretical K" = 2, "Observed K" = 3) %>%
+          dplyr::rename("Theoretical CSR" = 2, "Observed K" = 3) %>%
           dplyr::mutate(Label = unique(spat[[mif$sample_id]]),
                         Marker = marker, .before=1)
-        #calculate the permuted K
+        #calculate the permuted CSR
         kperms = parallel::mclapply(seq(num_permutations), function(perm){
           dat2 = dat[sample(seq(nrow(dat)), sum(dat[[marker]]), replace=F),]
           spatstat.geom::ppp(dat2$xloc, dat2$yloc, window = win) %>%
             spatstat.explore::Kest(r = r_range, correction = edge_correction) %>%
             data.frame() %>%
-            dplyr::rename("Theoretical K" = 2, "Permuted K" = 3) %>%
+            dplyr::rename("Theoretical CSR" = 2, "Permuted CSR" = 3) %>%
             dplyr::mutate(Label = unique(spat[[mif$sample_id]]),
                           Marker = marker,.before=1) %>%
             dplyr::mutate(iter = as.character(perm), .before = 1)
@@ -185,12 +195,12 @@ ripleys_k = function(mif,
           do.call(dplyr::bind_rows, .) %>% 
           mutate(`Exact CSR` = NA)
         K = dplyr::full_join(kobs, kperms,
-                             by = c("Label", "Marker", "r", "Theoretical K")) %>%
+                             by = c("Label", "Marker", "r", "Theoretical CSR")) %>%
           relocate(iter, .before = 1)
       }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
         do.call(dplyr::bind_rows, .) %>%
-        dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+        dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
                       `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
     } else if(permute == FALSE){
       marker_res = parallel::mclapply(mnames, function(marker){
@@ -205,7 +215,7 @@ ripleys_k = function(mif,
                             Label = unique(spat[[mif$sample_id]]),
                             Marker = marker,
                             r = r_range,
-                            `Theoretical K` = pi * r_range^2,
+                            `Theoretical CSR` = pi * r_range^2,
                             `Observed K` = NA,
                             check.names =FALSE))
         }
@@ -213,7 +223,7 @@ ripleys_k = function(mif,
         kobs = spatstat.geom::ppp(dat2$xloc, dat2$yloc, window = win) %>%
           spatstat.explore::Kest(r = r_range, correction = edge_correction) %>%
           data.frame() %>%
-          dplyr::rename("Theoretical K" = 2, "Observed K" = 3) %>%
+          dplyr::rename("Theoretical CSR" = 2, "Observed K" = 3) %>%
           dplyr::mutate(Label = unique(spat[[mif$sample_id]]),
                         Marker = marker, .before=1,
                         r = round(r))
@@ -221,26 +231,20 @@ ripleys_k = function(mif,
       }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>% #collapse all markers for spat
         do.call(dplyr::bind_rows, .)
       
-      
-      # spat2 = spat %>%
-      #   dplyr::select(1:3, !!marker) %>%
-      #   dplyr::mutate(background = ifelse(get(marker) == 1, 0, 1)) %>%
-      #   tidyr::gather("marks", "positive", -c(1:3)) %>%
-      #   dplyr::filter(positive == 1 )
       if(nrow(spat) < big){
         pp_obj = spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win)
         k_est = spatstat.explore::Kest(pp_obj, r = r_range, correction = edge_correction)
         gc(full=T)
         k_est2 = k_est %>%
-          data.frame(check.names = F) %>%
+          data.frame(check.names = FALSE) %>%
           dplyr::select(1,3) %>%
           dplyr::rename("Exact CSR" = 2) %>%
           dplyr::mutate(r = round(r),
-                        `Permuted K` = NA, .before = `Exact CSR`)
+                        `Permuted CSR` = NA, .before = `Exact CSR`)
       } else {
         ns = nrow(spat)
         slide = ceiling(ns / big)
-        ranges = spatialTIME:::getTile(slide = slide, l = ns, size = big)
+        ranges = getTile(slide = slide, l = ns, size = big)
         counts = parallel::mclapply(ranges, function(i_range){
           parallel::mclapply(ranges, function(j_range){
               i_tmp = spatstat.geom::ppp(x = spat$xloc[i_range], y = spat$yloc[i_range], window = win)
@@ -267,14 +271,14 @@ ripleys_k = function(mif,
           rowSums()
         k = (counts * spatstat.geom::area(win))/(ns * (ns-1))
         k_est2 = data.frame(r = r_range,
-                            `Permuted K` = NA,
-                            `Exact CSR` = k, check.names = F)
+                            `Permuted CSR` = NA,
+                            `Exact CSR` = k, check.names = FALSE)
       }
       
       res = dplyr::full_join(marker_res, k_est2) %>%
         dplyr::mutate(iter = "Estimater", .before = 1) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = NA,
-                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
+                      `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
                       `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
       
     }
@@ -285,11 +289,11 @@ ripleys_k = function(mif,
   out = out%>% #collapse all samples to single data frame
     dplyr::rename(!!mif$sample_id := Label)
   
-  if(permute == TRUE & keep_permutation_distribution == F){
+  if(permute == TRUE & keep_permutation_distribution == FALSE){
     out = out %>%
       dplyr::mutate(iter = "Permuted") %>%
       dplyr::group_by(iter, across(mif$sample_id), Marker, r) %>%
-      dplyr::summarise_all(~mean(., na.rm=T))
+      dplyr::summarise_all(~mean(., na.rm=TRUE))
   }
   
   if(overwrite){ #overwrite existing data in univariate_Count slot

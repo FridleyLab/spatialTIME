@@ -1,4 +1,5 @@
 K_out = function(data, marker, id, iter, correction,r_value, win){
+  un = NULL
   #Does the actual computation of Ripley' K
   K_obs = spatstat.geom::ppp(x = data$xloc, y = data$yloc, window = win) %>%
     spatstat.explore::Kest(r = r_value, correction = correction) %>%
@@ -218,10 +219,10 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
   }
   
   #Check if exhaustive is FALSE, then markers must be a data.frame
-  if(exhaustive == FALSE & class(markers) != 'data.frame'){
+  if(exhaustive == FALSE & !is(markers, 'data.frame')){
     stop("If exhaustive == FALSE, then markers must be a data.frame.")
   }
-  if(exhaustive == TRUE & class(markers) != 'character'){
+  if(exhaustive == TRUE & !is(markers, 'character')){
     stop("If exhaustive == TRUE, then markers must be a character vector")
   }
   
@@ -521,10 +522,10 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   }
   
   #Check if exhaustive is FALSE, then markers must be a data.frame
-  if(exhaustive == FALSE & class(markers) != 'data.frame'){
+  if(exhaustive == FALSE & !is(markers, 'data.frame')){
     stop("If exhaustive == FALSE, then markers must be a data.frame.")
   }
-  if(exhaustive == TRUE & class(markers) != 'character'){
+  if(exhaustive == TRUE & !is(markers, 'character')){
     stop("If exhaustive == TRUE, then markers must be a character vector")
   }
 
@@ -759,7 +760,7 @@ calculateK = function(i_dat, j_dat, anchor, counted, area, win, big, r_range, ed
         do.call(rbind.data.frame, .) %>%
         #take column sums and return
         colSums()
-    },mc.cores = cores, mc.preschedule = F, mc.allow.recursive = T)
+    },mc.cores = cores, mc.preschedule = FALSE, mc.allow.recursive = TRUE)
     
     if(edge_correction == "border"){
       num = lapply(counts, function(j_big){

@@ -79,7 +79,7 @@ markers <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
 # of  10,20,...,100 (zero must be included in the input).
 
 
-x <- NN_G(mif = x, mnames = markers, num_permutations = 1,
+x <- NN_G(mif = x, mnames = markers[1:2], num_permutations = 1,
 edge_correction = 'rs', r = seq(0,100,10),
 keep_perm_dis = FALSE, workers = 1)
 

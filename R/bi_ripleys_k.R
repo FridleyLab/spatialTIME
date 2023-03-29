@@ -1,17 +1,37 @@
 #' Bivariate Ripley's K
 #'
-#' @param spatial spatial data frame with columns of XMin, XMax, YMin, YMax
+#' @param mif mIF object with spatial data frames, clinical, and per-sample summary information
 #' @param mnames vector of column names for phenotypes or data frame of marker combinations
 #' @param r_range vector range of radii to calculate co-localization *K*
 #' @param edge_correction character edge_correction method, one of "translation", "border", "or none" 
 #' @param num_permutations integer number of permutations to estimate CSR
+#' @param permute whether or not to use permutations to estimate CSR (TRUE) or to calculate exact CSR (FALSE)
 #' @param keep_permutation_distribution boolean as to whether to summarise permutations to mean
 #' @param overwrite boolean as to whether to replace existing bivariate_Count if exists
-#' @param workers integer number of CPU workers to use when number of `anchor` or `counted` is greater than 10,000
+#' @param workers integer number of CPU workers to use
 #' @param big integer used as the threshold for subsetting large samples, default is 1000 either *i* or *j*
 #' @param nlarge number of cells in either *i* or *j* to flip to no edge correction - at small (relative to whole spatial region) *r* values differences in results between correction methods is negligible so running a few samples is recommended. Perhaps compute outweighs small differences in correction methods.
+#' @param xloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
+#' @param yloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
 #'
-#' @return mif object with bivariate ripley's K calculated
+#' @return mif object with bivariate Ripley's K calculated
+#' 
+#' @description
+#' Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with 
+#' some parameters like marker names of interest and range of radii in which to assess bivariate clustering or colocalization.
+#' In 1.3.3.3 we have introduced the ability to forsgo the need for permutations with the implementation of the exact CSR estimate.
+#' This is both faster and being the exact CSR, produces an exact degree of clustering in the spatial files.
+#' 
+#' Due to the availability of whole slide images (WSI), there's a possibility users will be running bivariate Ripley's K on samples
+#' that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and 
+#' therefore easily consumers high performance compute levels of RAM. To combat this, we have implemented a tiling method that performs
+#' counts for small chunks of the distance matrix at a time before finally calculating the bivariate Ripley's K value on the total counts.
+#' When doing this there are now 2 import parameters to keep in mind. The `big` parameter is the size of the tile to use. We have found
+#' 1000 to be a good number that allows for high number of cores while maintaining low RAM usage. The other important parameter when
+#' working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate 
+#' Ripley's K uses a default of 3000 but we have defaulted to 1000 to keep compute minimized as edge correction uses large amounts
+#' of RAM over 'none'.
+#' 
 #' @export
 #'
 #' @examples
@@ -25,11 +45,11 @@
 #' mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
 #'                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
 #'                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-#' x2 = bi_ripleys_k2(mif = x, mnames = mnames_good, 
-#'                    r_range = 0:100, edge_correction = "translation", 
+#' x2 = bi_ripleys_k(mif = x, mnames = mnames_good[1:2], 
+#'                    r_range = 0:100, edge_correction = "none", permute = FALSE,
 #'                    num_permutations = 50, keep_permutation_distribution = FALSE, 
-#'                    workers = 6, big = 1000)
-bi_ripleys_k2 = function(mif,
+#'                    workers = 1, big = 1000)
+bi_ripleys_k = function(mif,
                          mnames,
                          r_range = 0:100,
                          edge_correction = "translation",
@@ -42,6 +62,7 @@ bi_ripleys_k2 = function(mif,
                          nlarge = 1000,
                          xloc = NULL,
                          yloc = NULL){
+  Label = Anchor = Counted = `Exact CSR` = NULL
   #check whether the object assigned to mif is of class mif
   if(!inherits(mif, "mif")){
     stop("Please use a mIF object for mif")
@@ -119,10 +140,10 @@ bi_ripleys_k2 = function(mif,
                            r = r_range,
                            Anchor = anchor,
                            Counted = counted,
-                           `Theoretical K` = pi*r_range^2,
+                           `Theoretical CSR` = pi*r_range^2,
                            `Observed K` = NA,
-                           `Permuted K` = NA,
-                           `Exact K` = NA,
+                           `Permuted CSR` = NA,
+                           `Exact CSR` = NA,
                            check.names=FALSE) 
         if(permute){
           final = final %>%
@@ -136,7 +157,7 @@ bi_ripleys_k2 = function(mif,
       }
       
       K_obs = data.frame(r = r_range,
-                         `Theoretical K` = pi * r_range^2,
+                         `Theoretical CSR` = pi * r_range^2,
                          check.names = FALSE)
       K_obs$`Observed K` = calculateK(i_dat = i_dat, 
                                       j_dat = j_dat,
@@ -171,10 +192,10 @@ bi_ripleys_k2 = function(mif,
           j_dat = dat[label == counted,]
           #prep permtued K table
           permed = data.frame(r = r_range,
-                              `Theoretical K` = pi * r_range^2,
+                              `Theoretical CSR` = pi * r_range^2,
                               iter = perm_n,
                               check.names = FALSE)
-          permed$`Permuted K` = calculateK(i_dat = i_dat, 
+          permed$`Permuted CSR` = calculateK(i_dat = i_dat, 
                                            j_dat = j_dat,
                                            anchor = anchor,
                                            counted = counted, 
@@ -183,22 +204,22 @@ bi_ripleys_k2 = function(mif,
                                            edge_correction = edge_correction,
                                            cores = workers)
           return(permed)
-        }, mc.preschedule = F, mc.allow.recursive = T) %>%
+        }, mc.preschedule = FALSE, mc.allow.recursive = TRUE) %>%
           do.call(dplyr::bind_rows, .)
-        kpermed$`Exact K` = NA
+        kpermed$`Exact CSR` = NA
       } else {
         kpermed = data.frame(r = r_range,
-                             `Theoretical K` = pi * r_range^2,
+                             `Theoretical CSR` = pi * r_range^2,
                              iter = 1,
                              check.names = FALSE)
-        kpermed$`Permuted K` = NA
-        kpermed$`Exact K` = exact_K
+        kpermed$`Permuted CSR` = NA
+        kpermed$`Exact CSR` = exact_K
       }
       
       
       #join the emperical K and the permuted CSR estimate
       final = dplyr::full_join(K_obs,
-                               kpermed, by = c("r", "Theoretical K")) %>%
+                               kpermed, by = c("r", "Theoretical CSR")) %>%
         #add the image label to the data frame
         dplyr::mutate(Label = spatial_name, .before = 1)
       
@@ -208,31 +229,31 @@ bi_ripleys_k2 = function(mif,
     #reorder columns to make more sense
     res = res[,c(1,2,7,5,6,3,4,8,9)]
     return(res)
-  }, mc.cores = workers, mc.preschedule = F,mc.allow.recursive = T) %>%
+  }, mc.cores = workers, mc.preschedule = FALSE,mc.allow.recursive = TRUE) %>%
     do.call(dplyr::bind_rows, .)%>% #collapse all samples to single data frame
-    rename(!!mif$sample_id := Label)
+    dplyr::rename(!!mif$sample_id := Label)
   #if user doesn't want the permutation distribution, get average of the permutation estimate
   if(!keep_permutation_distribution & permute){
     out = out %>%
       #remove iter since this is the permutation number
       dplyr::select(-iter) %>%
       #group by those used for permuting
-      dplyr::group_by(across(mif$sample_id), r, Anchor, Counted) %>%
+      dplyr::group_by(dplyr::across(mif$sample_id), r, Anchor, Counted) %>%
       #take mean of theoretical, permuted, observed
       dplyr::summarise_all(~mean(., na.rm=TRUE)) %>%
       #calculate the degree of clustering from both the theoretical and permuted
-      dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                    `Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
-                    `Exact K` = NA) %>%
+      dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
+                    `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
+                    `Exact CSR` = NA) %>%
       dplyr::mutate(iter = num_permutations, .before = Anchor)
   }
   #if overwrite is true, replace the bivariate count in the derived slot
   if(overwrite){
     mif$derived$bivariate_Count = out %>%
       #calculate the degree of clustering from both the theoretical and permuted
-      dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
-                    `Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                    `Degree of Clustering Exact` = `Observed K` - `Exact K`) %>%
+      dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
+                    `Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
+                    `Degree of Clustering Exact` = `Observed K` - `Exact CSR`) %>%
       #add run number to differentiate between bivariate compute runs
       dplyr::mutate(Run = 1)
   }
@@ -242,9 +263,9 @@ bi_ripleys_k2 = function(mif,
     mif$derived$bivariate_Count = mif$derived$bivariate_Count%>%
       dplyr::bind_rows(out %>%
                          #calculate the degree of clustering from both the theoretical and permuted
-                         dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical K`,
-                                       `Degree of Clustering Permutation` = `Observed K` - `Permuted K`,
-                                       `Degree of Clustering Exact` = `Observed K` - `Exact K`) %>%
+                         dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
+                                       `Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
+                                       `Degree of Clustering Exact` = `Observed K` - `Exact CSR`) %>%
                          dplyr::mutate(Run = ifelse(exists("bivariate_Count", mif$derived),
                                                     max(mif$derived$bivariate_Count$Run) + 1,
                                                     1)))
