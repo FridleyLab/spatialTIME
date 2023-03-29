@@ -1,4 +1,5 @@
 K_out = function(data, marker, id, iter, correction,r_value, win){
+  un = NULL
   #Does the actual computation of Ripley' K
   K_obs = spatstat.geom::ppp(x = data$xloc, y = data$yloc, window = win) %>%
     spatstat.explore::Kest(r = r_value, correction = correction) %>%
@@ -6,10 +7,18 @@ K_out = function(data, marker, id, iter, correction,r_value, win){
     dplyr::filter(r != 0) %>%
     dplyr::mutate(Marker = marker,
            label = data[[id]][1],
-           iter = iter) %>%
-    dplyr::select(iter, label, Marker, r, theo, correction) %>%
-    dplyr::mutate(label = as.character(label))
-  return(K_obs)
+           iter = iter)
+  if(correction=="none"){
+    K_obs = K_obs %>%
+      dplyr::select(iter, label, Marker, r, theo, un) %>%
+      dplyr::mutate(label = as.character(label))
+    return(K_obs)
+  } else {
+    K_obs = K_obs %>%
+      dplyr::select(iter, label, Marker, r, theo, correction) %>%
+      dplyr::mutate(label = as.character(label))
+    return(K_obs)
+  }
 }
 
 perm_data = function(data, markers){
@@ -52,7 +61,7 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
   }
   
   #Notice that this follows spatstat's notation and argument name
-  if(!(correction %in% c('trans', "iso", "border", 'translation', 'isotropic'))){
+  if(!(correction %in% c('trans', "iso", "border", 'translation', 'isotropic', 'none'))){
     stop("Did not provide a valid edge correcion method.")
   }
   
@@ -98,9 +107,15 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
   
   perms = purrr::map_df(.x = 1:nrow(grid),~{
     data_new = perm_data(data, markers)
+    print(which(data_new$CD3..CD8. == 1))
     return(uni_K(data = data_new, iter = grid[.x,2], 
                  marker = grid[.x,1], id = id, r_value = r,
                  correction = correction, win = win))})
+  if(correction == "none"){
+    perms = perms %>%
+      select(-!!correction) %>%
+      rename(!!correction := un)
+  }
   colnames(perms)[c(2,5,6)] = c(id, 'Theoretical CSR','Permuted K')
   
   obs = purrr::map_df(.x = markers, ~uni_K(data = data, iter = 'Observed', 
@@ -204,10 +219,10 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
   }
   
   #Check if exhaustive is FALSE, then markers must be a data.frame
-  if(exhaustive == FALSE & !inherits(markers, 'data.frame')){
+  if(exhaustive == FALSE & !is(markers, 'data.frame')){
     stop("If exhaustive == FALSE, then markers must be a data.frame.")
   }
-  if(exhaustive == TRUE & !inherits(markers, 'character')){
+  if(exhaustive == TRUE & !is(markers, 'character')){
     stop("If exhaustive == TRUE, then markers must be a character vector")
   }
   
@@ -507,10 +522,10 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   }
   
   #Check if exhaustive is FALSE, then markers must be a data.frame
-  if(exhaustive == FALSE & !inherits(markers, 'data.frame')){
+  if(exhaustive == FALSE & !is(markers, 'data.frame')){
     stop("If exhaustive == FALSE, then markers must be a data.frame.")
   }
-  if(exhaustive == TRUE & !inherits(markers, 'character')){
+  if(exhaustive == TRUE & !is(markers, 'character')){
     stop("If exhaustive == TRUE, then markers must be a character vector")
   }
 
@@ -610,3 +625,176 @@ list.append = function(list, new){
   return(new_list)
 }
 
+
+#special thanks to Simon Vandekar and Julia Wrobel
+get_exactK = function(pp_obj,
+                     mark1,
+                     mark2 = NULL,
+                     r_vec = NULL,
+                     ...){
+  
+  n = pp_obj$n
+  K = spatstat.explore::Kest(pp_obj, r = r_vec, ...)
+  sumW = K * n * (n-1)
+  
+  if(is.null(mark2)){
+    X1 = ifelse(pp_obj$marks == mark1, 1, 0)
+    sX1 = sum(X1)
+    #v1 = sX1/n
+    v2 = (sX1 * (sX1 - 1))/(n * (n-1))
+    lambda2 = (sX1 *(sX1-1))
+  }else{
+    X1 = ifelse(pp_obj$marks == mark1, 1, 0)
+    X2 = ifelse(pp_obj$marks == mark2, 1, 0)
+    sX1 = sum(X1)
+    sX2 = sum(X2)
+    sX1X2 = sum(X1*X2)
+    
+    v1 = sX1X2/n
+    v2 = (sX1*sX2-sX1X2)/(n*(n-1))
+    lambda2 = sX1*sX2/(areapp^2)
+  }
+  
+  Kperm = v2 * sumW/lambda2
+  tidyr::as_tibble(Kperm[,-2])
+}
+
+#get tile counts
+getTile = function(slide, l, size){
+  if(slide == 1){
+    v = rep(TRUE, l)
+    return(list(v))
+  }
+  lapply(1:slide, function(s){
+    if(s == 1){
+      w = 1:size
+    }
+    if(s != 1 & s != slide){
+      w = (((s-1)*size)+1):((s)*size)
+    }
+    if(s == slide){
+      w = (((s-1)*size)+1):(l)
+    }
+    v = rep(FALSE, l)
+    v[w] = TRUE
+    v
+  })
+}
+
+calculateK = function(i_dat, j_dat, anchor, counted, area, win, big, r_range, edge_correction, cores){
+  li = nrow(i_dat)
+  lj = nrow(j_dat)
+  #find intensity of each marker
+  lambdai = li/area
+  lambdaj = lj/area
+  #point pattern for anchor for distance matrix
+  ppi = spatstat.geom::ppp(x = i_dat[,1],
+                           y = i_dat[,2],
+                           window = win)
+  #point pattern for counted for distance matrix
+  ppj = spatstat.geom::ppp(x = j_dat[,1],
+                           y = j_dat[,2],
+                           window = win)
+  if(li > big | lj > big){
+    #find the number of tiles of distance matrix in columns and rows
+    i_slides = ceiling(li / big)
+    j_slides = ceiling(lj / big)
+    #produce vectors of length ns, create T/F vector of which to subset
+    i_ranges = getTile(slide = i_slides, l = li, size = big)
+    j_ranges = getTile(slide = j_slides, l = lj, size = big)
+    #count up those within the specified distance
+    counts = parallel::mclapply(i_ranges, function(i_section){
+      j_out = parallel::mclapply(j_ranges, function(j_section){
+        #subset to tile
+        i_tmp = ppi[i_section]
+        j_tmp = ppj[j_section]
+        
+        #if the correction method is set to border, then run the num and den from spatstat Kmulti
+        if(edge_correction %in% c("border")){
+          bI = spatstat.geom::bdist.points(i_tmp)
+          bcloseI = bI[spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$i]
+          RS = spatstat.explore::Kount(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
+                                    spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$i,
+                                    bI, spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range)))
+          return(RS)
+        }
+        #calculate distances
+        dists = spatstat.geom::crossdist(i_tmp, j_tmp)
+        rmv_i = rowSums(dists < max(r_range)) != 0
+        rmv_j = colSums(dists < max(r_range)) != 0
+        i_tmp = i_tmp[rmv_i] #I
+        j_tmp = j_tmp[rmv_j] #J
+        dists = spatstat.geom::crossdist(i_tmp, j_tmp)
+        if(0 %in% dim(dists)){
+          return(rep(0, length(r_range)))
+        }
+        #calculate edge correcion
+        if(edge_correction %in% c("trans", "translation")){
+          edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
+          #count edge correction matrix for cells within range r in distance matrix
+          counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
+          #remove large distance and edge correction matrix to keep ram usage down
+          rm(dists, edge)
+          #return counts for tile
+          return(counts)
+        }
+        if(edge_correction %in% c("none")){
+          counts = cumsum(spatstat.geom::whist(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
+                                               spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
+          return(counts)
+        }
+      }) 
+      
+      if(edge_correction == "border"){
+        num = lapply(j_out, function(j_big){
+          j_big[[1]]
+        }) %>%
+          do.call(rbind.data.frame, .) %>%
+          colSums() %>%
+          unname()
+        den = j_out[[1]][[2]]
+        return(list(num = num, den = den))
+      }
+      j_out  %>% #use 1 core per tile
+        #bind all j tiles to data frame
+        do.call(rbind.data.frame, .) %>%
+        #take column sums and return
+        colSums()
+    },mc.cores = cores, mc.preschedule = FALSE, mc.allow.recursive = TRUE)
+    
+    if(edge_correction == "border"){
+      num = lapply(counts, function(j_big){
+        j_big[[1]]
+      }) %>%
+        do.call(rbind.data.frame, .) %>%
+        colSums() %>%
+        unname()
+      den = ppi$n
+      estimatedK = num / (lambdaj * den)
+    } else {
+      counts = counts %>%
+        #bind i tile counts and sum
+        do.call(rbind.data.frame, .) %>%
+        colSums() %>%
+        unname()
+      #calulate clustering from counted edge corrections with intensities of i and j
+      estimatedK = (1/(lambdai * lambdaj * area)) * counts
+    }
+  }
+  #if there are less than 10,000 j or i just compute matrix
+  if(!(li > big | lj > big)){
+    #calculate distance matrix
+    sp_tmp2 = as.data.frame(rbind(i_dat, j_dat)) %>% 
+      dplyr::mutate(Marker = c(rep(anchor, nrow(i_dat)), rep(counted, nrow(j_dat))))
+    pp_obj = spatstat.geom::ppp(x = sp_tmp2$xloc, y = sp_tmp2$yloc, window = win, marks = factor(sp_tmp2$Marker))
+    estimatedK = spatstat.explore::Kcross(pp_obj,
+                                          i = unique(sp_tmp2$Marker)[1],
+                                          j = unique(sp_tmp2$Marker)[2],
+                                          r = r_range,
+                                          correction = edge_correction) %>%
+      data.frame() %>%
+      dplyr::pull(3)
+  }
+  
+  return(estimatedK)
+}

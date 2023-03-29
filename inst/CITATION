@@ -1,0 +1,16 @@
+citHeader("To cite spatialTIME in publications use:")
+
+bibentry(
+  bibtype    = "Article",
+  title    = "spatialTIME and iTIME: R package and Shiny application for visualization and analysis of immunofluorescnece data",
+  author   = "Jordan H Creed, Christopher M Wilson, Alex C Soupir, Christelle M Colin-Leitzinger, Gregory J Kimmel, Oscar E Ospina, Nicholas H Chakiryan, Joseph Markowitz, Lauren C Peres, Anna Coghill, Brooke L Fridley",
+  journal  = "Bioinformatics",
+  year     = 2021,
+  volume   = 37,
+  number   = 23,
+  pages    = 4584-4586,
+  url      = "https://doi.org/10.1093/bioinformatics/btab757",
+  textVersion = paste(
+
+  )
+)

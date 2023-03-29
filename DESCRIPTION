@@ -1,6 +1,6 @@
 Package: spatialTIME
 Title: Spatial Analysis of Vectra Immunoflourescent Data
-Version: 1.2.2
+Version: 1.3.3-3
 Authors@R: 
      c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
@@ -12,6 +12,8 @@ Authors@R:
              email = "alex.soupir@moffitt.org"),
       person(given = "Oscar", family = "Ospina", role = "aut",
              email = "oscar.ospina@moffitt.org"),
+      person(given = "Julia", family = "Wrobel", role = "aut",
+             email = "julia.wrobel@cuanschutz.edu"),
       person(given = "Brooke", family = "Fridley", role = "cph",
              email = "brooke.fridley@moffitt.org"),
       person(given = "Fridley", family = "Lab", role = "cre",
@@ -21,18 +23,37 @@ Description: Visualization and analysis  of Vectra Immunoflourescent
     are included. Calculations are performed using a permutation-based 
     approach presented by Wilson et al.  <doi:10.1101/2021.04.27.21256104>. 
 License: MIT + file LICENSE
-Encoding: UTF-8
-LazyData: true
-Roxygen: list(markdown = TRUE)
-RoxygenNote: 7.2.2
-Imports: magrittr, dplyr, tidyr, ggplot2, scales,
-        grDevices, purrr, rlang, plyr, spatstat.geom,
-        spatstat.explore, RColorBrewer, furrr, gridExtra,
-        future, tidyselect, crayon, pheatmap
-Depends: R (>= 3.5.0)
-Suggests: knitr, rmarkdown, testthat
+Imports: 
+    magrittr,
+    dplyr,
+    tidyr,
+    ggplot2,
+    scales,
+    grDevices,
+    purrr,
+    rlang,
+    plyr,
+    spatstat.geom,
+    spatstat.explore,
+    RColorBrewer,
+    furrr,
+    future,
+    tidyselect,
+    crayon
+Suggests: 
+    knitr,
+    rmarkdown,
+    testthat (>= 3.0.0),
+    gridExtra,
+    pheatmap
 VignetteBuilder: knitr
 URL: https://github.com/FridleyLab/spatialTIME
 BugReports: https://github.com/FridleyLab/spatialTIME/issues
 NeedsCompilation: no
 Packaged: 2021-08-19 22:31:18 UTC; 4468179
+Config/testthat/edition: 3
+RoxygenNote: 7.2.3
+Depends: 
+    R (>= 2.10)
+LazyData: true
+Encoding: UTF-8

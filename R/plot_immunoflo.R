@@ -56,7 +56,7 @@ plot_immunoflo <- function(
   
   # convert to list of dataframes - throw error message if missing
   if (missing(mif)) stop("MIF is missing; please provide the appropriate data")
-  if (!inherits(mif, "mif")) stop("Please use a mif object")
+  if (!is(mif, "mif")) stop("Please use a mif object")
   # if (is.data.frame()) dlist = list(dlist) - need to change to MIF object
   
   # if (missing(filename)) stop("filename is missing; filename must be a string")

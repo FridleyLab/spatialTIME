@@ -5,13 +5,13 @@
 \alias{example_spatial}
 \title{Example list of 5 spatial TMA data}
 \format{
-A list of 5 data frames:
+A list of 5 data frames: 
 \itemize{
-\item TMA_[3,B].tiff
-\item TMA_[6,F].tiff
-\item TMA_[7,B].tiff
-\item TMA_[9,K].tiff
-\item TMA_[8,U].tiff
+\item TMA_\[3,B\].tiff
+\item TMA_\[6,F\].tiff
+\item TMA_\[7,B\].tiff
+\item TMA_\[9,K\].tiff
+\item TMA_\[8,U\].tiff
 }
 }
 \usage{

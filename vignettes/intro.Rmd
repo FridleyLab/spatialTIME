@@ -27,8 +27,6 @@ set.seed(126)
 library(spatialTIME)
 library(dplyr)
 library(ggplot2)
-library(gridExtra)
-library(pheatmap)
 library(tidyr)
 library(tidyselect)
 library(RColorBrewer)
@@ -101,7 +99,7 @@ mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
 # Used to make the legends in both plots below be in same order and use the 
 # same coloring scheme for the purpose making a common legend
 
-values = getColors(length(mnames_bad))
+values =  RColorBrewer::brewer.pal(length(mnames_bad), "Accent")
 names(values) = mnames_bad
 
 #add an element in the `derived` object position
@@ -138,7 +136,7 @@ x$sample %>% filter(deidentified_sample == 'TMA3_[9,K].tif') %>% select(c(2, 4:1
 ```
 
 ```{r}
-grid.arrange(bad_names, good_names, ncol=2)
+gridExtra::grid.arrange(bad_names, good_names, ncol=2)
 ```
 # Estimating the degree of spatial clustering with Count Based Methods
 
@@ -164,70 +162,115 @@ which is interpreted as the proportion of cells whose distance to its nearest ne
 
 ## Need for Permutations
 
-An underlying assumption used for many spatial clustering metrics is that the cells are randomly distributed across the region, no evidence of clustering or repulsion, and that the cell intensity is constant across the entire region. This assumption is the so-called complete spatial randomness (CSR). Damage can occur to tissue cores due to how they are collected. This damage can lead to rips and tears in the cores which results in regions where it appears that cells are not located and is not actually the case. Due to these violations of the CSR assumption, the theoretical estimate for CSR may not be accurate. To address this the cell positivity can be permuted across all observed locations and the permutation distribution of $K$, $L$, $M$, and $G$ is a core specific measure of CSR. 
+An underlying assumption used for many spatial clustering metrics is that the cells are randomly distributed across the region, no evidence of clustering or repulsion, and that the cell intensity is constant across the entire region. This assumption is the so-called complete spatial randomness (CSR). Damage can occur to tissue cores due to how they are collected. This damage can lead to rips and tears in the cores which results in regions where it appears that cells are not located and is not actually the case. Due to these violations of the CSR assumption, the theoretical estimate for CSR may not be accurate. To address this the cell positivity can be permuted across all observed locations and the permutation distribution of $K$, $L$, $M$, and $G$ is a core specific measure of CSR than theoretical. Also, with the permutations of CSR we are able to determine whether the observed clustering is significant by lying above or below a 95% of permuted CSR estimates. 
+
+## Calculating Exact CSR
+
+The product of running all possible permutations of Ripley's K and bivariate Ripley's K for cells on a TMA core or an ROI spot is simply the result of running Ripley's K or bivariate Ripley's K on all cells ignoring their marks. This allows us to determine the exact degree of clustering that are can use for associations with survival or other clinical variables.
 
 # Implementation
 
 ## Univariate Count-Based Methods
 
-The `ripleys_k` function reports a permuted and theoretical estimate of CSR, the observed value for $K$ (`method = 'K'`),  $L$ (`method = L`), or Marcon $M$ (`method = 'M'`), and the full permutation distribution of $K$, $L$, and $M$  of `keep_perm_dis = TRUE`.
+The `ripleys_k` function reports a permuted and theoretical estimate of CSR, the observed value for $K$ and the full permutation distribution of $K$ using `permute = TRUE, keep_permutation_distribution = TRUE`.
 
 Currently, the number of permutations is 10, but this should be increased to at least 100 for a more reliable estimate of the mean.
 
 ```{r, ripleys, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 x <- ripleys_k(mif = x, mnames = mnames_good, 
                num_permutations = 10, method = "K",
-               edge_correction = 'translation', r = seq(0,100,10),
-               keep_perm_dis = FALSE, workers = 1)
+               edge_correction = 'translation', r_range = 0:100,
+               permute = TRUE,
+               keep_permutation_distribution = FALSE, overwrite = TRUE, workers = 1)
 
 # This will keeps the colors in evx$ery plot for the remainder of the vignette compatible 
-values = getColors(length(unique(x$derived$univariate_Count$deidentified_sample)))
+values = RColorBrewer::brewer.pal(length(unique(x$derived$univariate_Count[[x$sample_id]])), "Accent")
 names(values) = unique(x$derived$univariate_Count$deidentified_sample)
 
 x$derived$univariate_Count  %>%
   filter(Marker != 'PDL1..Opal.540..Positive') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
-  geom_line(aes(color = deidentified_sample), show.legend = FALSE) +
+  geom_line(aes(color = get(x$sample_id)), show.legend = FALSE) +
   facet_wrap(Marker~., scales = 'free') + theme_bw() + 
   scale_color_manual(values = values)
   
 
 ```
+We can also run using the exact CSR approach which is faster and produces a more accurate Degree of clustering.
 
-Positive values for degree of cluster when using `method = 'K'` and `method = 'L'` indicates evidence of spatial clustering, while negative values correspond to spatial regularity. On the other hand, if using `method = 'M'` then values larger than 1 correspond to clustering and values less than one correspond to regularity. Also, these values can be interpreted as the the percent difference from spatial clustering, for example if $M=0.5$ that means there is 50% less spatial clustering than expected under CSR.
+```{r, ripleys_exact, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
+x <- ripleys_k(mif = x, mnames = mnames_good, 
+               num_permutations = 10, method = "K",
+               edge_correction = 'translation', r_range = 0:100,
+               permute = FALSE,
+               keep_permutation_distribution = FALSE, overwrite = TRUE, workers = 1)
+
+# This will keeps the colors in evx$ery plot for the remainder of the vignette compatible 
+values = RColorBrewer::brewer.pal(length(unique(x$derived$univariate_Count[[x$sample_id]])), "Accent")
+names(values) = unique(x$derived$univariate_Count$deidentified_sample)
+
+x$derived$univariate_Count  %>%
+  filter(Marker != 'PDL1..Opal.540..Positive') %>%
+  ggplot(aes(x = r, y = `Degree of Clustering Exact`)) +
+  geom_line(aes(color = get(x$sample_id)), show.legend = FALSE) +
+  facet_wrap(Marker~., scales = 'free') + theme_bw() + 
+  scale_color_manual(values = values)
+  
+```
+
+Positive values for degree of cluster when using `method = 'K'` indicates evidence of spatial clustering, while negative values correspond to spatial regularity. We can also observe that the `permute = TRUE` method is slightly more jagged in it's curve smoothness than the `permute = FALSE` method (FOXP3 negative curves in particular). 
 
 ## Sensitivity of r
 
-There is no clear way to select which value of $r$ to use for a particular analysis. Below we illustrate how the degree of clustering can change with the value of $r$. Notice that for values of $r > 20$ that there is very little difference in the ordering between the samples (though the degree of spatial clustering can changes dramatically), while very small values $r$ would have different results.
+There is no clear way to select which value of $r$ to use for a particular analysis. Below we illustrate how the degree of clustering can change with the value of $r$. Notice that for values of $r > 20$ that there is very little difference in the ordering between the samples (though the degree of spatial clustering can changes dramatically), while very small values $r$ would have different results. It's typically recommended to pick an $r$ in a region that is of interest (small scale or large scale clustering) where there is higher variation in the Degree of Clustering values between samples.
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
-x$derived$univariate_Count  %>%
+x$derived$univariate_Count %>%
   filter(Marker == 'CD3..CD8.') %>%
   inner_join(x$clinical,.) %>%
-  ggplot(aes(shape = status, y = `Degree of Clustering Permutation`, x =r)) +
-  geom_point(aes(color = deidentified_sample)) +
+  ggplot(aes(shape = status, y = `Degree of Clustering Exact`, x =r)) +
+  geom_point(aes(color = get(x$sample_id))) +
   theme_bw() + scale_color_manual(values = values)
 ```
 
 ## Bivariate Count-Based Methods
 
-In the univariate case, we consider each cell of a single cell type and center circles around each cell (reference cell). In the bivariate case, we are interested in how many cells of Type 1 (Counted) are clustered in proximity to Type 2 (Anchor). Here the circles are centered around cell of Type 2 and then the cells of Type 1 are counted.
+In the univariate case, we consider each cell of a single cell type and center circles around each cell (reference cell). In the bivariate case, we are interested in how many cells of Type 1 (Counted) are clustered in proximity to Type 2 (Anchor). Here the circles are centered around cell of Type 2 and then the cells of Type 1 are counted. Similar to univariate Ripley's K, we will run 10 permutations to get an average permuted CSR value.
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
-x <- bi_ripleys_k(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), 
-                  num_permutations = 10, method = "K",
-                  edge_correction = 'translation', r = seq(0,100,10),
-                  keep_perm_dis = FALSE, workers = 1, exhaustive = TRUE)
+x <- bi_ripleys_k(mif = x, mnames = mnames_good, 
+                  num_permutations = 10, 
+                  permute=TRUE,
+                  edge_correction = 'translation', r_range = 0:100,
+                  keep_permutation_distribution = FALSE, workers = 1)
 
 x$derived$bivariate_Count  %>%
-  filter(anchor == 'CD3..FOXP3.') %>%
+  filter(Anchor == 'CD3..FOXP3.',
+         Counted == 'CD3..CD8.') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
-  geom_line(aes(color = deidentified_sample), show.legend = TRUE) +
+  geom_line(aes(color = get(x$sample_id)), show.legend = TRUE) +
   theme_bw() + scale_color_manual(values = values)
 ```
-               
-The interpretation of the degree of clustering is the same here. The green line shows evidence that Tregs tend to cluster around Cytotoxic T cells for all values of $r$, while the black line indicates spatial repulsion of Tregs by Cytotoxic T cells for $\gt50$. 
 
+We can also do the same as with the univariate Ripley's K and set `permute = FALSE` in order to get the exact CSR estimate and degree of clustering.
+
+```{r,fig.width=10, fig.height=6, fig.align = 'center'}
+x <- bi_ripleys_k(mif = x, mnames = mnames_good, 
+                  num_permutations = 10, 
+                  permute=FALSE,
+                  edge_correction = 'translation', r_range = 0:100,
+                  keep_permutation_distribution = FALSE, 
+                  overwrite = TRUE, workers = 1)
+
+x$derived$bivariate_Count  %>%
+  filter(Anchor == 'CD3..FOXP3.',
+         Counted == 'CD3..CD8.') %>%
+  ggplot(aes(x = r, y = `Degree of Clustering Exact`)) +
+  geom_line(aes(color = get(x$sample_id)), show.legend = TRUE) +
+  theme_bw() + scale_color_manual(values = values)
+```
+
+The interpretation of the degree of clustering is the same here. The line for TMA3_[8,U].tif shows evidence that Tregs tend to cluster around Cytotoxic T cells for all values of $r$, while the line for TMA1_[3,B].tif indicates spatial repulsion of Tregs by Cytotoxic T cells for $r\gt50$. Again, we can see that the curves for the exact degree of clustering are more smooth than those using the permutation method. The permutation method would produce more smooth curve with an increase in the number of permutations
 
 ## Univariate Nearest-Neighbor Methods
 
@@ -238,13 +281,12 @@ Currently, the number of permutations is 10, but this should be increased to at 
 ```{r, NN, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 
 x <- NN_G(mif = x, mnames = mnames_good, num_permutations = 10,
-                edge_correction = 'rs', r = seq(0,100,10),
-                keep_perm_dis = FALSE, workers = 1)
+                edge_correction = 'rs', r = 0:100, workers = 1)
 
 x$derived$univariate_NN  %>%
   filter(Marker != 'PDL1..Opal.540..Positive') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
-  geom_line(aes(color = deidentified_sample)) +
+  geom_line(aes(color = get(x$sample_id))) +
   facet_wrap(Marker~., scales = 'free') + theme_bw() + 
   scale_color_manual(values = values)
   
@@ -287,17 +329,20 @@ Below is an example that shows how to select a single value for $r$, and how one
 ```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap = 'Histogram displaying how much the permuted estimates of K (100 permutations) can vary. This also illustrates how different the permutation distribution and its mean (green vertical line) can be from the theoretical value (red vertical line) or observed value (blue vertical line). Lastly, this plot confirms what we see visually above in that the CD3+ cells are not uniformly distributed throughout this slide, but clustered.'}
 x <- ripleys_k(mif = x, mnames = mnames_good[1], num_permutations = 100,
                edge_correction = 'translation', r = c(0,50),
-               keep_perm_dis = TRUE, workers = 1, overwrite = TRUE)
+               permute = TRUE,
+               keep_permutation_distribution = TRUE, workers = 1, overwrite = TRUE)
 
 #Computed the mean of the permutation distribution for a particular image
 perm_mean  = x$derived$univariate_Count %>%
-  filter(deidentified_sample == 'TMA3_[9,K].tif')  %>%
-  summarize(`Permuted K` = mean(`Permuted K`)) %>%
+  filter(deidentified_sample == 'TMA3_[9,K].tif',
+         r == 50)  %>%
+  summarize(`Permuted CSR` = mean(`Permuted CSR`)) %>%
   unlist()
 
 x$derived$univariate_Count %>%
-  filter(deidentified_sample == 'TMA3_[9,K].tif') %>%
-  ggplot(aes(x = `Permuted K`)) + 
+  filter(deidentified_sample == 'TMA3_[9,K].tif',
+         r == 50) %>%
+  ggplot(aes(x = `Permuted CSR`)) + 
   geom_histogram(color = 'white', bins = 50) + 
   geom_vline(aes(xintercept = `Theoretical CSR`), color = 'red', size = 1.5) + 
   geom_vline(aes(xintercept = `Observed K`), color = 'blue', size = 1.5) + 
@@ -326,11 +371,11 @@ Due to space constraints, there are only 5 TMA cores included in the example dat
 
 ```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap='Scatter plots showing the difference in degree of spatial clustering for CD3+, and CD8+ cells. These markers were selected since all 5 examples spatial files had at least 2 to these cells.'}
 x <- ripleys_k(mif = x, mnames = mnames_good, num_permutations = 10,
-               edge_correction = 'translation', r = c(0,50),
-               keep_perm_dis = FALSE, workers = 1, overwrite = TRUE)
+               edge_correction = 'translation', r = c(0,50), permute = T,
+               keep_permutation_distribution = FALSE, workers = 1, overwrite = TRUE)
 
 inner_join(x$clinical, x$derived$univariate_Count) %>%
-  filter(grepl('CD3..O|CD8..O', Marker)) %>% 
+  filter(grepl('CD3..O|CD8..O', Marker), r == 50) %>% 
   ggplot(aes(x = status, y = `Degree of Clustering Permutation`)) + 
   geom_point(aes(color = deidentified_sample), show.legend = FALSE) + 
   facet_wrap(Marker ~., scales = 'free') 
@@ -342,12 +387,13 @@ inner_join(x$clinical, x$derived$univariate_Count) %>%
 Rip_K_df = x$derived$univariate_Count %>% 
   filter(!(Marker %in% c('PDL1..Opal.540..Positive', 
                          'CD3..FOXP3.',
-                         'PD1..Opal.650..Positive'))) %>%
+                         'PD1..Opal.650..Positive')), r == 50) %>%
   select(deidentified_sample, Marker, `Degree of Clustering Permutation`) %>%
   pivot_wider(names_from = deidentified_sample, values_from = `Degree of Clustering Permutation`,
               id_cols = Marker)
 
 Rip_K_matrix = Rip_K_df %>% 
+  ungroup() %>%
   select(-Marker) %>%
   as.matrix()
 
@@ -357,6 +403,7 @@ annotation = inner_join(x$clinical, x$derived$univariate_Count) %>%
   select(deidentified_sample, status) %>%
   filter(!duplicated(.)) %>%
   data.frame()
+  
 
 rownames(annotation) = annotation$deidentified_sample
 
@@ -365,8 +412,6 @@ annotation = annotation %>%
   
 pheatmap(Rip_K_matrix, treeheight_row = 0, treeheight_col = 0, 
                    cluster_cols = FALSE, annotation = annotation)
-
-
 ```
 
 # Using Custom Cell Locations
@@ -375,7 +420,7 @@ If `xloc` and `yloc` are set as `NULL`, when computing spatial clustering than t
 
 ```{r}
 x <- ripleys_k(mif = x, mnames = mnames_good[1], num_permutations = 100,
-               edge_correction = 'translation', r = c(0,50),
-               keep_perm_dis = TRUE, workers = 1, overwrite = TRUE,
+               edge_correction = 'translation', r = c(0,50),permute = T, 
+               keep_permutation_distribution = TRUE, workers = 1, overwrite = TRUE,
                xloc = 'XMin', yloc = 'YMin')
 ```

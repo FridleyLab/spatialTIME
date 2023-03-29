@@ -2,90 +2,91 @@
 % Please edit documentation in R/ripleys_k.R
 \name{ripleys_k}
 \alias{ripleys_k}
-\title{Calculate Count Based Measures of Spatial Clustering for IF data}
+\title{Calculate Ripley's K}
 \usage{
 ripleys_k(
   mif,
   mnames,
-  r_range = seq(0, 100, 50),
+  r_range = seq(0, 100, 1),
   num_permutations = 50,
   edge_correction = "translation",
   method = "K",
-  keep_perm_dis = FALSE,
+  permute = FALSE,
+  keep_permutation_distribution = FALSE,
   workers = 1,
   overwrite = FALSE,
   xloc = NULL,
-  yloc = NULL
+  yloc = NULL,
+  big = 10000
 )
 }
 \arguments{
-\item{mif}{An MIF object}
+\item{mif}{object of class `mif` created with `create_mif`}
 
-\item{mnames}{Character vector of marker names to estimate degree of
-spatial clustering.}
+\item{mnames}{cell phenotype markers to calculate Ripley's K for}
 
-\item{r_range}{Numeric vector of potential r values this range must include 0.}
+\item{r_range}{radius range (including 0)}
 
-\item{num_permutations}{Numeric value indicating the number of permutations used.
-Default is 50.}
+\item{num_permutations}{number of permutations to use to estimate CSR. If `keep_perm_dis` is set to FALSE, this will be ignored}
 
-\item{edge_correction}{Character value indicating the type of edge correction
-to use. Options include "translation" or "isotropic".}
+\item{edge_correction}{edge correction method to pass to `Kest`. can take one of "translation", "isotropic", "none"}
 
-\item{method}{Character value indicating which measure (K, L, M) used to
-estimate the degree of spatial clustering. Description of the methods can be
-found in Details section.}
+\item{method}{not used currently}
 
-\item{keep_perm_dis}{Logical value determining whether or not to keep the full
-distribution of permuted K values}
+\item{permute}{whether to use CSR estimate or use permutations to determine CSR}
 
-\item{workers}{Integer value for the number of workers to spawn}
+\item{keep_permutation_distribution}{whether to find mean of permutation distribution or each
+permutation calculation}
 
-\item{overwrite}{Logical value determining if you want the results to replace the
-current output (TRUE) or be to be appended (FALSE).}
+\item{workers}{number of cores to use for calculations}
 
-\item{xloc}{a string corresponding to the x coordinates. If null the average of
-XMin and XMax will be used}
+\item{overwrite}{whether to overwrite the `univariate_Count` slot within `mif$derived`}
 
-\item{yloc}{a string corresponding to the y coordinates. If null the average of
-YMin and YMax will be used}
+\item{xloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+
+\item{yloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+
+\item{big}{the number of cells at which to flip from an edge correction method other than 'none' to 'none' due to size}
 }
 \value{
-Returns a data.frame
-\item{Theoretical CSR}{Expected value assuming complete spatial randomnessn}
-\item{Permuted CSR}{Average observed K, L, or M for the permuted point
-process}
-\item{Observed}{Observed valuefor the observed point process}
-\item{Degree of Clustering Permuted}{Degree of spatial clustering where the
-reference is the permutated estimate of CSR}
-\item{Degree of Clustering Theoretical}{Degree of spatial clustering where the
-reference is the theoretical estimate of CSR}
+object of class `mif`
 }
 \description{
-This function calculates count based Measures (Ripley's K, Besag
-L, and Marcon's M) of IF data to characterize correlation of spatial point
-process.
+ripleys_k() calculates the emperical Ripley's K measurement for the cell types specified by mnames in the mIF object. This
+is very useful when exploring the spatial clustering of single cell types on TMA cores or ROI spots following proccessing
+with a program such as HALO for cell phenotyping.
+
+In the `ripleys_k` function, there is the ability to perform permutations in order to assess whether the clustering
+of a cell type is significant, or the ability to derive the exact CSR and forgo permutations for much faster sample
+processing. Permutations can be helpful if the significance of clustering wasnts to be identified - run 1000 permutations 
+and if observed is outside 95-percentile then significant clustering. We, however, recommend using the exact CSR estimate
+due to speed.
+
+Some things to be aware of when computing the exact Ripley's K estimate, if your spatial file is greater than 
+the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time. 
+Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating 
+edge correction for these spatial files will not succeed when attempting to force an edge correction on it.
 }
 \examples{
-#Create mif object
-library(dplyr)
-x <- create_mif(clinical_data = example_clinical \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-sample_data = example_summary \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-spatial_list = example_spatial,
-patient_id = "deidentified_id", 
-sample_id = "deidentified_sample")
-
-# Define the set of markers to study
-markers <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-"FOXP3..Opal.620..Positive","CD3..CD8.","CD3..FOXP3.")
-
-# Ripley's K for all markers with a neighborhood size 
-# of  10,20,...,100 (zero must be included in the input).
-
-x <- ripleys_k(mif = x, mnames = markers, num_permutations = 1,
-edge_correction = 'translation', r = seq(0,100,10),
-keep_perm_dis = FALSE, workers = 1)
-
+x <- spatialTIME::create_mif(clinical_data =spatialTIME::example_clinical \%>\% 
+  dplyr::mutate(deidentified_id = as.character(deidentified_id)),
+  sample_data = spatialTIME::example_summary \%>\% 
+  dplyr::mutate(deidentified_id = as.character(deidentified_id)),
+  spatial_list = spatialTIME::example_spatial,
+  patient_id = "deidentified_id", 
+  sample_id = "deidentified_sample")
+mnames = x$spatial[[1]] \%>\%
+  colnames() \%>\%
+  grep("Pos|CD", ., value =TRUE) \%>\%
+  grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
+x2 = ripleys_k(mif = x, 
+  mnames = mnames[1], 
+  r_range = seq(0, 100, 1), 
+  num_permutations = 100,
+  edge_correction = "translation", 
+  method = "K", 
+  permute = FALSE,
+  keep_permutation_distribution =FALSE, 
+  workers = 1, 
+  overwrite =TRUE)
 }
