@@ -155,10 +155,11 @@ bi_ripleys_k = function(mif,
         }
         return(final)
       }
-      
+      #make empty data frame to begin the final K table
       K_obs = data.frame(r = r_range,
                          `Theoretical CSR` = pi * r_range^2,
                          check.names = FALSE)
+      #get observed K
       K_obs$`Observed K` = calculateK(i_dat = i_dat, 
                                       j_dat = j_dat,
                                       anchor = anchor,
@@ -166,8 +167,8 @@ bi_ripleys_k = function(mif,
                                       area = area, win = win, big = big, 
                                       r_range = r_range,
                                       edge_correction = edge_correction,
-                                      cores = workers)
-      
+                                      cores = 1)
+      #set the anchor and counted in final table
       K_obs$Anchor = anchor
       K_obs$Counted = counted
       
@@ -202,7 +203,7 @@ bi_ripleys_k = function(mif,
                                            area = area, win = win, big = big, 
                                            r_range = r_range,
                                            edge_correction = edge_correction,
-                                           cores = workers)
+                                           cores = 1)
           return(permed)
         }, mc.preschedule = FALSE, mc.allow.recursive = TRUE) %>%
           do.call(dplyr::bind_rows, .)
