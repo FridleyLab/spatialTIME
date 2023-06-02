@@ -52,7 +52,7 @@ bi_NN_G2 = function(mif,
     stop("Need at least 2 markers provided to `mnames` in order to do bivariate NN G(r)")
   }
   #run bivar nn g
-  out = parallel::mclapply(mif$spatial, function(spat){
+  out = pbmcapply::mclapply(mif$spatial, function(spat){
     if(is.null(xloc)){
       spat$xloc = (spat$XMax + spat$XMin)/2
     }

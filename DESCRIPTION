@@ -39,7 +39,8 @@ Imports:
     furrr,
     future,
     tidyselect,
-    crayon
+    crayon,
+    pbmcapply
 Suggests: 
     knitr,
     rmarkdown,
