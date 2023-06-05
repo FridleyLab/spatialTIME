@@ -54,68 +54,123 @@
 
 dixons_s = function(mif, mnames, num_permutations = 1000, type = c("Z", "C"),
                     workers = 1, overwrite = FALSE, xloc = NULL, yloc = NULL){
-  #dix_s_z
-  #dix_s_c
-  #make sure to assign the spatial data name to the output of dix_s_z and dix_s_c
-  #check classifier label
   
+  if(!is(mnames, "character")){
+    stop("Provide a vector of marker names in the spatial files")
+  }
   data = mif$spatial
+  #filter names of markers because order doesn't matter, still computes both ways
   mnames = mnames %>%
     expand.grid(., .) %>%
     dplyr::filter(Var1 != Var2) %>% 
     dplyr::rowwise() %>%
     dplyr::mutate(Var3 = paste0(sort(c(Var1, Var2)), collapse = ",")) %>%
-    distinct(Var3, .keep_all = TRUE) %>%
-    select(1, 2)
+    dplyr::distinct(Var3, .keep_all = TRUE) %>%
+    dplyr::select(1, 2) %>%
+    dplyr::ungroup()
   
-  future::plan(future::multisession, workers = workers)
-  if(overwrite == FALSE){
+  #per spatial file
+  out = parallel::mclapply(data, function(spat){
+    #if locations not provided
+    if(is.null(xloc)){
+      spat$xloc = (spat$XMin+spat$XMax)/2
+    } else {
+      spat$xloc = spat[[xloc]]
+    }
+    if(is.null(yloc)){
+      spat$yloc = (spat$YMin+spat$YMax)/2
+    } else {
+      spat$yloc = spat[[yloc]]
+    }
+    
+    res = parallel::mclapply(1:nrow(mnames), function(r){
+      markers = as.character(unlist(mnames[r,]))
+      df = spat %>%
+        dplyr::select(xloc, yloc, dplyr::any_of(markers)) %>%
+        dplyr::filter(!(get(markers[1]) == 1 & get(markers[2]) == 1)) %>% #get rid of dual positives
+        tidyr::gather("Marker", "Positive", -xloc, -yloc) %>%
+        dplyr::mutate(Marker = factor(Marker, levels = markers)) %>%
+        dplyr::filter(Positive == 1)
+      
+      df_tab = table(df$Marker)
+      if(nrow(df_tab) == 0 | nrow(df_tab) == 1 | TRUE %in% (df_tab < 3)){ #set minimum number of cells in each group to 3
+        final_df_z = expand.grid(From = names(df_tab),
+                               To = names(df_tab)) %>%
+          dplyr::mutate(`Image Location` = spat$`Image Location`[1], #
+                 !!markers[1] := df_tab[1],
+                 !!markers[2] := df_tab[2])
+        final_df_c = data.frame(df = rep(NA, 3),
+                                `Chi-sq` = rep(NA, 3),
+                                P.asymp = rep(NA, 3),
+                                P.rand = rep(NA, 3),
+                                check.names = FALSE)
+        rownames(final_df_c) = c("Overall segregation", paste("From", markers))
+        colnames(final_df_c)[1] = mif$sample_id
+        return(list(tablaZ = final_df_z,
+                    tablaC = final_df_c))
+      }
+      dixon_val = dixon::dixon(df, nsim = num_permutations)
+      return(list(tablaZ = dixon_val$tablaZ %>%
+                    dplyr::rename_with(~ .x %>% gsub(" ", "", .)) %>%
+                    dplyr::mutate(!!markers[1] := df_tab[1],
+                                  !!markers[2] := df_tab[2]),
+                  tablaC = dixon_val$tablaC))
+    })
+    #bring together
+    Dixon_Z = lapply(res, function(marks){
+      marks$tablaZ %>%
+        dplyr::mutate(!!mif$sample_id := spat[[mif$sample_id]][1], .before = 1)
+    }) %>%
+      do.call(dplyr::bind_rows, .) %>%
+      dplyr::mutate(Simulations = num_permutations)
+    Dixon_C = lapply(res, function(marks){
+      marks$tablaC%>%
+        tibble::rownames_to_column("Direction") %>%
+        dplyr::mutate(Direction = stringr::str_squish(Direction)) %>%
+        dplyr::mutate(!!mif$sample_id := spat[[mif$sample_id]][1], .before = 1)
+    }) %>%
+      do.call(dplyr::bind_rows, .) %>%
+      dplyr::mutate(Simulations = num_permutations)
+    return(list(Dixon_Z=Dixon_Z, 
+                Dixon_C=Dixon_C))
+  }, mc.cores = workers, mc.allow.recursive = T, mc.preschedule = F)
+  
+  if(overwrite){
     if("Z" %in% type){
-      mif$derived$dixons_S_Z = rbind(mif$derived$dixons_S_Z,
-                                     furrr::future_map(.x = 1:length(data),
-                                                       ~{
-                                                         dix_s_z(data = data[[.x]], num_permutations = num_permutations,
-                                                                 markers = mnames, xloc = xloc, yloc = yloc) %>%
-                                                           dplyr::mutate(Image.Tag = names(data)[.x])
-                                                       }, .options = furrr::furrr_options(seed = TRUE),
-                                                       .progress = TRUE) %>%
-                                       plyr::ldply())
+      mif$derived$Dixon_Z = lapply(out, function(spat){
+        spat$Dixon_Z %>%
+          dplyr::mutate(Run = 1)
+      }) %>%
+        do.call(dplyr::bind_rows, .)
     }
     if("C" %in% type){
-      mif$derived$dixons_S_C = rbind(mif$derived$dixons_S_C,
-                                     furrr::future_map(.x = 1:length(data),
-                                                       ~{
-                                                         dix_s_c(data = data[[.x]], num_permutations = num_permutations,
-                                                                 markers = mnames, classifier_label = classifier_label, 
-                                                                 xloc = xloc, yloc = yloc) %>%
-                                                           mutate(Image.Tag = names(data)[.x])
-                                                       }, .options = furrr::furrr_options(seed =TRUE),
-                                                       .progress =TRUE) %>%
-                                       plyr::ldply())
+      mif$derived$Dixon_C = lapply(out, function(spat){
+        spat$Dixon_C %>%
+          dplyr::mutate(Run = 1)
+      }) %>%
+        do.call(dplyr::bind_rows, .)
     }
   } else {
     if("Z" %in% type){
-      mif$derived$dixons_S_Z = furrr::future_map(.x = 1:length(data),
-                                                 ~{
-                                                   dix_s_z(data = data[[.x]], num_permutations = num_permutations,
-                                                           markers = mnames, classifier_label = classifier_label, 
-                                                           xloc = xloc, yloc = yloc) %>%
-                                                     mutate(Image.Tag = names(data)[.x])
-                                                 }, .options = furrr::furrr_options(seed =TRUE),
-                                                 .progress =TRUE) %>%
-        plyr::ldply()
+      mif$derived$Dixon_Z = dplyr::bind_rows(mif$derived$Dixon_Z, 
+                                             lapply(out, function(spat){
+                                               spat$Dixon_Z %>%
+                                                 dplyr::mutate(Run = max(Run) + 1)
+                                               }) %>% 
+                                               do.call(dplyr::bind_rows, .)
+      )
     }
     if("C" %in% type){
-      mif$derived$dixons_S_C = furrr::future_map(.x = 1:length(data),
-                                                 ~{
-                                                   dix_s_c(data = data[[.x]], num_permutations = num_permutations,
-                                                           markers = mnames, classifier_label = classifier_label, 
-                                                           xloc = xloc, yloc = yloc) %>%
-                                                     mutate(Image.Tag = names(data)[.x])
-                                                 }, .options = furrr::furrr_options(seed =TRUE),
-                                                 .progress =TRUE) %>%
-        plyr::ldply()
+      mif$derived$Dixon_C = dplyr::bind_rows(mif$derived$Dixon_C, 
+                                             lapply(out, function(spat){
+                                               spat$Dixon_C %>%
+                                                 dplyr::mutate(Run = max(Run) + 1)
+                                             }) %>% 
+                                               do.call(dplyr::bind_rows, .)
+      )
     }
   }
+  
   structure(mif, class="mif")
 }
+
