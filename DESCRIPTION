@@ -41,6 +41,7 @@ Imports:
     tidyselect,
     crayon,
     pbmcapply
+    dixon
 Suggests: 
     knitr,
     rmarkdown,
