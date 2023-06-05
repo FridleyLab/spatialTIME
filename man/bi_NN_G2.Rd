@@ -2,7 +2,7 @@
 % Please edit documentation in R/bi_nn_g2.R
 \name{bi_NN_G2}
 \alias{bi_NN_G2}
-\title{Univariate Nearest Neighbor G(r)}
+\title{Bivariate Nearest Neighbor G(r)}
 \usage{
 bi_NN_G2(
   mif,
@@ -41,7 +41,7 @@ bi_NN_G2(
 object of class `mif` containing a new slot under `derived` got nearest neighbor distances
 }
 \description{
-Univariate Nearest Neighbor G(r)
+Bivariate Nearest Neighbor G(r)
 }
 \examples{
 x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\% 

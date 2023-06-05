@@ -1,4 +1,4 @@
-#' Univariate Nearest Neighbor G(r)
+#' Bivariate Nearest Neighbor G(r)
 #'
 #' @param mif object of class `mif` created by function `create_mif()`
 #' @param mnames character vector of column names within the spatial files, indicating whether a cell row is positive for a phenotype
@@ -207,15 +207,15 @@ bi_NN_G2 = function(mif,
                   `Degree of Clustering Theoretical` = `Observed G` - `Theoretical CSR`)
   
   if(overwrite){
-    mif$derived$univariate_NN = out %>%
+    mif$derived$bivariate_NN = out %>%
       dplyr::mutate(Run = 1)
   }
   if(!overwrite){
-    mif$derived$univariate_NN = mif$derived$univariate_NN %>%
+    mif$derived$bivariate_NN = mif$derived$bivariate_NN %>%
       dplyr::bind_rows(out %>%
-                         dplyr::mutate(Run = ifelse(!exists("univariate_NN", mif$derived),
+                         dplyr::mutate(Run = ifelse(!exists("bivariate_NN", mif$derived),
                                                     1,
-                                                    max(mif$derived$univariate_NN$Run) + 1)))
+                                                    max(mif$derived$bivariate_NN$Run) + 1)))
   }
   return(mif)
 }
