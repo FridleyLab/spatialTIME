@@ -21,6 +21,16 @@ K_out = function(data, marker, id, iter, correction,r_value, win){
   }
 }
 
+get_bi_rows = function(data, markers){
+  data %>%
+    dplyr::mutate(cell = 1:n()) %>%
+    dplyr::select(cell, !!markers) %>%
+    dplyr::filter(!(get(markers[1]) == 1 & get(markers[2]) == 1)) %>%
+    tidyr::gather("Marker", "Positive", -cell) %>%
+    dplyr::filter(Positive == 1) %>%
+    dplyr::mutate(Marker = factor(Marker, levels = markers))
+}
+
 perm_data = function(data, markers){
   #Generate data uses permutation for all markers
   data_pos = data %>%
