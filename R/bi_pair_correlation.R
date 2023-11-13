@@ -112,16 +112,16 @@ bi_pair_correlation = function(mif,
       dat = dplyr::full_join(obs,
                              perms) %>%
         dplyr::rename("Theoretical g" = 2) %>%
-        mutate(From = markers[1], To = markers[2], .before = 1) %>%
-        group_by(From, To, r) %>%
-        mutate(`Permuted_larger_than_Observed` = sum(`Permuted g` > unique(`Observed g`), na.rm = TRUE))
+        dplyr::mutate(From = markers[1], To = markers[2], .before = 1) %>%
+        dplyr::group_by(From, To, r) %>%
+        dplyr::mutate(`Permuted_larger_than_Observed` = sum(`Permuted g` > unique(`Observed g`), na.rm = TRUE))
       
       #collapse if not needing permutations
       if(!keep_permutation_distribution){
         dat %>%
-          select(-iter) %>%
-          group_by(Permuted_larger_than_Observed, .add = TRUE) %>%
-          summarise_all(mean, na.rm = TRUE)
+          dplyr::select(-iter) %>%
+          dplyr::group_by(Permuted_larger_than_Observed, .add = TRUE) %>%
+          dplyr::summarise_all(mean, na.rm = TRUE)
       } else {
         dat
       }
@@ -148,7 +148,7 @@ bi_pair_correlation = function(mif,
   } else {
     n_run = max(mif$derived$bivaraite_pair_correlation$Run)+1
     mif$derived$bivaraite_pair_correlation = dplyr::bind_rows(mif$derived$bivaraite_pair_correlation,
-                                                               out %>% mutate(Run = n_run))
+                                                               out %>% dplyr::mutate(Run = n_run))
   }
   
   return(mif)
