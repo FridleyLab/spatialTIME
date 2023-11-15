@@ -30,6 +30,7 @@ library(ggplot2)
 library(tidyr)
 library(tidyselect)
 library(RColorBrewer)
+library(pheatmap)
 
 getColors = function(n){
   #https://stackoverflow.com/questions/15282580/how-to-generate-a-number-of-most-distinctive-colors-in-r
@@ -302,8 +303,7 @@ The interpretation of the bivariate nearest neighbor distribution is similar to 
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
 x <- bi_NN_G(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), num_permutations = 10,
-               edge_correction = 'rs', r = seq(0,100,10),
-               keep_perm_dis = FALSE, workers = 1, overwrite = TRUE)
+               edge_correction = 'rs', r = 0:100, workers = 1, overwrite = TRUE)
 
 x$derived$bivariate_NN  %>%
   filter(anchor == 'CD3..FOXP3.') %>%

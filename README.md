@@ -4,7 +4,7 @@
 [![tic](https://github.com/fridleylab/spatialTIME/workflows/tic/badge.svg?branch=master)](https://github.com/fridleylab/spatialTIME/actions)
 <!-- badges: end -->
 
-# spatialTIME <img src="man/hex_sticker/hex.png" align="right" height="139" />
+# spatialTIME <img src="man/figures/logo.png" align="right" width="120" />
 
 <!-- badges: start -->
 <!-- badges: end -->
