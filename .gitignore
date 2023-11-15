@@ -4,7 +4,6 @@
 .Ruserdata
 inst/doc
 _notes
-docs/
 dev/
 data/example_tma.rda
 man/example_tma.Rd
