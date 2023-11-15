@@ -28,7 +28,7 @@
 #' x2 = bi_NN_G2(mif = x, mnames = mnames_good, r_range = 0:100, num_permutations = 25, edge_correction = "rs", keep_permutation_distribution = FALSE, workers = 1, overwrite = TRUE)
 #' 
 #' @export
-bi_NN_G2 = function(mif,
+bi_NN_G = function(mif,
                  mnames,
                  r_range = 0:100,
                  num_permutations = 50,
@@ -36,7 +36,6 @@ bi_NN_G2 = function(mif,
                  keep_permutation_distribution = FALSE,
                  workers = 1,
                  overwrite = FALSE,
-                 big = 1000,
                  xloc = NULL,
                  yloc = NULL){
   if(!inherits(mif, "mif")){

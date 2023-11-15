@@ -1,11 +1,10 @@
-#' Univariate Nearest Neighbor G(r)
+#' Bivariate Nearest Neighbor G(r)
 #'
 #' @param mif object of class `mif` created by function `create_mif()`
 #' @param mnames character vector of column names within the spatial files, indicating whether a cell row is positive for a phenotype
 #' @param r_range numeric vector of radii around marker positive cells which to use for G(r)
 #' @param num_permutations integer number of permutations to use for estimating core specific complete spatial randomness (CSR)
 #' @param edge_correction character vector of edge correction methods to use: "rs", "km" or "han"
-#' @param permute boolean for whether to permute or estimate true CSR for G(r)
 #' @param keep_permutation_distribution boolean for whether to summarise permutations to a single value or maintain each permutations result
 #' @param workers integer number for the number of CPU cores to use in parallel to calculate all samples/markers
 #' @param overwrite boolean whether to overwrite previous run of NN G(r) or increment "RUN" and maintain  previous measurements
@@ -27,17 +26,15 @@
 #'   "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
 #'   "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
 #'   
-#' x2 = NN_G2(mif = x, mnames = mnames_good, r_range = 0:100, num_permutations = 25, edge_correction = "rs", permute = TRUE, keep_permutation_distribution = FALSE, workers = 1, overwrite = TRUE)
-NN_G2 = function(mif,
+#' x2 = bi_NN_G2(mif = x, mnames = mnames_good, r_range = 0:100, num_permutations = 25, edge_correction = "rs", keep_permutation_distribution = FALSE, workers = 1, overwrite = TRUE)
+bi_NN_G2 = function(mif,
                  mnames,
                  r_range = 0:100,
                  num_permutations = 50,
                  edge_correction = "rs",
-                 permute = FALSE,
                  keep_permutation_distribution = FALSE,
                  workers = 1,
                  overwrite = FALSE,
-                 big = 1000,
                  xloc = NULL,
                  yloc = NULL){
   if(!inherits(mif, "mif")){
@@ -46,6 +43,13 @@ NN_G2 = function(mif,
   if(!(0 %in% r_range)){
     r_range = c(0, r_range)
   }
+  if(length(mnames) == 1){
+    stop("Please use univariate NN G(r) function for only a single marker")
+  }
+  if(length(mnames) == 0){
+    stop("Need at least 2 markers provided to `mnames` in order to do bivariate NN G(r)")
+  }
+  #run bivar nn g
   out = parallel::mclapply(mif$spatial, function(spat){
     if(is.null(xloc)){
       spat$xloc = (spat$XMax + spat$XMin)/2
@@ -53,32 +57,47 @@ NN_G2 = function(mif,
     if(is.null(yloc)){
       spat$yloc = (spat$YMax + spat$YMin)/2
     }
+    #get name of sample, make spatial a matrix and build sample window
     core = spat[1, mif$sample_id]
     spat = spat %>%
       dplyr::select(xloc, yloc, any_of(mnames)) %>% 
       as.matrix()
     win = spatstat.geom::convexhull.xy(spat[,"xloc"], spat[,"yloc"])
-    #using spatstat
-    exact_G = spatstat.explore::nearest.neighbour(spatstat.geom::ppp(x = spat[,"xloc"],
-                                                                     y = spat[,"yloc"],
-                                                                     window = win),
-                                                  r = r_range, correction = edge_correction) %>%
-      data.frame()
-    
-    res = parallel::mclapply(mnames, function(marker){
-      df = spat[spat[,marker] == 1,]
-      if(sum(spat[,marker] == 1) < 3){
-        perms = data.frame(r = r_range,
-                           `Theoretical G` = NA,
+    areaW = spatstat.geom::area(win)
+    #get the different marker combinations
+    marker_combos = expand.grid(anchor = markers,
+                                counted = markers) %>%
+      dplyr::filter(anchor != counted) %>%
+      dplyr::mutate_all(as.character)
+    marker_list = split(unlist(marker_combos), rep(seq(nrow(marker_combos)), 2))
+    #compute bivariate G(r)
+    res = parallel::mclapply(marker_list, function(marks){ #marks is a charter vector of 2L
+      df = spat[,c("xloc", "yloc", marks)]
+      df = df[df[[1]] != 1 & df[[2]] != 1,]
+      
+      if(TRUE %in% (colSums(df[,marks]) < 3)){
+        perms = data.frame(samp = core,
+                           Anchor = unname(marks[1]),
+                           Counted = unname(marks[2]),
+                           r = r_range,
+                           `Theoretical CSR` = NA,
                            `Permuted G` = NA,
                            `Observed G` = NA,
-                           Marker = marker, check.names = F) %>%
+                           check.names = F) %>%
           dplyr::full_join(expand.grid(r = r_range, iter = seq(num_permutations)), by = "r")
+        colnames(perms)[1] = mif$sample_id
         return(perms)
       }
-      pp_obj = spatstat.geom::ppp(x = df[,"xloc"],
-                                  y = df[,"yloc"],
-                                  window= win)
+      
+      #total number of points
+      npts = nrow(df)
+      lamJ = sum(df[,marks[2]])/areaW
+      rmax = max(r_range)
+      
+      pp_obj = spatstat.geom::ppp(x = tmp[,"xloc"],
+                                  y = tmp[,"yloc"],
+                                  window= win,
+                                  marks = tmp[,"Marks"])
       #area = spatstat.geom::area(win)
       #n = spatstat.geom::npoints(pp_obj)
       #theo = 1 - exp(-(n/area) * pi * r^2)
