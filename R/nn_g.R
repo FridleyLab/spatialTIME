@@ -71,27 +71,16 @@ NN_G = function(mif,
       if(sum(spat[,marker] == 1) < 3){
         perms = data.frame(r = r_range,
                            `Theoretical G` = NA,
-                           `Permuted G` = NA,
-                           `Observed G` = NA,
-                           Marker = marker, check.names = F) %>%
-          dplyr::full_join(expand.grid(r = r_range, iter = seq(num_permutations)), by = "r")
+                           `Permuted G` = NA, check.names = F) %>%
+          dplyr::full_join(expand.grid(r = r_range, iter = seq(num_permutations)), by = "r") %>%
+          mutate(`Observed G` = NA,
+                 Marker = marker)
         return(perms)
       }
       pp_obj = spatstat.geom::ppp(x = df[,"xloc"],
                                   y = df[,"yloc"],
                                   window= win)
-      #area = spatstat.geom::area(win)
-      #n = spatstat.geom::npoints(pp_obj)
-      #theo = 1 - exp(-(n/area) * pi * r^2)
-      #dists = as.matrix(dist(df[,1:2]))
-      #dists[dists == 0] = NA
-      #nnd = apply(dists, 1, min, na.rm=T)
-      #d = (nnd <= spatstat.geom::bdist.points(pp_obj))
-      #x = nnd[d]
-      #a=spatstat.geom::eroded.areas(win, r_range)
-      #this is for hanish
-      #G = cumsum(hist(x[x<=max(r_range)],plot =F, breaks = r_range)$counts/100)
-      #G/max(G[is.finite(G)])
+      
       G = spatstat.explore::nearest.neighbour(pp_obj, r = r_range, correction = edge_correction) %>%
         data.frame() %>%
         dplyr::rename("Theoretical G" = 2, "Observed G" = 3)
