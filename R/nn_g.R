@@ -96,24 +96,19 @@ NN_G = function(mif,
         data.frame() %>%
         dplyr::rename("Theoretical G" = 2, "Observed G" = 3)
       
-      if(permute){
-        perms = parallel::mclapply(seq(num_permutations), function(n){
-          df = spat[sample(1:nrow(spat), nrow(df), replace =F),]
-          pp_obj = spatstat.geom::ppp(x = df[,"xloc"],
-                                      y = df[,"yloc"],
-                                      window= win)
-          spatstat.explore::nearest.neighbour(pp_obj, r = r_range, correction = edge_correction) %>%
-            data.frame() %>%
-            dplyr::rename("Theoretical G" = 2, "Permuted G" = 3) %>%
-            dplyr::mutate(iter = n)
-        }) %>%
-          do.call(dplyr::bind_rows, .) %>%
-          dplyr::full_join(G, by = c("r", "Theoretical G")) %>%
-          dplyr::mutate(Marker = marker)
-      } else {
-        perms = data.frame(r = r_range,
-                           `Theoretical G` = 1 - exp(-(nrow(spat)/spatstat.geom::area(win)) * pi * r_range^2))
-      }
+      perms = parallel::mclapply(seq(num_permutations), function(n){
+        df = spat[sample(1:nrow(spat), nrow(df), replace =F),]
+        pp_obj = spatstat.geom::ppp(x = df[,"xloc"],
+                                    y = df[,"yloc"],
+                                    window= win)
+        spatstat.explore::nearest.neighbour(pp_obj, r = r_range, correction = edge_correction) %>%
+          data.frame() %>%
+          dplyr::rename("Theoretical G" = 2, "Permuted G" = 3) %>%
+          dplyr::mutate(iter = n)
+      }) %>%
+        do.call(dplyr::bind_rows, .) %>%
+        dplyr::full_join(G, by = c("r", "Theoretical G")) %>%
+        dplyr::mutate(Marker = marker)
       
       return(perms)
     }) %>%
