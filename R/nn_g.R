@@ -46,9 +46,13 @@ NN_G = function(mif,
   out = parallel::mclapply(mif$spatial, function(spat){
     if(is.null(xloc)){
       spat$xloc = (spat$XMax + spat$XMin)/2
+    } else {
+      spat$xloc = spat[[xloc]]
     }
     if(is.null(yloc)){
       spat$yloc = (spat$YMax + spat$YMin)/2
+    } else {
+      spat$yloc = spat[[yloc]]
     }
     core = spat[1, mif$sample_id]
     spat = spat %>%
