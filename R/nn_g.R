@@ -5,7 +5,7 @@
 #' @param r_range numeric vector of radii around marker positive cells which to use for G(r)
 #' @param num_permutations integer number of permutations to use for estimating core specific complete spatial randomness (CSR)
 #' @param edge_correction character vector of edge correction methods to use: "rs", "km" or "han"
-#' @param keep_permutation_distribution boolean for whether to summarise permutations to a single value or maintain each permutations result
+#' @param keep_perm_dis boolean for whether to summarise permutations to a single value or maintain each permutations result
 #' @param workers integer number for the number of CPU cores to use in parallel to calculate all samples/markers
 #' @param overwrite boolean whether to overwrite previous run of NN G(r) or increment "RUN" and maintain  previous measurements
 #' @param xloc,yloc the x and y location columns in the spatial files that indicate the center of the respective cells
@@ -26,13 +26,13 @@
 #'   "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
 #'   "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
 #'   
-#' x2 = NN_G2(mif = x, mnames = mnames_good, r_range = 0:100, num_permutations = 25, edge_correction = "rs", keep_permutation_distribution = FALSE, workers = 1, overwrite = TRUE)
+#' x2 = NN_G(mif = x, mnames = mnames_good, r_range = 0:100, num_permutations = 25, edge_correction = "rs", keep_perm_dis = FALSE, workers = 1, overwrite = TRUE)
 NN_G = function(mif,
                  mnames,
                  r_range = 0:100,
                  num_permutations = 50,
                  edge_correction = "rs",
-                 keep_permutation_distribution = FALSE,
+                 keep_perm_dis = FALSE,
                  workers = 1,
                  overwrite = FALSE,
                  xloc = NULL,
@@ -104,7 +104,7 @@ NN_G = function(mif,
       do.call(dplyr::bind_rows, .) %>%
       dplyr::mutate(!!mif$sample_id := core)
     res = res[,c(7, 6, 4, 1, 2, 5, 3)]
-    if(keep_permutation_distribution){
+    if(keep_perm_dis){
       return(res)
     }
     res = res[,-3]

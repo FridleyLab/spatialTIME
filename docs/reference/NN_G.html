@@ -66,7 +66,7 @@
 <span>  r_range <span class="op">=</span> <span class="fl">0</span><span class="op">:</span><span class="fl">100</span>,</span>
 <span>  num_permutations <span class="op">=</span> <span class="fl">50</span>,</span>
 <span>  edge_correction <span class="op">=</span> <span class="st">"rs"</span>,</span>
-<span>  keep_permutation_distribution <span class="op">=</span> <span class="cn">FALSE</span>,</span>
+<span>  keep_perm_dis <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  workers <span class="op">=</span> <span class="fl">1</span>,</span>
 <span>  overwrite <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>  xloc <span class="op">=</span> <span class="cn">NULL</span>,</span>
@@ -96,7 +96,7 @@
 <dd><p>character vector of edge correction methods to use: "rs", "km" or "han"</p></dd>
 
 
-<dt>keep_permutation_distribution</dt>
+<dt>keep_perm_dis</dt>
 <dd><p>boolean for whether to summarise permutations to a single value or maintain each permutations result</p></dd>
 
 
@@ -133,12 +133,7 @@
 <span class="r-in"><span>  <span class="st">"FOXP3..Opal.620..Positive"</span>,<span class="st">"PDL1..Opal.540..Positive"</span>,</span></span>
 <span class="r-in"><span>  <span class="st">"PD1..Opal.650..Positive"</span>,<span class="st">"CD3..CD8."</span>,<span class="st">"CD3..FOXP3."</span><span class="op">)</span></span></span>
 <span class="r-in"><span>  </span></span>
-<span class="r-in"><span><span class="va">x2</span> <span class="op">=</span> <span class="fu">NN_G2</span><span class="op">(</span>mif <span class="op">=</span> <span class="va">x</span>, mnames <span class="op">=</span> <span class="va">mnames_good</span>, r_range <span class="op">=</span> <span class="fl">0</span><span class="op">:</span><span class="fl">100</span>, num_permutations <span class="op">=</span> <span class="fl">25</span>, edge_correction <span class="op">=</span> <span class="st">"rs"</span>, keep_permutation_distribution <span class="op">=</span> <span class="cn">FALSE</span>, workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span class="error">Error in dplyr::mutate(., `Degree of Clustering Permutation` = `Observed G` -     `Permuted G`, `Degree of Clustering Theoretical` = `Observed G` -     `Theoretical G`):</span> <span style="color: #00BBBB;">ℹ</span> In argument: `Degree of Clustering Permutation = `Observed G` -</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span>   `Permuted G``.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #00BBBB;">ℹ</span> In group 1: `iter = 1`, `Marker = "PD1..Opal.650..Positive"`.</span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="font-weight: bold;">Caused by error:</span></span>
-<span class="r-err co"><span class="r-pr">#&gt;</span> <span style="color: #BBBB00;">!</span> object 'Permuted G' not found</span>
+<span class="r-in"><span><span class="va">x2</span> <span class="op">=</span> <span class="fu">NN_G</span><span class="op">(</span>mif <span class="op">=</span> <span class="va">x</span>, mnames <span class="op">=</span> <span class="va">mnames_good</span>, r_range <span class="op">=</span> <span class="fl">0</span><span class="op">:</span><span class="fl">100</span>, num_permutations <span class="op">=</span> <span class="fl">25</span>, edge_correction <span class="op">=</span> <span class="st">"rs"</span>, keep_perm_dis <span class="op">=</span> <span class="cn">FALSE</span>, workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
 </code></pre></div>
     </div>
   </div>
