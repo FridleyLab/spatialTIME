@@ -87,8 +87,10 @@ bi_pair_correlation = function(mif,
         return(df)
       }
       
-      ps = subset(sample_ppp, cells$cell)
-      spatstat.geom::marks(ps) = cells$Marker
+      #ps = subset(sample_ppp, cells$cell)
+      #spatstat.geom::marks(ps) = cells %>% arrange(cellid) %>% pull(Marker)
+      ps = spatstat.geom::ppp(cells$xloc, cells$yloc, window = win, marks = cells$Marker)
+      
       obs = spatstat.explore::pcfcross(ps, markers[1], markers[2],
                                   r = r_range, correction = edge_correction,
                                   ...) %>%
