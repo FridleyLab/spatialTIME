@@ -306,7 +306,7 @@ x <- bi_NN_G(mif = x, mnames = c("CD3..CD8.", "CD3..FOXP3."), num_permutations =
                edge_correction = 'rs', r = 0:100, workers = 1, overwrite = TRUE)
 
 x$derived$bivariate_NN  %>%
-  filter(anchor == 'CD3..FOXP3.') %>%
+  filter(Anchor == 'CD3..FOXP3.') %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
   geom_line(aes(color = deidentified_sample), show.legend = TRUE) +
   theme_bw() +  scale_color_manual(values = values)
@@ -420,7 +420,7 @@ If `xloc` and `yloc` are set as `NULL`, when computing spatial clustering than t
 
 ```{r}
 x <- ripleys_k(mif = x, mnames = mnames_good[1], num_permutations = 100,
-               edge_correction = 'translation', r = c(0,50),permute = T, 
+               edge_correction = 'translation', r = c(0,50),permute = TRUE, 
                keep_permutation_distribution = TRUE, workers = 1, overwrite = TRUE,
                xloc = 'XMin', yloc = 'YMin')
 ```
