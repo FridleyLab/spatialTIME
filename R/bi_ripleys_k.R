@@ -96,7 +96,7 @@ bi_ripleys_k = function(mif,
     area = spatstat.geom::area(win)
     #matrix operations are WAY faster than data frame
     #since now all numeric, easy enough to use matrix
-    spat = as.matrix(spat[,c("xloc", "yloc", mnames)])
+    spat = as.matrix(spat[,c("xloc", "yloc", as.character(unique(unlist(mnames))))])
     #get the combinations data frame
     if(inherits(mnames, "data.frame")){
       m_combos = mnames
