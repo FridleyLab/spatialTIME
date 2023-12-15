@@ -1,4 +1,4 @@
-#' Bivariate Ripley's K
+#' Bivariate Ripley's K for Whole Slide Images
 #'
 #' @param mif mIF object with spatial data frames, clinical, and per-sample summary information
 #' @param mnames vector of column names for phenotypes or data frame of marker combinations
@@ -49,7 +49,7 @@
 #'                    r_range = 0:100, edge_correction = "none", permute = FALSE,
 #'                    num_permutations = 50, keep_permutation_distribution = FALSE, 
 #'                    workers = 1, big = 1000)
-bi_ripleys_k = function(mif,
+bi_ripleys_k_WSI = function(mif,
                          mnames,
                          r_range = 0:100,
                          edge_correction = "translation",
@@ -58,6 +58,8 @@ bi_ripleys_k = function(mif,
                          keep_permutation_distribution = FALSE,
                          overwrite = TRUE,
                          workers = 6,
+                         big = 1000,
+                         nlarge = 1000,
                          xloc = NULL,
                          yloc = NULL){
   Label = Anchor = Counted = `Exact CSR` = NULL
@@ -73,13 +75,7 @@ bi_ripleys_k = function(mif,
   if(!(0 %in% r_range)){
     r_range = c(0, r_range)
   }
-  #check if user should be using wsi method
-  if(any(sapply(mif$spatial, nrow) > 10000)){
-    message("Some samples have a large number of cells - bi_ripleys_k_WSI may be more appropriate.")
-    if(!askYesNo("Continue?")){
-      stop("Stopping - please use bi_ripleys_k_WSI for large samples")
-    }
-  }
+  #split mif into jobs for spatial files
   #split mif into jobs for spatial files
   out = parallel::mclapply(names(mif$spatial), function(spatial_name){
     #prepare spatial data with x and y location (cell centers)
@@ -110,18 +106,16 @@ bi_ripleys_k = function(mif,
                              counted = mnames) %>%
         dplyr::filter(anchor != counted)
     }
-    core_pp = spatstat.geom::ppp(x = spat[,'xloc'],
-                                 y = spat[,'yloc'],
-                                 window = win)
     #calculating exact K works now!
     if(!permute){
       #calculate exact K
-      exact_K = spatstat.explore::Kest(core_pp,
+      exact_K = spatstat.explore::Kest(spatstat.geom::ppp(x = spat[,'xloc'],
+                                                          y = spat[,'yloc'],
+                                                          window = win),
                                        r = r_range,
                                        correction = edge_correction) %>%
         data.frame() %>%
-        dplyr::rename("Theoretical CSR" = 2,
-                      "Exact CSR" = 3)
+        dplyr::pull(3)
     }
     
     #for the combinations of markers, do bivark and permutations
@@ -131,42 +125,46 @@ bi_ripleys_k = function(mif,
       counted = m_combos[combo, ] %>% dplyr::pull(counted) %>% as.character()
       cat(spatial_name, "\t", combo, "\t", anchor, "\t", counted, "\n")
       #remove rows that are positive for both counted and anchor
-      spat_tmp = get_bi_rows(data.frame(spat, check.names = FALSE), c(anchor, counted))
-      tabs = table(spat_tmp$Marker)
+      spat_tmp = spat[!(spat[,anchor] == 1 & spat[,counted] == 1),c("xloc", "yloc", anchor, counted)]
+      
+      #get data for both anchor and counted
+      i_dat = spat_tmp[spat_tmp[,3] == 1,]
+      j_dat = spat_tmp[spat_tmp[,4] == 1,]
+      
       #if the number of positive cells for either counted or anchor is less than 2, return empty K
-      if(length(tabs) < 2 | any(tabs < 2)){
+      if(sum(spat_tmp[,3]) < 2 | sum(spat_tmp[,4]) < 2){
         final = data.frame(Label = spatial_name,
+                           r = r_range,
                            Anchor = anchor,
                            Counted = counted,
-                           r = r_range,
                            `Theoretical CSR` = pi*r_range^2,
+                           `Observed K` = NA,
                            `Permuted CSR` = NA,
                            `Exact CSR` = NA,
-                           `Observed K` = NA,
                            check.names=FALSE) 
-        if(permute & keep_permutation_distribution){
+        if(permute){
           final = final %>%
-            dplyr::full_join(expand.grid(r = r_range,
-                                         iter = seq(num_permutations)),
-                             by = "r")
-        } else if(permute & !keep_permutation_distribution){
-          final$iter = num_permutations
+          dplyr::full_join(expand.grid(r = r_range,
+                                       iter = seq(num_permutations)),
+                           by = "r")
         } else {
           final$iter = 1
         }
-        return(final %>%
-                 dplyr::relocate(iter, .after = 3))
+        return(final)
       }
       #make empty data frame to begin the final K table
-      ps = core_pp[spat_tmp$cell]
-      spatstat.geom::marks(ps) = spat_tmp$Marker
-      K_obs = spatstat.explore::Kcross(ps,
-                                       i = anchor, j = counted,
-                                       r = r_range,
-                                       correction = edge_correction) %>%
-        data.frame() %>%
-        dplyr::rename("Theoretical CSR" = 2,
-                      "Observed K" = 3)
+      K_obs = data.frame(r = r_range,
+                         `Theoretical CSR` = pi * r_range^2,
+                         check.names = FALSE)
+      #get observed K
+      K_obs$`Observed K` = calculateK(i_dat = i_dat, 
+                                      j_dat = j_dat,
+                                      anchor = anchor,
+                                      counted = counted, 
+                                      area = area, win = win, big = big, 
+                                      r_range = r_range,
+                                      edge_correction = edge_correction,
+                                      cores = 1)
       #set the anchor and counted in final table
       K_obs$Anchor = anchor
       K_obs$Counted = counted
@@ -174,7 +172,7 @@ bi_ripleys_k = function(mif,
       if(permute){
         #randomly sample the rows of possible cell locations for permuting
         perm_rows = lapply(seq(num_permutations), function(x){
-          sample(1:nrow(spat), sum(tabs), replace = FALSE)
+          sample(1:nrow(spat), sum(nrow(i_dat), nrow(j_dat)), replace = FALSE)
         })
         
         #assign("perm_rows", perm_rows, envir = .GlobalEnv)
@@ -183,28 +181,29 @@ bi_ripleys_k = function(mif,
           cat(perm_n)
           #extract vector of rows for permutation run
           perm = perm_rows[[perm_n]]
-          #subset the spatstat object
-          ps = core_pp[perm]
-          spatstat.geom::marks(ps) = spat_tmp$Marker
-          
-          permed = spatstat.explore::Kcross(ps,
-                                            i = anchor, j = counted,
-                                            r = r_range,
-                                            correction = edge_correction) %>%
-            data.frame() %>%
-            dplyr::rename("Theoretical CSR" = 2,
-                          "Permuted CSR" = 3) %>%
-            dplyr::mutate(iter = perm_n)
+          #subset the x and y coords for those to use for permutation
+          dat = spat[perm,1:2]
+          #create label vector of anchor and counted cells of length anchor + counted
+          label = c(rep(anchor, nrow(i_dat)), rep(counted, nrow(j_dat)))
+          #subset permute rows for anchor and counted
+          i_dat = dat[label == anchor,]
+          j_dat = dat[label == counted,]
+          #prep permtued K table
+          permed = data.frame(r = r_range,
+                              `Theoretical CSR` = pi * r_range^2,
+                              iter = perm_n,
+                              check.names = FALSE)
+          permed$`Permuted CSR` = calculateK(i_dat = i_dat, 
+                                           j_dat = j_dat,
+                                           anchor = anchor,
+                                           counted = counted, 
+                                           area = area, win = win, big = big, 
+                                           r_range = r_range,
+                                           edge_correction = edge_correction,
+                                           cores = 1)
           return(permed)
         }, mc.preschedule = FALSE, mc.allow.recursive = TRUE) %>%
           do.call(dplyr::bind_rows, .)
-        # #simplify if not keeping perms
-        # if(!keep_permutation_distribution){
-        #   kpermed = kpermed %>%
-        #     dplyr::group_by(r) %>%
-        #     dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(.x, na.rm = TRUE))) %>%
-        #     dplyr::mutate(iter = 1)
-        # }
         kpermed$`Exact CSR` = NA
       } else {
         kpermed = data.frame(r = r_range,
@@ -212,7 +211,7 @@ bi_ripleys_k = function(mif,
                              iter = 1,
                              check.names = FALSE)
         kpermed$`Permuted CSR` = NA
-        kpermed$`Exact CSR` = exact_K$`Exact CSR`
+        kpermed$`Exact CSR` = exact_K
       }
       
       
@@ -220,37 +219,39 @@ bi_ripleys_k = function(mif,
       final = dplyr::full_join(K_obs,
                                kpermed, by = c("r", "Theoretical CSR")) %>%
         #add the image label to the data frame
-        dplyr::mutate(Label = spatial_name, .before = 1) %>% 
-        dplyr::relocate(Anchor, Counted, iter, r, 
-                        `Theoretical CSR`, `Permuted CSR`, `Exact CSR`, .after = 1) %>%
-        dplyr::group_by(Label, Anchor, Counted, r) %>%
-        dplyr::mutate(`Permutations Larger than Observed` = ifelse(permute,
-                                                                   sum(`Permuted CSR` > `Observed K`, na.rm = TRUE),
-                                                                   NA))
-      if(permute & !keep_permutation_distribution){
-        final = final %>%
-          dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(.x, na.rm = TRUE))) %>%
-          dplyr::mutate(iter = num_permutations) %>%
-          dplyr::relocate(iter, .after = 3)
-      }
-        
+        dplyr::mutate(Label = spatial_name, .before = 1)
       
       return(final)
-    }, mc.preschedule = F,mc.allow.recursive = T) %>% #
+    }) %>% #, mc.cores = cores, mc.preschedule = F,mc.allow.recursive = T
       do.call(dplyr::bind_rows, .)
     #reorder columns to make more sense
+    res = res[,c(1,2,7,5,6,3,4,8,9)]
     return(res)
   }, mc.cores = workers, mc.preschedule = FALSE,mc.allow.recursive = TRUE) %>%
     do.call(dplyr::bind_rows, .)%>% #collapse all samples to single data frame
     dplyr::rename(!!mif$sample_id := Label)
-  out = out %>%
-    #calculate the degree of clustering from both the theoretical and permuted
-    dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
-                  `Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
-                  `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
+  #if user doesn't want the permutation distribution, get average of the permutation estimate
+  if(!keep_permutation_distribution & permute){
+    out = out %>%
+      #remove iter since this is the permutation number
+      dplyr::select(-iter) %>%
+      #group by those used for permuting
+      dplyr::group_by(dplyr::across(mif$sample_id), r, Anchor, Counted) %>%
+      #take mean of theoretical, permuted, observed
+      dplyr::summarise_all(~mean(., na.rm=TRUE)) %>%
+      #calculate the degree of clustering from both the theoretical and permuted
+      dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
+                    `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
+                    `Exact CSR` = NA) %>%
+      dplyr::mutate(iter = num_permutations, .before = Anchor)
+  }
   #if overwrite is true, replace the bivariate count in the derived slot
   if(overwrite){
     mif$derived$bivariate_Count = out %>%
+      #calculate the degree of clustering from both the theoretical and permuted
+      dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
+                    `Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
+                    `Degree of Clustering Exact` = `Observed K` - `Exact CSR`) %>%
       #add run number to differentiate between bivariate compute runs
       dplyr::mutate(Run = 1)
   }
@@ -259,6 +260,10 @@ bi_ripleys_k = function(mif,
     #bind old and new bivar runs together, incrementing Run
     mif$derived$bivariate_Count = mif$derived$bivariate_Count%>%
       dplyr::bind_rows(out %>%
+                         #calculate the degree of clustering from both the theoretical and permuted
+                         dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
+                                       `Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
+                                       `Degree of Clustering Exact` = `Observed K` - `Exact CSR`) %>%
                          dplyr::mutate(Run = ifelse(exists("bivariate_Count", mif$derived),
                                                     max(mif$derived$bivariate_Count$Run) + 1,
                                                     1)))
