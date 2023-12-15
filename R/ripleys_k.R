@@ -258,6 +258,8 @@ ripleys_k = function(mif,
               } else {            
                 
                 edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
+                edge[edge == 0] = NA
+                diag(edge) = NA
                 counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
               }
               rm(dists)
