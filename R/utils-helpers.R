@@ -23,7 +23,7 @@ K_out = function(data, marker, id, iter, correction,r_value, win){
 
 get_bi_rows = function(data, markers){
   data %>%
-    dplyr::mutate(cell = 1:n()) %>%
+    dplyr::mutate(cell = 1:dplyr::n()) %>%
     dplyr::select(cell, xloc, yloc, !!markers) %>%
     dplyr::filter(!(get(markers[1]) == 1 & get(markers[2]) == 1)) %>%
     tidyr::gather("Marker", "Positive", -cell, -xloc, -yloc) %>%
