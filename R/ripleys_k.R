@@ -111,7 +111,8 @@ ripleys_k = function(mif,
       if(edge_correction %in% c("translation", "trans")){
         edge = spatstat.explore::edge.Trans(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win), W = win)
       } else if(edge_correction %in% c("isotropic", "iso")){
-        edge = spatstat.explore::edge.Ripley(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win))
+        edge = spatstat.explore::edge.Ripley(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win), 
+                                             r = pairdist(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win)))
       } else if(edge_correction == "none"){
         edge = matrix(nrow = nrow(spat), ncol = nrow(spat), data = 1)
       }
@@ -258,6 +259,8 @@ ripleys_k = function(mif,
               } else {            
                 
                 edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
+                edge[edge == 0] = NA
+                diag(edge) = NA
                 counts = sapply(r_range, function(r){sum(edge[which(dists < r)])})
               }
               rm(dists)

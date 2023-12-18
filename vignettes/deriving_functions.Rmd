@@ -7,205 +7,45 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This will be a short vignette for using all of the functions that derives spatial metrics
+This is going to be a short vignette for the use of the functions used to derive spatial metrics. 
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
   collapse = TRUE,
   comment = "#>"
 )
-invisible(suppressPackageStartupMessages(library(tidyverse)))
 ```
 
 ```{r setup}
-library(spatialTIME)
 library(tidyverse)
-```
+library(spatialTIME)
+mif =  spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical %>% 
+                                 dplyr::mutate(deidentified_id = as.character(deidentified_id)),
+                               sample_data = spatialTIME::example_summary %>% 
+                                 dplyr::mutate(deidentified_id = as.character(deidentified_id)),
+                               spatial_list = spatialTIME::example_spatial,
+                               patient_id = "deidentified_id", 
+                               sample_id = "deidentified_sample")
 
-## Create `mIF` object
-
-```{r}
-mif = create_mif(clinical_data = example_clinical %>% 
-                   mutate(deidentified_id = as.character(deidentified_id)),
-                 sample_data = example_summary %>% 
-                   mutate(deidentified_id = as.character(deidentified_id)),
-                 spatial_list = example_spatial,
-                 patient_id = "deidentified_id", 
-                 sample_id = "deidentified_sample")
-mif
-```
-
-```{r}
-markers = colnames(mif$spatial[[1]]) %>%
-    grep("Pos|CD", ., value = TRUE) %>%
-    grep("Cyt|Nuc", ., value = TRUE, invert = TRUE)
-markers = markers[c(1,2,4,5,9)]
-markers
+markers = colnames(mif$spatial[[1]]) %>% grep("CD3|Pos", ., value = T) %>% grep("Cyto|Nucle", ., value = T, invert = T)
+markers = markers[c(1,2,4,5,8)]
 ```
 
 ## Ripley's K
 
 ### Univariate
 
-```{r, fig.width=10}
-mif = ripleys_k(mif = mif, 
-                mnames = markers[1:2],
-                r_range = 0:100,
+```{r}
+mif = ripleys_k(mif = mif,
+                mnames = markers, 
+                r_range = 0:100, 
                 num_permutations = 50,
-                edge_correction = "translation",
-                permute = TRUE,
-                keep_permutation_distribution = FALSE,
-                workers = 1, 
-                overwrite = TRUE,
+                edge_correction = 'translation', 
+                permute = TRUE, 
+                keep_permutation_distribution = FALSE, 
+                workers = 5, 
+                overwrite = TRUE, 
                 xloc = NULL, 
                 yloc = NULL)
-
-mif$derived$univariate_Count %>%
-  ggplot() +
-  geom_line(aes(x = r, y = `Degree of Clustering Permutation`, color = deidentified_sample)) +
-  facet_grid(~Marker)
-```
-
-### Bivariate
-
-```{r, fig.width=10}
-mif = bi_ripleys_k(mif = mif, 
-                   mnames = markers[1:2],
-                   r_range = 0:100,
-                   num_permutations = 50,
-                   edge_correction = "translation",
-                   permute = TRUE,
-                   keep_permutation_distribution = FALSE,
-                   workers = 1, 
-                   overwrite = TRUE,
-                   xloc = NULL, 
-                   yloc = NULL)
-
-mif$derived$bivariate_Count %>%
-  ggplot() +
-  geom_line(aes(x = r, y = `Degree of Clustering Permutation`, color = deidentified_sample)) +
-  facet_grid(~Anchor)
-```
-
-## Nearest Neighbor G
-
-### Univariate
-
-```{r, fig.width=10}
-mif = NN_G(mif = mif, 
-           mnames = markers[1:2], 
-           r_range = 0:100, 
-           num_permutations = 50, 
-           edge_correction = "rs", 
-           keep_perm_dis = FALSE, 
-           workers = 1, 
-           overwrite = TRUE, 
-           xloc = NULL,
-           yloc = NULL)
-
-mif$derived$univariate_NN %>%
-  ggplot() +
-  geom_line(aes(x = r, y = `Degree of Clustering Permutation`, color = deidentified_sample)) +
-  facet_grid(~Marker)
-```
-
-### Bivariate
-
-```{r, fig.width=10}
-mif = bi_NN_G(mif = mif, 
-           mnames = markers[1:2], 
-           r_range = 0:100, 
-           num_permutations = 50, 
-           edge_correction = "rs", 
-           keep_perm_dis = FALSE, 
-           workers = 1, 
-           overwrite = TRUE, 
-           xloc = NULL,
-           yloc = NULL)
-
-mif$derived$bivariate_NN %>%
-  ggplot() +
-  geom_line(aes(x = r, y = `Degree of Clustering Permutation`, color = deidentified_sample)) +
-  facet_grid(~Anchor)
-```
-
-## Pair Correlation g
-
-### Univariate
-
-```{r, fig.width=10}
-mif = pair_correlation(mif = mif, 
-                       mnames = markers[1:2],
-                       r_range = 0:100, 
-                       num_permutations = 50, 
-                       edge_correction = "translation", 
-                       keep_permutation_distribution = FALSE, 
-                       workers = 1, 
-                       overwrite = TRUE, 
-                       xloc = NULL, 
-                       yloc = NULL)
-
-mif$derived$univariate_pair_correlation %>%
-  ggplot() +
-  geom_line(aes(x = r, y = `Degree of Correlation Permuted`, color = deidentified_sample)) +
-  facet_grid(~Marker)
-```
-
-### Bivariate
-
-```{r, fig.width=10}
-mif = bi_pair_correlation(mif = mif, 
-                       mnames = markers[1:2],
-                       r_range = 0:100, 
-                       num_permutations = 50, 
-                       edge_correction = "translation", 
-                       keep_permutation_distribution = FALSE, 
-                       workers = 1, 
-                       overwrite = TRUE, 
-                       xloc = NULL, 
-                       yloc = NULL)
-
-mif$derived$bivariate_pair_correlation %>%
-  ggplot() +
-  geom_line(aes(x = r, y = `Degree of Correlation Permuted`, color = deidentified_sample)) +
-  facet_grid(~From)
-```
-
-## Interaction Variable
-
-```{r, fig.width=10}
-mif = interaction_variable(mif = mif,
-                           mnames = markers[1:2],
-                           r_range = 0:100,
-                           num_permutations = 50,
-                           keep_permutation_distribution = FALSE,
-                           workers = 1,
-                           overwrite = TRUE,
-                           xloc = NULL,
-                           yloc = NULL)
-
-mif$derived$interaction_variable %>%
-  ggplot() +
-  geom_line(aes(x = r, y = `Degree of Interaction Permuted`, color = deidentified_sample)) +
-  facet_grid(~From)
-```
-
-## Dixon's Segregation S
-
-```{r}
-mif = dixons_s(mif = mif, 
-               mnames = markers[1:2], 
-               num_permutations = 50, 
-               type = "Z", 
-               workers = 1, 
-               overwrite = TRUE, 
-               xloc = NULL, 
-               yloc = NULL)
-
-mif$derived$Dixon_Z %>%
-    filter(From != To) %>%
-    ggplot() +
-    geom_point(aes(x = Z, y = S, color = deidentified_sample)) +
-    facet_grid(~From)
 ```
 

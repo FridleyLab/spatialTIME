@@ -54,12 +54,16 @@ bi_NN_G = function(mif,
   out = pbmcapply::pbmclapply(mif$spatial, function(spat){
     if(is.null(xloc)){
       spat$xloc = (spat$XMax + spat$XMin)/2
+    } else {
+      spat$xloc = spat[[xloc]]
     }
     if(is.null(yloc)){
       spat$yloc = (spat$YMax + spat$YMin)/2
+    } else {
+      spat$yloc = spat[[yloc]]
     }
     #get name of sample, make spatial a matrix and build sample window
-    core = spat[1, mif$sample_id]
+    core = unlist(spat[1, mif$sample_id])
     spat = spat %>%
       dplyr::select(xloc, yloc, any_of(mnames)) %>% 
       as.matrix()

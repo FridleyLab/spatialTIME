@@ -3,7 +3,7 @@
 #' @param mif mIF object with spatial data frames, clinical, and per-sample summary information
 #' @param mnames vector of column names for phenotypes or data frame of marker combinations
 #' @param r_range vector range of radii to calculate co-localization *K*
-#' @param edge_correction character edge_correction method, one of "translation", "border", "or none" 
+#' @param edge_correction character edge_correction method, one of "translation", or none" 
 #' @param num_permutations integer number of permutations to estimate CSR
 #' @param permute whether or not to use permutations to estimate CSR (TRUE) or to calculate exact CSR (FALSE)
 #' @param keep_permutation_distribution boolean as to whether to summarise permutations to mean
@@ -75,6 +75,8 @@ bi_ripleys_k_WSI = function(mif,
   if(!(0 %in% r_range)){
     r_range = c(0, r_range)
   }
+  if(!(edge_correction %in% c("trans", "none", "translation")))
+    stop("provide either translation or none for border correction")
   #split mif into jobs for spatial files
   #split mif into jobs for spatial files
   out = parallel::mclapply(names(mif$spatial), function(spatial_name){
