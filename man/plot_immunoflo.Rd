@@ -11,7 +11,9 @@ plot_immunoflo(
   mcolors = NULL,
   cell_type = NULL,
   filename = NULL,
-  path = NULL
+  path = NULL,
+  xloc = NULL,
+  yloc = NULL
 )
 }
 \arguments{
@@ -28,6 +30,8 @@ plot_immunoflo(
 \item{filename}{Character string of file name to store plots. Plots are generated as single .pdf file.}
 
 \item{path}{Different path than file name or to use in conjunction with filename ???}
+
+\item{xloc, yloc}{columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `XMin`/`YMin` and `XMax`/`YMax`}
 }
 \value{
 mif object and the ggplot objects can be viewed form the derived slot of the mif object

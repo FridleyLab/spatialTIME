@@ -8,10 +8,10 @@
 #' @param mcolors Character vector of color names to display markers in the plot.
 #' @param cell_type Character vector of cell type
 #' @param path Different path than file name or to use in conjunction with filename ???
+#' @param xloc,yloc columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `XMin`/`YMin` and `XMax`/`YMax`
 #' 
 #' @return mif object and the ggplot objects can be viewed form the derived slot of the mif object
 #' 
-#' @importFrom rlang .data
 #' @importFrom grDevices dev.off
 #'    
 #' @export
@@ -45,14 +45,13 @@ plot_immunoflo <- function(
   mcolors = NULL, 
   cell_type = NULL, 
   filename = NULL,
-  path = NULL
-  ) {
+  path = NULL,
+  xloc = NULL,
+  yloc = NULL) {
   
   ### changes to make
   # 1. input will be new data type 
   # 2. plot to pdf unless given subset of samples 
-  
-  
   
   # convert to list of dataframes - throw error message if missing
   if (missing(mif)) stop("MIF is missing; please provide the appropriate data")
@@ -61,24 +60,27 @@ plot_immunoflo <- function(
   
   # if (missing(filename)) stop("filename is missing; filename must be a string")
   
-
-  
-  # progress bar for creating plots
-  pb <- dplyr::progress_estimated(length(mif[["spatial"]]))
-  
   # plots
-  plot <- lapply(mif[["spatial"]], function(x){
-    # update progress bar
-    pb$tick()$print()
+  plot <- pbmcapply::pbmclapply(mif[["spatial"]], function(x){
+    #make the xloc and yloc columns
+    if(is.null(xloc) | is.null(yloc)){
+      x = x %>%
+        dplyr::mutate(xloc = (XMax + XMin)/2,
+                      yloc = (YMax + YMin)/2)
+    } else {
+      #rename columns to follow xloc and yloc names
+      x = x %>%
+        dplyr::rename("xloc" = !!xloc, 
+                      "yloc" = !!yloc)
+    }
+    
     # data to generate plot
     plot_data <- x %>%
-      dplyr::select(plot_title, .data$XMin, .data$XMax, 
-        .data$YMin, .data$YMax, !!mnames, cell_type) %>% 
+      dplyr::select(dplyr::any_of(c(!!plot_title, !!mnames, !!cell_type)),
+                    xloc, yloc) %>% 
       tidyr::pivot_longer(cols = !!mnames,
                           names_to = "marker", values_to = "indicator") %>% 
-      dplyr::mutate(xloc = (.data$XMin + .data$XMax) / 2,
-                    yloc = (.data$YMin + .data$YMax) / 2,
-                    marker = factor(.data$marker, levels = mnames)) 
+      dplyr::mutate(marker = factor(marker, levels = mnames))
     
     # plot title
     plot_title <- if (length(plot_title) == 1) {
@@ -100,10 +102,10 @@ plot_immunoflo <- function(
     
     if(is.null(cell_type)){
       basic_plot <- plot_data %>% 
-        dplyr::filter(.data$indicator == 1) %>% 
-        ggplot2::ggplot(ggplot2::aes(x = .data$xloc, 
-                                     y = .data$yloc, 
-                                     color = .data$marker)) +
+        dplyr::filter(indicator == 1) %>% 
+        ggplot2::ggplot(ggplot2::aes(x = xloc, 
+                                     y = yloc, 
+                                     color = marker)) +
         # ggplot2::geom_point(data = filter(plot_data, indicator == 0),
         #                     # aes(fill = "grey70"),
         #                     color = "gray70") +
@@ -120,11 +122,11 @@ plot_immunoflo <- function(
                        panel.grid = ggplot2::element_blank()) 
     }else{
     basic_plot <- plot_data %>% 
-      dplyr::filter(.data$indicator == 1) %>% 
-      ggplot2::ggplot(ggplot2::aes(x = .data$xloc, 
-                                   y = .data$yloc, 
-                                   color = .data$marker, 
-                                   shape = .data[[cell_type]])) +
+      dplyr::filter(indicator == 1) %>% 
+      ggplot2::ggplot(ggplot2::aes(x = xloc, 
+                                   y = yloc, 
+                                   color = marker, 
+                                   shape = cell_type)) +
       # ggplot2::geom_point(data = filter(plot_data, indicator == 0),
       #                     # aes(fill = "grey70"),
       #                     color = "gray70") +
