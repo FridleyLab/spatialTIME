@@ -43,6 +43,7 @@ object of class `mif` containing a new slot under `derived` got nearest neighbor
 Univariate Nearest Neighbor G(r)
 }
 \examples{
+library(dplyr)
 x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\% 
   dplyr::mutate(deidentified_id = as.character(deidentified_id)),
   sample_data = spatialTIME::example_summary \%>\% 
@@ -55,5 +56,8 @@ mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
   "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
   "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
   
-x2 = NN_G(mif = x, mnames = mnames_good, r_range = 0:100, num_permutations = 25, edge_correction = "rs", keep_perm_dis = FALSE, workers = 1, overwrite = TRUE)
+x2 = NN_G(mif = x, mnames = mnames_good[1:2], 
+r_range = 0:100, num_permutations = 10, 
+edge_correction = "rs", keep_perm_dis = FALSE, 
+workers = 1, overwrite = TRUE)
 }

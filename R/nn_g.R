@@ -14,6 +14,7 @@
 #' @export
 #'
 #' @examples
+#' library(dplyr)
 #' x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical %>% 
 #'   dplyr::mutate(deidentified_id = as.character(deidentified_id)),
 #'   sample_data = spatialTIME::example_summary %>% 
@@ -26,7 +27,10 @@
 #'   "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
 #'   "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
 #'   
-#' x2 = NN_G(mif = x, mnames = mnames_good, r_range = 0:100, num_permutations = 25, edge_correction = "rs", keep_perm_dis = FALSE, workers = 1, overwrite = TRUE)
+#' x2 = NN_G(mif = x, mnames = mnames_good[1:2], 
+#' r_range = 0:100, num_permutations = 10, 
+#' edge_correction = "rs", keep_perm_dis = FALSE, 
+#' workers = 1, overwrite = TRUE)
 NN_G = function(mif,
                  mnames,
                  r_range = 0:100,
@@ -56,7 +60,7 @@ NN_G = function(mif,
     }
     core = spat[1, mif$sample_id]
     spat = spat %>%
-      dplyr::select(xloc, yloc, any_of(mnames)) %>% 
+      dplyr::select(xloc, yloc, dplyr::any_of(mnames)) %>% 
       as.matrix()
     win = spatstat.geom::convexhull.xy(spat[,"xloc"], spat[,"yloc"])
     #using spatstat
