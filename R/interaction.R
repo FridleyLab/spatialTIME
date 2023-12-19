@@ -60,7 +60,6 @@ interaction_variable = function(mif,
     win = spatstat.geom::convexhull.xy(spat$xloc, spat$yloc)
     
     res = parallel::mclapply(1:nrow(mnames), function(marker){
-      require(spatstat.explore)
       markers = unname(unlist(mnames[marker,])) %>% as.character()
       sample_ppp = spatstat.geom::ppp(spat$xloc, spat$yloc,
                                       window = win)
@@ -73,7 +72,7 @@ interaction_variable = function(mif,
         } else {
           df = data.frame(From = markers[1], To = markers[2],
                           r = r_range) %>%
-            full_join(expand.grid(r = r_range,
+            dplyr::full_join(expand.grid(r = r_range,
                                   iter = seq(num_permutations)))
         }
         return(df)
@@ -95,7 +94,7 @@ interaction_variable = function(mif,
                             From = markers[1],
                             To = markers[2]) %>%
         #mutate(!!mif$sample_id := unique(spat[[mif$sample_id]])) %>%
-        full_join(ITvals, by = join_by(r))
+        dplyr::full_join(ITvals, by = dplyr::join_by(r))
       
       perms = parallel::mclapply(seq(num_permutations), function(p){
         tmp_ps = subset(sample_ppp, sample(1:nrow(spat), ps$n, replace = FALSE))
@@ -115,7 +114,7 @@ interaction_variable = function(mif,
       
       #calculate number of permutations with greater interaction than observed
       dat = dplyr::full_join(obs,
-                             perms, by = join_by(r, From, To)) %>%
+                             perms, by = dplyr::join_by(r, From, To)) %>%
         dplyr::group_by(From, To, r) %>%
         dplyr::mutate(`Permuted_larger_than_Observed` = sum(`Permuted Interaction` > unique(`Observed Interaction`), na.rm = TRUE))
       

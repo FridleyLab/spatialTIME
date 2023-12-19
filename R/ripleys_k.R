@@ -112,7 +112,7 @@ ripleys_k = function(mif,
         edge = spatstat.explore::edge.Trans(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win), W = win)
       } else if(edge_correction %in% c("isotropic", "iso")){
         edge = spatstat.explore::edge.Ripley(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win), 
-                                             r = pairdist(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win)))
+                                             r = spatstat.geom::pairdist(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win)))
       } else if(edge_correction == "none"){
         edge = matrix(nrow = nrow(spat), ncol = nrow(spat), data = 1)
       }

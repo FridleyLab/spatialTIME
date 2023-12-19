@@ -80,7 +80,7 @@ pair_correlation = function(mif,
                               r = r_range, correction = edge_correction, ...) %>%
           data.frame() %>%
           dplyr::rename("Permuted g" = 3) %>%
-          mutate(iter = p)
+          dplyr::mutate(iter = p)
       }, mc.preschedule = FALSE,
       mc.allow.recursive = TRUE) %>%
         do.call(dplyr::bind_rows, .)
@@ -88,16 +88,16 @@ pair_correlation = function(mif,
       dat = dplyr::full_join(obs,
                        perms) %>%
         dplyr::rename("Theoretical g" = 2) %>%
-        mutate(Marker = marker, .before = 1) %>%
-        group_by(Marker, r) %>%
-        mutate(`Permuted_larger_than_Observed` = sum(`Permuted g` > unique(`Observed g`), na.rm = TRUE))
+        dplyr::mutate(Marker = marker, .before = 1) %>%
+        dplyr::group_by(Marker, r) %>%
+        dplyr::mutate(`Permuted_larger_than_Observed` = sum(`Permuted g` > unique(`Observed g`), na.rm = TRUE))
       
       #collapse if not needing permutations
       if(!keep_permutation_distribution){
         dat %>%
           select(-iter) %>%
-          group_by(Permuted_larger_than_Observed, .add = TRUE) %>%
-          summarise_all(mean, na.rm = TRUE)
+          dplyr::group_by(Permuted_larger_than_Observed, .add = TRUE) %>%
+          dplyr::summarise_all(mean, na.rm = TRUE)
       } else {
         dat
       }
