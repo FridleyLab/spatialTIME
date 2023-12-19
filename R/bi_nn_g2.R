@@ -17,15 +17,19 @@
 #'   dplyr::mutate(deidentified_id = as.character(deidentified_id)),
 #'   sample_data = spatialTIME::example_summary %>% 
 #'   dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-#'   spatial_list = spatialTIME::example_spatial,
+#'   spatial_list = spatialTIME::example_spatial[1:2],
 #'   patient_id = "deidentified_id", 
 #'   sample_id = "deidentified_sample")
 #'     
 #' mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
 #'   "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
 #'   "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-#'   
-#' x2 = bi_NN_G(mif = x, mnames = mnames_good, r_range = 0:100, num_permutations = 25, edge_correction = "rs", keep_perm_dis = FALSE, workers = 1, overwrite = TRUE)
+#' \dontrun{
+#' x2 = bi_NN_G(mif = x, mnames = mnames_good[1:2], 
+#'       r_range = 0:100, num_permutations = 10, 
+#'       edge_correction = "rs", keep_perm_dis = FALSE, 
+#'       workers = 1, overwrite = TRUE)
+#' }
 #' 
 #' @export
 bi_NN_G = function(mif,
@@ -65,7 +69,7 @@ bi_NN_G = function(mif,
     #get name of sample, make spatial a matrix and build sample window
     core = unlist(spat[1, mif$sample_id])
     spat = spat %>%
-      dplyr::select(xloc, yloc, any_of(mnames)) %>% 
+      dplyr::select(xloc, yloc, dplyr::any_of(mnames)) %>% 
       as.matrix()
     win = spatstat.geom::convexhull.xy(spat[,"xloc"], spat[,"yloc"])
     areaW = spatstat.geom::area(win)
@@ -163,7 +167,8 @@ bi_NN_G = function(mif,
         #for edge correction rs
         o <- pmin.int(obs_nnd, obs_bdry)
         result = spatstat.explore::km.rs(o, obs_bdry, obs_d,
-                                         spatstat.geom::handle.r.b.args(r_range, NULL, W, rmaxdefault = rmax.rule("G", win, lamJ)))
+                                         spatstat.geom::handle.r.b.args(r_range, NULL, W, 
+                                                                        rmaxdefault = spatstat.explore::rmax.rule("G", win, lamJ)))
         G_cross_df = cbind(G_cross_df, `Observed G` = result$rs)
         #permutations
         G_cross_df2 = lapply(seq(1:num_permutations), function(perm_num){
@@ -177,7 +182,8 @@ bi_NN_G = function(mif,
           obs_d = (obs_nnd <= obs_bdry)
           o <- pmin.int(obs_nnd, obs_bdry)
           result = spatstat.explore::km.rs(o, obs_bdry, obs_d,
-                                           spatstat.geom::handle.r.b.args(r_range, NULL, W, rmaxdefault = rmax.rule("G", win, lamJ)))
+                                           spatstat.geom::handle.r.b.args(r_range, NULL, W, 
+                                                                          rmaxdefault = spatstat.explore::rmax.rule("G", win, lamJ)))
           
           data.frame(r = r_range,
                      `Permuted G` = result$rs,
