@@ -147,7 +147,7 @@ plot_immunoflo <- function(
       ggplot2::scale_y_reverse()
     return(basic_plot)
     
-  })
+  }, mc.cores = 1)
   
   # output to pdf if filename is specified 
   if(!is.null(filename)){
