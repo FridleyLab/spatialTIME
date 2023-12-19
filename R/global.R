@@ -5,4 +5,8 @@ utils::globalVariables(c("r", "label", "Marker", "theo", "Positive", "anchor",
                          "Observed G", "Observed K", "Observed", ":=", ".", "is", 
                          'Exact CSR', 'Label', 'Var3', 'across', 'areapp', 
                          'bind_rows', 'dist', 'distinct', 'mutate',
-                         'relocate', 'rename', 'select', 'un'))
+                         'relocate', 'rename', 'select', 'un', '.data',
+                         '    Obs.Count', 'Anchor', 'Counted', 'Direction', 'From', 'Na', 'Naa', 'Nab', 'Nb', 'Nba', 'Nbb',
+                         'Observed Interaction', 'Observed g', 'Permuted Interaction', 'Permuted g',
+                         'Permuted_larger_than_Observed', 'Range', 'Run', 'Theoretical G', 'To', 'W', 'cell',
+                         'marker', 'marks', 'indicator'))

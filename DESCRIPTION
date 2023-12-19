@@ -31,8 +31,6 @@ Imports:
     scales,
     grDevices,
     purrr,
-    rlang,
-    plyr,
     spatstat.geom,
     spatstat.explore,
     RColorBrewer,
@@ -41,9 +39,12 @@ Imports:
     tidyselect,
     crayon,
     pbmcapply,
-    dixon
+    dixon,
+    tibble,
+    stringr
 Suggests: 
     knitr,
+    devtools,
     rmarkdown,
     testthat (>= 3.0.0),
     gridExtra,
@@ -55,7 +56,7 @@ NeedsCompilation: no
 Packaged: 2021-08-19 22:31:18 UTC; 4468179
 Config/testthat/edition: 3
 RoxygenNote: 7.2.3
-Depends: 
+Depends:
     R (>= 2.10)
 LazyData: true
 Encoding: UTF-8

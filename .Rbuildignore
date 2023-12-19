@@ -15,3 +15,8 @@
 ^man/simulate_mif\.Rd$
 ^NAMESPACE_bkup
 ^bugs
+^doc$
+^Meta$
+^docs$
+^R_dev$
+^pkgdown$
