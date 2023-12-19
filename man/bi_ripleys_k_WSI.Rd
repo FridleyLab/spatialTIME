@@ -27,7 +27,7 @@ bi_ripleys_k_WSI(
 
 \item{r_range}{vector range of radii to calculate co-localization *K*}
 
-\item{edge_correction}{character edge_correction method, one of "translation", "border", "or none"}
+\item{edge_correction}{character edge_correction method, one of "translation", or none"}
 
 \item{num_permutations}{integer number of permutations to estimate CSR}
 
@@ -77,7 +77,7 @@ x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\%
 mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-x2 = bi_ripleys_k(mif = x, mnames = mnames_good[1:2], 
+x2 = bi_ripleys_k_WSI(mif = x, mnames = mnames_good[1:2], 
                    r_range = 0:100, edge_correction = "none", permute = FALSE,
                    num_permutations = 50, keep_permutation_distribution = FALSE, 
                    workers = 1, big = 1000)

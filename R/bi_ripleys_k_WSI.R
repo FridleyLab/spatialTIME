@@ -45,7 +45,7 @@
 #' mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
 #'                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
 #'                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-#' x2 = bi_ripleys_k(mif = x, mnames = mnames_good[1:2], 
+#' x2 = bi_ripleys_k_WSI(mif = x, mnames = mnames_good[1:2], 
 #'                    r_range = 0:100, edge_correction = "none", permute = FALSE,
 #'                    num_permutations = 50, keep_permutation_distribution = FALSE, 
 #'                    workers = 1, big = 1000)
