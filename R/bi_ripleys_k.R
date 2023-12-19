@@ -9,10 +9,8 @@
 #' @param keep_permutation_distribution boolean as to whether to summarise permutations to mean
 #' @param overwrite boolean as to whether to replace existing bivariate_Count if exists
 #' @param workers integer number of CPU workers to use
-#' @param big integer used as the threshold for subsetting large samples, default is 1000 either *i* or *j*
-#' @param nlarge number of cells in either *i* or *j* to flip to no edge correction - at small (relative to whole spatial region) *r* values differences in results between correction methods is negligible so running a few samples is recommended. Perhaps compute outweighs small differences in correction methods.
-#' @param xloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
-#' @param yloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
+#' @param xloc,yloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
+#' @param force logical whether or not to continue if sample has more than 10,000 cells
 #'
 #' @return mif object with bivariate Ripley's K calculated
 #' 
@@ -48,7 +46,7 @@
 #' x2 = bi_ripleys_k(mif = x, mnames = mnames_good[1:2], 
 #'                    r_range = 0:100, edge_correction = "none", permute = FALSE,
 #'                    num_permutations = 50, keep_permutation_distribution = FALSE, 
-#'                    workers = 1, big = 1000)
+#'                    workers = 1)
 bi_ripleys_k = function(mif,
                          mnames,
                          r_range = 0:100,
@@ -59,7 +57,7 @@ bi_ripleys_k = function(mif,
                          overwrite = TRUE,
                          workers = 6,
                          xloc = NULL,
-                         yloc = NULL){
+                         yloc = NULL, force = FALSE){
   Label = Anchor = Counted = `Exact CSR` = NULL
   #check whether the object assigned to mif is of class mif
   if(!inherits(mif, "mif")){
@@ -75,9 +73,10 @@ bi_ripleys_k = function(mif,
   }
   #check if user should be using wsi method
   if(any(sapply(mif$spatial, nrow) > 10000)){
-    message("Some samples have a large number of cells - bi_ripleys_k_WSI may be more appropriate.")
-    if(!askYesNo("Continue?")){
-      stop("Stopping - please use bi_ripleys_k_WSI for large samples")
+    if(!force){
+      stop("Some samples have a large number of cells - bi_ripleys_k_WSI may be more appropriate.")
+    } else {
+      message("Some samples have a large number of cells - bi_ripleys_k_WSI may be more appropriate.\nContinuing\n")
     }
   }
   #split mif into jobs for spatial files

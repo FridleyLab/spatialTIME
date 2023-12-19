@@ -15,7 +15,8 @@ bi_ripleys_k(
   overwrite = TRUE,
   workers = 6,
   xloc = NULL,
-  yloc = NULL
+  yloc = NULL,
+  force = FALSE
 )
 }
 \arguments{
@@ -37,13 +38,9 @@ bi_ripleys_k(
 
 \item{workers}{integer number of CPU workers to use}
 
-\item{xloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
+\item{xloc, yloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
 
-\item{yloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
-
-\item{big}{integer used as the threshold for subsetting large samples, default is 1000 either *i* or *j*}
-
-\item{nlarge}{number of cells in either *i* or *j* to flip to no edge correction - at small (relative to whole spatial region) *r* values differences in results between correction methods is negligible so running a few samples is recommended. Perhaps compute outweighs small differences in correction methods.}
+\item{force}{logical whether or not to continue if sample has more than 10,000 cells}
 }
 \value{
 mif object with bivariate Ripley's K calculated
@@ -78,5 +75,5 @@ mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
 x2 = bi_ripleys_k(mif = x, mnames = mnames_good[1:2], 
                    r_range = 0:100, edge_correction = "none", permute = FALSE,
                    num_permutations = 50, keep_permutation_distribution = FALSE, 
-                   workers = 1, big = 1000)
+                   workers = 1)
 }
