@@ -39,7 +39,7 @@ bi_pair_correlation(
 
 \item{yloc}{y location column in spatial files}
 
-\item{...}{other parameters to pass to `spatstat.explore::pcfcross`}
+\item{...}{other variables to pass to `[spatstat.explore::pcfcross]`}
 }
 \value{
 `mif` object with the bivariate_pair_correlation slot filled

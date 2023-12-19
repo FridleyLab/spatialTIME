@@ -10,7 +10,10 @@
 #' @param overwrite boolean for whether to overwrite existing bivariate pair correlation results
 #' @param xloc x location column in spatial files
 #' @param yloc y location column in spatial files
-#' @param ... other parameters to pass to `spatstat.explore::pcfcross`
+#' @param ... other variables to pass to `[spatstat.explore::pcfcross]`
+#' 
+#' @importFrom spatstat.explore match.kernel
+#' @importFrom spatstat.explore dkernel
 #'
 #' @return `mif` object with the bivariate_pair_correlation slot filled
 #' @export
@@ -67,7 +70,6 @@ bi_pair_correlation = function(mif,
     
     #over markers
     res = parallel::mclapply(1:nrow(mnames), function(marker){
-      require(spatstat.explore)
       #bivariate is pcfcross
       markers = unname(unlist(mnames[marker,])) %>% as.character()
       sample_ppp = spatstat.geom::ppp(spat$xloc, spat$yloc,
@@ -81,7 +83,7 @@ bi_pair_correlation = function(mif,
         } else {
           df = data.frame(From = markers[1], To = markers[2],
                      r = r_range) %>%
-            full_join(expand.grid(r = r_range,
+            dplyr::full_join(expand.grid(r = r_range,
                                   iter = seq(num_permutations)))
         }
         return(df)
