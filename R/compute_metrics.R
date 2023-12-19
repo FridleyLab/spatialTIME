@@ -194,7 +194,7 @@ compute_metrics = function(mif, mnames, r_range = seq(0, 100, 50),
     derived = lapply(derived2, function(tmp){
       tmp %>%
         dplyr::group_by(dplyr::across(dplyr::any_of(c(id, "Marker", "anchor", "counted", "r")))) %>%
-        dplyr::mutate(iter = 1:n(), .before = !!id)
+        dplyr::mutate(iter = 1:dplyr::n(), .before = !!id)
       
     })
   } else { #if not keep permutation, find mean of all runs
