@@ -58,7 +58,7 @@ NN_G = function(mif,
     } else {
       spat$yloc = spat[[yloc]]
     }
-    core = spat[1, mif$sample_id]
+    core = as.character(spat[1, mif$sample_id])
     spat = spat %>%
       dplyr::select(xloc, yloc, dplyr::any_of(mnames)) %>% 
       as.matrix()
