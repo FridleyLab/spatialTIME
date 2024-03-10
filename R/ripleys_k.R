@@ -4,7 +4,7 @@
 #' @param mnames cell phenotype markers to calculate Ripley's K for
 #' @param r_range radius range (including 0)
 #' @param num_permutations number of permutations to use to estimate CSR. If `keep_perm_dis` is set to FALSE, this will be ignored
-#' @param edge_correction edge correction method to pass to `Kest`. can take one of "translation", "isotropic", "none"
+#' @param edge_correction edge correction method to pass to `Kest`. can take one of "translation", "isotropic", "none", or 'border'
 #' @param method not used currently
 #' @param permute whether to use CSR estimate or use permutations to determine CSR
 #' @param keep_permutation_distribution whether to find mean of permutation distribution or each
@@ -136,33 +136,55 @@ ripleys_k = function(mif,
           return(d)
         }
         
-        edge_pos = edge[pos, pos]
-        counts = sapply(r_range, function(r) sum(edge_pos[which(dists[pos, pos] > 0 & dists[pos, pos] < r)]))
-        obs = (counts * area)/(length(pos)*(length(pos)-1))
-        theo = pi * r_range^2
-        
-        perms = parallel::mclapply(seq(num_permutations), function(x){
-          n_pos = sample(1:nrow(spat), length(pos), replace =FALSE)
-          edge_pos = edge[n_pos, n_pos]
-          counts = sapply(r_range, function(r) sum(edge_pos[which(dists[n_pos, n_pos] > 0 & dists[n_pos, n_pos] < r)]))
-          permed = (counts * area)/(length(pos)*(length(pos)-1))
+        if(edge_correction == "border"){
+          ppp = spatstat.geom::ppp(spat$xloc, spat$yloc, window = win, marks = as.factor(spat[[marker]]))
+          obs = spatstat.explore::Kest(subset(ppp, marks == 1), r = r_range, correction = 'border') %>%
+            data.frame(check.names = FALSE) %>% rename("Theoretical CSR" = 2, "Observed K" = 3)
+          perms = parallel::mclapply(seq(num_permutations), function(x){
+            pout = spatstat.explore::Kest(subset(ppp, sample(1:nrow(spat), sum(spat[[marker]]), replace = FALSE)), 
+                                   r = r_range, correction = 'border') %>%
+              data.frame(check.names = FALSE) %>%
+              mutate(iter = as.character(x), .before = 1)
+            return(data.frame(iter = pout$iter,
+                              r = pout$r,
+                              `Theoretical CSR` = pout$theo,
+                              `Permuted CSR` = pout$border,
+                              `Exact CSR` = NA,
+                              check.names = FALSE))
+          }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
+            do.call(dplyr::bind_rows, .)
+          final = dplyr::full_join(obs, perms, by = c("r", "Theoretical CSR"))
+          final$Marker = marker
+          final$Label = spat[1,1] #hard coded for example
+        } else {
+          edge_pos = edge[pos, pos]
+          counts = sapply(r_range, function(r) sum(edge_pos[which(dists[pos, pos] > 0 & dists[pos, pos] < r)]))
+          obs = (counts * area)/(length(pos)*(length(pos)-1))
           theo = pi * r_range^2
-          return(data.frame(iter = as.character(x),
-                            r = r_range,
-                            `Theoretical CSR` = theo,
-                            `Permuted CSR` = permed,
-                            `Exact CSR` = NA,
-                            check.names = FALSE))
-        }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
-          do.call(dplyr::bind_rows, .)
-        final = dplyr::full_join(data.frame(r = r_range,
-                                            `Theoretical CSR` = theo,
-                                            `Observed K` = obs,
-                                            check.names = FALSE),
-                                 perms, by = c("r", "Theoretical CSR"))
-        final$Marker = marker
-        final$Label = spat[1,1] #hard coded for example
-        final[,c(4,8, 7, 1,2,3,5,6)]
+          
+          perms = parallel::mclapply(seq(num_permutations), function(x){
+            n_pos = sample(1:nrow(spat), length(pos), replace =FALSE)
+            edge_pos = edge[n_pos, n_pos]
+            counts = sapply(r_range, function(r) sum(edge_pos[which(dists[n_pos, n_pos] > 0 & dists[n_pos, n_pos] < r)]))
+            permed = (counts * area)/(length(pos)*(length(pos)-1))
+            theo = pi * r_range^2
+            return(data.frame(iter = as.character(x),
+                              r = r_range,
+                              `Theoretical CSR` = theo,
+                              `Permuted CSR` = permed,
+                              `Exact CSR` = NA,
+                              check.names = FALSE))
+          }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
+            do.call(dplyr::bind_rows, .)
+          final = dplyr::full_join(data.frame(r = r_range,
+                                              `Theoretical CSR` = theo,
+                                              `Observed K` = obs,
+                                              check.names = FALSE),
+                                   perms, by = c("r", "Theoretical CSR"))
+          final$Marker = marker
+          final$Label = spat[1,1] #hard coded for example
+        }
+        return(final[,c(4,8, 7, 1,2,3,5,6)])
       }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>% #collapse all markers for spat
         do.call(dplyr::bind_rows, .) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
