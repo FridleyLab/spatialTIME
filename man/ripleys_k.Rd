@@ -29,7 +29,7 @@ ripleys_k(
 
 \item{num_permutations}{number of permutations to use to estimate CSR. If `keep_perm_dis` is set to FALSE, this will be ignored}
 
-\item{edge_correction}{edge correction method to pass to `Kest`. can take one of "translation", "isotropic", "none"}
+\item{edge_correction}{edge correction method to pass to `Kest`. can take one of "translation", "isotropic", "none", or 'border'}
 
 \item{method}{not used currently}
 

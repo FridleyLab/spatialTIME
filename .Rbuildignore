@@ -20,3 +20,4 @@
 ^docs$
 ^R_dev$
 ^pkgdown$
+^vignettes/deriving_functions.Rmd
