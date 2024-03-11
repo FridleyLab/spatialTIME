@@ -159,7 +159,7 @@ The distribution of the nearest neighbor distances, $\hat{G}(r)$, can be studied
 
 $$\hat{G}(r) = \frac{1}{n}\sum_{i=1}^{n}{\bf 1}(\min_{j}(\{d(x_i,x_j)\}\le r),$$
 
-which is interpreted as the proportion of cells whose distance to its nearest neighbor is less than $r$. Notice that there is not a weighting factor for each pair of points as we saw above. The edge correction in these methods, reduced sample (`rs`) and Hanisch (`han`), simply have different cell inclusion conditions. The reduced sample correction is similar to the border correction for count based methods, where the middle chunk of the area of interest is studied. The Hanisch border correction leaves out points whose $k^{th}$ neighbor can not be in the area of interest. For more information about these border corrections, see the following [article](https://www.routledgehandbooks.com/pdf/doi/10.1201/b16195-4).
+which is interpreted as the proportion of cells whose distance to its nearest neighbor is less than $r$. Notice that there is not a weighting factor for each pair of points as we saw above. The edge correction in these methods, reduced sample (`rs`) and Hanisch (`han`), simply have different cell inclusion conditions. The reduced sample correction is similar to the border correction for count based methods, where the middle chunk of the area of interest is studied. The Hanisch border correction leaves out points whose $k^{th}$ neighbor can not be in the area of interest. For more information about these border corrections, see the following [article](https://www.taylorfrancis.com/books/mono/10.1201/b16195).
 
 ## Need for Permutations
 
