@@ -2,6 +2,8 @@
 <!-- badges: start -->
 
 [![tic](https://github.com/fridleylab/spatialTIME/workflows/tic/badge.svg?branch=master)](https://github.com/fridleylab/spatialTIME/actions)
+https://www.r-pkg.org/badges/version-ago/{package}
+[![](http://cranlogs.r-pkg.org/badges/spatialTIME)](https://cran.rstudio.com/web/packages/refund/index.html)
 <!-- badges: end -->
 
 # spatialTIME <img src="man/figures/logo.png" align="right" width="120" />
