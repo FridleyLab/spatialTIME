@@ -276,7 +276,7 @@ ripleys_k = function(mif,
               dists[dists == 0 | dists > max(r_range)] = NA
             
               if(edge_correction == "none"){
-                counts = cumsum(spatstat.geom::whist(dists, 
+                counts = cumsum(spatstat.univar::whist(dists, 
                                                      spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
               } else {            
                 
