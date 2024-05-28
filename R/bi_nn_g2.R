@@ -166,9 +166,9 @@ bi_NN_G = function(mif,
       } else if(edge_correction == "rs"){
         #for edge correction rs
         o <- pmin.int(obs_nnd, obs_bdry)
-        result = spatstat.explore::km.rs(o, obs_bdry, obs_d,
-                                         spatstat.geom::handle.r.b.args(r_range, NULL, W, 
-                                                                        rmaxdefault = spatstat.explore::rmax.rule("G", win, lamJ)))
+        result = spatstat.univar::km.rs(o, obs_bdry, obs_d,
+                                        spatstat.geom::handle.r.b.args(r_range, NULL, W, 
+                                                                       rmaxdefault = spatstat.explore::rmax.rule("G", win, lamJ)))
         G_cross_df = cbind(G_cross_df, `Observed G` = result$rs)
         #permutations
         G_cross_df2 = lapply(seq(1:num_permutations), function(perm_num){
@@ -181,9 +181,9 @@ bi_NN_G = function(mif,
                                                                     window = win))
           obs_d = (obs_nnd <= obs_bdry)
           o <- pmin.int(obs_nnd, obs_bdry)
-          result = spatstat.explore::km.rs(o, obs_bdry, obs_d,
-                                           spatstat.geom::handle.r.b.args(r_range, NULL, W, 
-                                                                          rmaxdefault = spatstat.explore::rmax.rule("G", win, lamJ)))
+          result = spatstat.univar::km.rs(o, obs_bdry, obs_d,
+                                          spatstat.geom::handle.r.b.args(r_range, NULL, W, 
+                                                                         rmaxdefault = spatstat.explore::rmax.rule("G", win, lamJ)))
           
           data.frame(r = r_range,
                      `Permuted G` = result$rs,

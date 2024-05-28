@@ -749,7 +749,7 @@ calculateK = function(i_dat, j_dat, anchor, counted, area, win, big, r_range, ed
           return(counts)
         }
         if(edge_correction %in% c("none")){
-          counts = cumsum(spatstat.geom::whist(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
+          counts = cumsum(spatstat.univar::whist(spatstat.geom::crosspairs(i_tmp, j_tmp, max(r_range), what = "ijd")$d,
                                                spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
           return(counts)
         }
