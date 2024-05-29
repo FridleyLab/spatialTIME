@@ -1,7 +1,7 @@
 <!-- badges: start -->
-[![](http://cranlogs.r-pkg.org/badges/spatialTIME)](https://cran.rstudio.com/web/packages/spatialTIME/index.html)
-[![](http://cranlogs.r-pkg.org/badges/grand-total/spatialTIME)](https://cran.rstudio.com/web/packages/spatialTIME/index.html)
-[![](http://www.r-pkg.org/badges/version-ago/spatialTIME)](https://cran.rstudio.com/web/packages/spatialTIME/index.html)
+[![](http://cranlogs.r-pkg.org/badges/spatialTIME)](https://CRAN.R-project.org/package=spatialTIME)
+[![](http://cranlogs.r-pkg.org/badges/grand-total/spatialTIME)](https://CRAN.R-project.org/package=spatialTIME)
+[![](http://www.r-pkg.org/badges/version-ago/spatialTIME)](https://CRAN.R-project.org/package=spatialTIME)
 <!-- badges: end -->
 
 <!--

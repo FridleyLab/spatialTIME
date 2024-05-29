@@ -41,15 +41,15 @@ create_mif <- function(clinical_data, sample_data, spatial_list = NULL,
   sample_data_clean <- sample_data %>% 
     dplyr::full_join(clinical_data %>% 
                 dplyr::select(!!patient_id), by = patient_id) %>% 
-    dplyr::select(!!patient_id, !!sample_id, dplyr::everything())
+    dplyr::select(dplyr::all_of(c(!!patient_id, !!sample_id)), dplyr::everything()) %>% 
+    dplyr::group_by_at(patient_id) %>% 
+    dplyr::mutate(sample_string = paste0(!!(as.name(sample_id)), collapse = "|")) %>% 
+    dplyr::select(dplyr::all_of(c(!!patient_id, 'sample_string'))) %>% 
+    dplyr::slice(1)
   
   clinical_data_clean <- clinical_data %>% 
-    dplyr::full_join(sample_data %>% 
-                dplyr::group_by_at(dplyr::vars(patient_id)) %>% 
-                dplyr::mutate(sample_string = paste0(!!(as.name(sample_id)), collapse = "|")) %>% 
-                dplyr::select(!!patient_id, .data$sample_string) %>% 
-                dplyr::slice(1), by = patient_id) %>%
-    dplyr::select(!!patient_id, .data$sample_string, dplyr::everything())
+    dplyr::full_join(sample_data_clean, by = patient_id) %>%
+    dplyr::select(dplyr::all_of(c(!!patient_id, 'sample_string')), dplyr::all_of(dplyr::everything()))
   
   
   if(!is.null(spatial_list) & is.null(names(spatial_list))){
