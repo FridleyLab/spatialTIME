@@ -12,9 +12,6 @@
 #' @param yloc y location column in spatial files
 #' @param ... other variables to pass to `[spatstat.explore::pcfcross]`
 #' 
-#' @importFrom spatstat.explore match.kernel
-#' @importFrom spatstat.explore dkernel
-#'
 #' @return `mif` object with the bivariate_pair_correlation slot filled
 #' @export
 #'
