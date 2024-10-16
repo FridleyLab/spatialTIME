@@ -14,8 +14,7 @@ bi_pair_correlation(
   workers = 1,
   overwrite = FALSE,
   xloc = NULL,
-  yloc = NULL,
-  ...
+  yloc = NULL
 )
 }
 \arguments{
@@ -38,8 +37,6 @@ bi_pair_correlation(
 \item{xloc}{x location column in spatial files}
 
 \item{yloc}{y location column in spatial files}
-
-\item{...}{other variables to pass to `[spatstat.explore::pcfcross]`}
 }
 \value{
 `mif` object with the bivariate_pair_correlation slot filled

@@ -17,7 +17,7 @@
       </button>
       <span class="navbar-brand">
         <a class="navbar-link" href="../index.html">spatialTIME</a>
-        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.3.4-1</span>
+        <span class="version label label-default" data-toggle="tooltip" data-placement="bottom" title="">1.4.0</span>
       </span>
     </div>
 
@@ -128,16 +128,19 @@
 <span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>deidentified_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">deidentified_id</span><span class="op">)</span><span class="op">)</span>,</span></span>
 <span class="r-in"><span>  sample_data <span class="op">=</span> <span class="fu">spatialTIME</span><span class="fu">::</span><span class="va"><a href="example_summary.html">example_summary</a></span> <span class="op"><a href="pipe.html">%&gt;%</a></span> </span></span>
 <span class="r-in"><span>  <span class="fu">dplyr</span><span class="fu">::</span><span class="fu"><a href="https://dplyr.tidyverse.org/reference/mutate.html" class="external-link">mutate</a></span><span class="op">(</span>deidentified_id <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/character.html" class="external-link">as.character</a></span><span class="op">(</span><span class="va">deidentified_id</span><span class="op">)</span><span class="op">)</span>,</span></span>
-<span class="r-in"><span>  spatial_list <span class="op">=</span> <span class="fu">spatialTIME</span><span class="fu">::</span><span class="va"><a href="example_spatial.html">example_spatial</a></span>,</span></span>
+<span class="r-in"><span>  spatial_list <span class="op">=</span> <span class="fu">spatialTIME</span><span class="fu">::</span><span class="va"><a href="example_spatial.html">example_spatial</a></span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>,</span></span>
 <span class="r-in"><span>  patient_id <span class="op">=</span> <span class="st">"deidentified_id"</span>, </span></span>
 <span class="r-in"><span>  sample_id <span class="op">=</span> <span class="st">"deidentified_sample"</span><span class="op">)</span></span></span>
 <span class="r-in"><span>    </span></span>
 <span class="r-in"><span><span class="va">mnames_good</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"CD3..Opal.570..Positive"</span>,<span class="st">"CD8..Opal.520..Positive"</span>,</span></span>
 <span class="r-in"><span>  <span class="st">"FOXP3..Opal.620..Positive"</span>,<span class="st">"PDL1..Opal.540..Positive"</span>,</span></span>
 <span class="r-in"><span>  <span class="st">"PD1..Opal.650..Positive"</span>,<span class="st">"CD3..CD8."</span>,<span class="st">"CD3..FOXP3."</span><span class="op">)</span></span></span>
-<span class="r-in"><span>  </span></span>
-<span class="r-in"><span><span class="va">x2</span> <span class="op">=</span> <span class="fu">bi_NN_G</span><span class="op">(</span>mif <span class="op">=</span> <span class="va">x</span>, mnames <span class="op">=</span> <span class="va">mnames_good</span>, r_range <span class="op">=</span> <span class="fl">0</span><span class="op">:</span><span class="fl">100</span>, num_permutations <span class="op">=</span> <span class="fl">25</span>, edge_correction <span class="op">=</span> <span class="st">"rs"</span>, keep_perm_dis <span class="op">=</span> <span class="cn">FALSE</span>, workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
-<span class="r-out co"><span class="r-pr">#&gt;</span>   |                                                              |   0%, ETA NA  |============                                               |  20%, ETA 00:46  |========================                                   |  40%, ETA 00:31  |===================================                        |  60%, ETA 00:17  |===============================================            |  80%, ETA 00:08  |=======================================================| 100%, Elapsed 00:42</span>
+<span class="r-in"><span><span class="kw">if</span> <span class="op">(</span><span class="cn">FALSE</span><span class="op">)</span> <span class="op">{</span></span></span>
+<span class="r-in"><span><span class="va">x2</span> <span class="op">=</span> <span class="fu">bi_NN_G</span><span class="op">(</span>mif <span class="op">=</span> <span class="va">x</span>, mnames <span class="op">=</span> <span class="va">mnames_good</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">2</span><span class="op">]</span>, </span></span>
+<span class="r-in"><span>      r_range <span class="op">=</span> <span class="fl">0</span><span class="op">:</span><span class="fl">100</span>, num_permutations <span class="op">=</span> <span class="fl">10</span>, </span></span>
+<span class="r-in"><span>      edge_correction <span class="op">=</span> <span class="st">"rs"</span>, keep_perm_dis <span class="op">=</span> <span class="cn">FALSE</span>, </span></span>
+<span class="r-in"><span>      workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></span>
+<span class="r-in"><span><span class="op">}</span></span></span>
 <span class="r-in"><span></span></span>
 </code></pre></div>
     </div>

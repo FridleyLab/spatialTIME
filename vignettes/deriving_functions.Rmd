@@ -199,3 +199,20 @@ mif$derived$Dixon_Z %>%
     facet_grid(~From)
 ```
 
+## Marker Frequency Difference
+
+```{r}
+mif = marker_freq_diff(mif = mif,
+                       classifier = "Classifier.Label",
+                       ref_level = "Tumor", 
+                       diff_level = "Stroma",
+                       mnames = c("CD3..FOXP3.", "CD3..CD8.", "CD3..PD1.", "CD3..PD.L1.",
+                                  "CD3..Opal.570..Positive", "PD1..Opal.650..Positive"),
+                       overwrite = TRUE)
+mif$derived$frequency_difference %>% 
+    ggplot() + 
+    geom_point(aes(x = `Tumor_M_Stroma CD3..CD8.`, y = `Tumor_M_Stroma CD3..FOXP3.`, color = deidentified_sample)) +
+    coord_equal() +
+    geom_abline(slope = 1, intercept = 0, color = "red")
+```
+
