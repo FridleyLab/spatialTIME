@@ -68,19 +68,16 @@ spatialTIME functions use a custom `mif` object which can be created using `crea
 We include one example of a clinical and sample dataset which have a total of 229 patients with one core. Out of those 229 samples, only 5 are included in our package.  
 
 ```{r, create}
-
 # Make sure the variable types are the same for deidentified_id and 
 # deidentified_sample in their corresponding datasets
-x <- create_mif(clinical_data = example_clinical %>% 
-                  mutate(deidentified_id = as.character(deidentified_id)),
-                sample_data = example_summary %>% 
-                  mutate(deidentified_id = as.character(deidentified_id)),
-                spatial_list = example_spatial,
-                patient_id = "deidentified_id", 
-                sample_id = "deidentified_sample")
+mif <- create_mif(
+  clinical_data = janitor::clean_names(example_clinical),
+  sample_data = janitor::clean_names(example_summary),
+  spatial_list = lapply(example_spatial, janitor::clean_names),
+  patient_id = "deidentified_id",
+  sample_id = "deidentified_sample")
 
-x #prints a summary of how many patients, samples, and spatial files are present
-
+mif #prints a summary of how many patients, samples, and spatial files are present
 ```
 
 
@@ -93,21 +90,28 @@ slot and printed to a PDF if a file name is provided.
 When studying phenotype and individual markers, note that it is important to have the individual before the phenotype markers. This will ensure that the phenotype that are derived by multiple markers are not plotted over by the individual marker. For instance, below the the first plot appears to have no cytotoxic T cells (CD3+ and CD8+), but then the order is changed we see the cytotoxic T cells. Moral of the story: Put the marker combinations before the single markers.
 
 ```{r, plot_bad, fig.width=14, fig.height=6,fig.align = 'left', fig.cap='Notice that using the "bad" (B) order that one would have the impression that there is a huge number of CD3+ and there are no cells that are CD3+ FOXP3+ or CD3+ CD8+. While the "good" (G) order can  better make this distiction as well as show cells that are only positive for CD3 and not postive for FOXP3 or CD8.'}
-mnames_bad <- c("CD3..CD8.","CD3..FOXP3.","CD3..Opal.570..Positive",
-                "CD8..Opal.520..Positive","FOXP3..Opal.620..Positive", 
-                "PDL1..Opal.540..Positive", "PD1..Opal.650..Positive")
+mnames_bad <- c("cd3_cd8.","cd3_foxp3.","cd3_opal_570_positive",
+                "cd8_opal_520_positive","foxp3_opal_620_positive", 
+                "pdl1_opal_540_positive", "pd1_opal_650_positive")
 
 # Used to make the legends in both plots below be in same order and use the 
 # same coloring scheme for the purpose making a common legend
 
-values =  RColorBrewer::brewer.pal(length(mnames_bad), "Accent")
-names(values) = mnames_bad
+values <-  RColorBrewer::brewer.pal(length(mnames_bad), "Accent")
+names(values) <- mnames_bad
 
-#add an element in the `derived` object position
-x<- plot_immunoflo(x, plot_title = "deidentified_sample",  mnames = mnames_bad,
+# add an element in the `derived` object position
+mif <- plot_immunoflo(mif, 
+                       plot_title = "deidentified_sample",  
+                       mnames = mnames_bad,
                    cell_type = "Classifier.Label")
 
-bad_names <- x[["derived"]][["spatial_plots"]][[4]] + 
+mif[["derived"]][["spatial_plots"]][[1]]
+```
+
+
+```{r}
+bad_names <- plot[["derived"]][["spatial_plots"]][[4]] + 
   theme(legend.position = 'bottom') + 
   scale_color_manual(breaks = mnames_bad,
                      values = values,
@@ -120,10 +124,12 @@ mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
 
-x <- plot_immunoflo(x, plot_title = "deidentified_sample", mnames = mnames_good, 
-                    cell_type = "Classifier.Label")
+plot <- plot_immunoflo(mif, 
+                       plot_title = "deidentified_sample", 
+                       mnames = mnames_good, 
+                       cell_type = "Classifier.Label")
 
-good_names <- x[["derived"]][["spatial_plots"]][[4]] + 
+good_names <- plot[["derived"]][["spatial_plots"]][[4]] + 
   theme(legend.position = 'bottom') + 
   scale_color_manual(breaks = mnames_good, 
                      values = values[match(mnames_good, names(values))],
@@ -132,13 +138,16 @@ good_names <- x[["derived"]][["spatial_plots"]][[4]] +
                        gsub("\\.\\.", "+", .) %>% 
                        gsub("\\.", "+", .))
 
-x$sample %>% filter(deidentified_sample == 'TMA3_[9,K].tif') %>% select(c(2, 4:15)) %>%
+mif$sample %>% 
+  filter(deidentified_sample == 'TMA3_[9,K].tif') %>% 
+  select(c(2, 4:15)) %>%
   pivot_longer(cols = 2:13, names_to = 'Marker', values_to = 'Count')
 ```
 
 ```{r}
 gridExtra::grid.arrange(bad_names, good_names, ncol=2)
 ```
+
 # Estimating the degree of spatial clustering with Count Based Methods
 
 ## Univariate

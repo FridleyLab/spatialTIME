@@ -142,12 +142,14 @@ create_mif <- function(clinical_data,
 #' if (!("VectraPolarisData" %in% installed.packages())) {
 #'  BiocManager::install("VectraPolarisData")
 #' }
+#' # Ovarian cancer example
 #' ovarian <- VectraPolarisData::HumanOvarianCancerVP()
 #' 
 #' ova_mif <- spatial_exp_to_mif(spatial_exp = ovarian, 
 #'                               patient_id = "sample_id", 
 #'                               markers = c("phenotype_cd68", "phenotype_cd3", "phenotype_cd8"))
 #'
+#' # Lung cancer example
 #' spe_lung <- VectraPolarisData::HumanLungCancerV3()
 #' 
 #' 

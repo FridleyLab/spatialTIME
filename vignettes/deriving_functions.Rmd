@@ -20,10 +20,8 @@ knitr::opts_chunk$set(
 library(dplyr)
 library(ggplot2)
 devtools::load_all()
-mif = create_mif(clinical_data = example_clinical %>% 
-                   mutate(deidentified_id = as.character(deidentified_id)),
-                 sample_data = example_summary %>% 
-                   mutate(deidentified_id = as.character(deidentified_id)),
+mif = create_mif(clinical_data = example_clinical,
+                 sample_data = example_summary,
                  spatial_list = example_spatial,
                  patient_id = "deidentified_id", 
                  sample_id = "deidentified_sample")

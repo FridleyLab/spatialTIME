@@ -1,0 +1,310 @@
+---
+title: "Using SpatialExperiment Objects"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{spatialexperiment}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+```{r setup}
+library(spatialTIME)
+```
+
+Multiplex single-cell imaging datasets
+
+We'll be using data from the [VectraPolarisData Bioconductor package](https://www.bioconductor.org/packages/release/data/experiment/vignettes/VectraPolarisData/inst/doc/VectraPolarisData.html) (Wrobel, J and Ghosh, T, 2022). This provides two datasets from the Vectra Polaris imaging system in the form of SpatialExperiment objects. [See this vignette for more details](http://juliawrobel.com/MI_tutorial/MI_VectraPolarisData.html).
+
+```{r}
+if (!("VectraPolarisData" %in% installed.packages())) {
+  BiocManager::install("VectraPolarisData")
+}
+```
+
+## About the data 
+
+In this example we will be using data from a [human ovarian cancer study](https://pubmed.ncbi.nlm.nih.gov/34615692/) (Steinhart et al, 2021). 
+
+```{r}
+# Ovarian cancer example
+ovarian <- VectraPolarisData::HumanOvarianCancerVP()
+```
+
+For more details on the `SpatialExperiment` class see this [Bioconductor Vignette](https://www.bioconductor.org/packages/release/bioc/vignettes/SpatialExperiment/inst/doc/SpatialExperiment.html) and [preprint](https://www.biorxiv.org/content/10.1101/2021.01.27.428431v3).
+
+We can inspect what this type of object looks like typically:
+
+```{r}
+ovarian
+```
+
+The `colData` entry has a lot of our marker information as well as other annotation. Let's specifically look at the `sample_id` and some of the markers we will be using.
+
+This is how we look at the colData in this set. 
+
+```{r}
+colData(ovarian)
+```
+
+We can look at the sample IDs doing this. 
+
+```{r}
+# this is how we can extract sample IDs
+head(ovarian$sample_id)
+```
+
+There are also marker columns we will need for plotting They all start with `phenotype_`
+
+```{r}
+head(ovarian$phenotype_cd19 )
+```
+
+Now to use these data with spatialTIME package for analyses we will need to convert it to the MIF (multiplex immunofluorescence) format. For SpatialExperiment objects specifically we can do this using the `spatial_exp_to_mif()` function. For all other types of data you can use the `create_mif()` function. 
+
+There are three required arguments in this function to create our mif object. 
+1) we need to provide the SpatialExperiment object we are using. 
+2) We need to indicate what the name of the column is that links the colData with the spatialCoord data. In this case it is call "sample_id"
+
+```{r}
+ova_mif <- spatial_exp_to_mif(
+  spatial_exp = ovarian,
+  patient_id = "sample_id",
+  markers = c("phenotype_cd68", "phenotype_cd3", "phenotype_cd8")
+)
+```
+
+## Plot it 
+
+```{r}
+ova_mif <- plot_immunoflo(ova_mif,
+  plot_title = "sample_id",
+  mnames = markers,
+  xloc = "x",
+  yloc = "y"
+)
+# view a sample
+ova_mif$derived$spatial_plots[[3]] +
+  coord_equal()
+```
+
+```{r}
+# do similar with ggplot
+ova_mif$spatial[[3]] %>% # select the same sample
+  mutate(Other = ifelse(rowSums(across(!!markers)) == 0, # if none of the markers are positive make "Other" 1 else 0
+    1,
+    0
+  )) %>%
+  select(x, y, tissue_category, !!markers, Other) %>% # select only needed columns
+  pivot_longer(c(!!markers, Other), # take cell-type columns and convert to one column
+    names_to = "Marker", # called "Marker"
+    values_to = "Positive"
+  ) %>% # and column contents a new columns called "Positive
+  filter(Positive == 1) %>% # select just values of 1 (less duplicates)
+  ggplot() + # prep plotting object
+  geom_point(
+    data = . %>%
+      filter(Marker == "Other"), # only plot the background 'other' cells
+    aes(
+      x = x, y = y, # with locations
+      shape = tissue_category
+    )
+  ) + # and shape of tissue
+  geom_point(
+    data = . %>%
+      filter(Marker != "Other"), # plot now positive cells
+    aes(
+      x = x, y = y, # with locations
+      shape = tissue_category, # tissue
+      color = Marker
+    )
+  ) + # and color by cell type (without other)
+  coord_equal() + # make x and y same scale
+  theme_classic() + # clean it up
+  scale_y_reverse() + # make same orientation as image (flipped)
+  ggplot2::scale_shape_manual(NULL,
+    values = c(3, 16),
+    drop = FALSE
+  ) # make the shapes the right shape
+```
+
+## Subset mIF to Single Compartment 
+
+```{r}
+# filter the mif object to be only the tumor compartment
+ova_mif_tumor <- subset_mif(ova_mif,
+  classifier = "tissue_category",
+  level = "Tumor",
+  markers = markers
+)
+# check a spatial data frame for levels in tissue_category
+ova_mif_tumor$spatial[[1]]$tissue_category %>% unique()
+```
+
+great, only cells in a tumor compartment
+summary of the samples has also been updated to reflect new compartment
+
+## Ripley's K 
+
+```{r}
+# takes time to process all samples
+ova_mif_tumor <- ripleys_k(ova_mif_tumor,
+  mnames = markers,
+  r_range = 0:100,
+  edge_correction = "translation", # translational edge correction
+  permute = FALSE, # allows for exact estimation of complete spatial ransomness, or CSR
+  workers = 1, # depending on number of spatial samples and ram, may cause crashes if overallocated
+  big = 50000, # really only needed (keep larger than largest spatial data) when computer has ram limitations otherwise would avoid, causes non-perfect estimation of CSR due to rounding
+  xloc = "x",
+  yloc = "y",
+  overwrite = TRUE
+)
+```
+
+plot phenotype_cd3 to view t cell clustering
+
+```{r}
+ova_mif_tumor$derived$univariate_Count %>%
+  filter(Marker == "phenotype_cd3") %>%
+  ggplot() +
+  geom_line(aes(x = r, y = `Degree of Clustering Exact`, group = sample_id),
+    alpha = 0.5
+  )
+```
+
+can see that most samples have a positive 'degree of clustering'
+meaning that the T cells in the most samples are clustering closer together than expected
+if they were randomly distributed around the samples. 
+we also see that there are 202 rows that have missing values, i.e. the spatial files didn't have enough positive cells for a marker
+
+## Nearest Neighbor G
+
+```{r}
+ova_mif_tumor <- NN_G(
+  mif = ova_mif_tumor,
+  mnames = markers,
+  r_range = 0:100,
+  num_permutations = 10, # NN G(r) requires permutations to estimate CSR
+  edge_correction = "rs", # reduced sampling edge correction
+  keep_perm_dis = FALSE, # whether to keep results from each permutation
+  workers = 1,
+  overwrite = TRUE,
+  xloc = "x",
+  yloc = "y"
+)
+# plot phenotype_cd3 to view t cell clusering
+ova_mif_tumor$derived$univariate_NN %>%
+  filter(Marker == "phenotype_cd3") %>%
+  ggplot() +
+  geom_line(aes(x = r, y = `Degree of Clustering Permutation`, group = sample_id),
+    alpha = 0.5
+  )
+```
+
+We can see NN G(r) is much more 'curvy' than Ripley's K
+values above 0 mean clustering more than expected if the T cells were random
+we also can vaguely see that there is a bit of a hill between 0 and 25, indicating tight clusters of CD3, 
+then outside of that they either fall to 0 or maintain their degree of clustering
+NN G(r) (observed) tells the proportion of T cells with a neighbor at or below a measured radius
+
+```{r}
+ova_mif_tumor$derived$univariate_NN %>%
+  filter(Marker == "phenotype_cd3") %>%
+  ggplot() +
+  geom_line(aes(x = r, y = `Observed G`, group = sample_id),
+    alpha = 0.5
+  )
+```
+
+By plotting the raw NN G(r) value, we see that it grows and approaches 1, at which point all T cells in the sample has another T cell within that radius. Or 75% of T cells have another T cell within whatever radius.
+The reason we take the difference between observed and permuted (Degree of Clustering Permutation) is to account for sample-specific technical artifacts like holes or even necrotic reagions that violate what Ripley's K and NN G assume of the sample this difference is then what we compare between samples
+
+## Picking a Radius - Ripley's K 
+
+unless diving into complicated statistics with functional data analysis (analysis of the entire shape of the RIpley's K or NN G curve)
+researchers have to pick a radius that they would like to associate with some feature of the samples like patient survival,
+stage, treatment response, or even disease subtypes
+
+best way found to do this is plot all curves for a marker and find a radius thats small enough to biologically meaningful while
+large enough to capture variance in the data
+plot phenotype_cd3 to view t cell clusering
+
+```{r}
+ova_mif_tumor$derived$univariate_Count %>%
+  filter(Marker == "phenotype_cd3") %>%
+  ggplot() +
+  geom_line(aes(x = r, y = `Degree of Clustering Exact`, group = sample_id),
+    alpha = 0.5
+  )
+```
+
+
+For this data, we might pick a radius of 50 pixels because after that most values don't drastically change, so we can subset and move forward.
+
+```{r}
+analysis_dat <- ova_mif_tumor$derived$univariate_Count %>%
+  filter(Marker == "phenotype_cd3", r == 50) %>% # filter ripley's k output to CD3 cells and radius of 50
+  full_join(
+    ova_mif_tumor$clinical, # merge with clinical (on left side)
+    .
+  ) # ripleys k on right
+head(analysis_dat)
+```
+
+## Performing Association with Survival
+
+For simplicity we can dichotomize the clustering values
+
+```{r}
+analysis_dat <- analysis_dat %>%
+  mutate(
+    cluster_group = ifelse(`Degree of Clustering Exact` >= median(`Degree of Clustering Exact`, na.rm = TRUE), # remembering that 2 samples didn't have enough T cells so remove NA
+      "High Clustering",
+      "Low Clustering"
+    ), # if above the median, high, else low
+    cluster_group = factor(cluster_group, levels = c("Low Clustering", "High Clustering"))
+  ) %>% # convert to factor to control reference
+  filter(!is.na(cluster_group)) # must remove extra rows that do not have clustering group
+# create formula with columns in analysis_data
+form1 <- formula(Surv(survival_time, as.numeric(death)) ~ age_at_diagnosis + stage + grade + cluster_group)
+# fit the model with the data
+model1 <- coxph(form1, data = analysis_dat)
+# view the fit
+summary(model1)
+```
+
+We see that stage 4 has moderately worse survival than stage 1 (reference) but not significant based on exp(coef)
+hazard ratio (exp[-coef]) = 7.75, 95% confidence interval (0.869, 69.116)
+we also see that high clustering has a moderately worse survival than the low clustering
+hazard ratio (exp[-coef]) = 1.55, 95% confidence interval (0.966, 2.482)
+
+We can also see whether or not adding the clustering to the model formula significantly improves the model fit to the data
+This must be done with a nested formula, i.e. removing or adding a column to the formula to assess impact of the addition or removal
+Here we just remove the clustering_group and fit another model
+Create formula with columns in analysis_data
+
+```{r}
+form2 <- formula(Surv(survival_time, as.numeric(death)) ~ age_at_diagnosis + stage + grade)
+# fit the model with the data
+model2 <- coxph(form2, data = analysis_dat)
+
+# to identify the significance, we can perform a likelihood ratio test
+lrt <- lrtest(
+  model2,
+  model1
+)
+lrt
+# doesn't appear that adding in the spatial information signficantly improves the survival model fit for the data
+```
+
+
+## Session info 
+```{r}
+sessionInfo()
+```
