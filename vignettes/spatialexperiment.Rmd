@@ -63,14 +63,15 @@ head(ovarian$sample_id)
 There are also marker columns we will need for plotting They all start with `phenotype_`
 
 ```{r}
-head(ovarian$phenotype_cd19 )
+head(ovarian$phenotype_cd19)
 ```
 
 Now to use these data with spatialTIME package for analyses we will need to convert it to the MIF (multiplex immunofluorescence) format. For SpatialExperiment objects specifically we can do this using the `spatial_exp_to_mif()` function. For all other types of data you can use the `create_mif()` function. 
 
 There are three required arguments in this function to create our mif object. 
-1) we need to provide the SpatialExperiment object we are using. 
-2) We need to indicate what the name of the column is that links the colData with the spatialCoord data. In this case it is call "sample_id"
+1) The `SpatialExperiment` object we are using. 
+2) The name of the column is that links the colData with the spatialCoord data. In this case it is call "sample_id".
+3) The names of the columns that contain any markers we'd like to use for the analysis.
 
 ```{r}
 ova_mif <- spatial_exp_to_mif(
