@@ -60,10 +60,16 @@ create_mif <- function(clinical_data,
      all(!sapply(names(spatial_list), is.null))
     )
 
+  clinical_data <- clinical_data %>%
+    dplyr::mutate(patient_id = as.character(!!(as.name(patient_id))))
+
+  sample_data <- sample_data %>%
+    dplyr::mutate(patient_id = as.character(!!(as.name(patient_id))))
+
   sample_data_clean <- sample_data %>%
     dplyr::full_join(clinical_data %>%
                 dplyr::select(!!patient_id), by = patient_id) %>%
-    dplyr::select(dplyr::all_of(c(!!patient_id, !!sample_id)), dplyr::everything()) %>%
+    dplyr::select(dplyr::all_of(c(patient_id, !!sample_id)), dplyr::everything()) %>%
     dplyr::group_by_at(patient_id) %>%
     dplyr::mutate(sample_string = paste0(!!(as.name(sample_id)), collapse = "|")) %>%
     dplyr::select(dplyr::all_of(c(!!patient_id, 'sample_string'))) %>%
@@ -236,12 +242,12 @@ spatial_exp_to_mif <- function(spatial_exp,
 
   # create summary by sample
   spat_summ <- spat_df %>%
-    group_by(sample_id) %>% # for each sample
-    summarise(across(any_of(markers), # across all markers
+    dplyr::group_by(sample_id) %>% # for each sample
+    dplyr::summarise(across(any_of(markers), # across all markers
                      ~ sum(.x), # count the number positive
                      .names = "{col} Cells"),
               `Total Cells` = n()) %>% # total number of cells in sample
-    mutate(across(contains(markers), # across all markers
+    dplyr::mutate(across(contains(markers), # across all markers
                   ~ .x / `Total Cells` * 100, #calculate percent of total
                   .names = "Percent {col} Cells"),
            .before = `Total Cells`) %>%
