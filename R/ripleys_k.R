@@ -130,7 +130,7 @@ ripleys_k = function(mif,
                          `Permuted CSR` = NA,
                          `Exact CSR` = NA,
                          check.names =FALSE)
-          d = dplyr::full_join(d, expand.grid(iter = as.character(seq(num_permutations)),
+          d = suppressMessages(dplyr::full_join(d, expand.grid(iter = as.character(seq(num_permutations))),
                                               r = r_range), by = "iter") %>%
             dplyr::mutate(`Theoretical CSR` = pi * r^2)
           return(d)
@@ -153,7 +153,7 @@ ripleys_k = function(mif,
                               check.names = FALSE))
           }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
             do.call(dplyr::bind_rows, .)
-          final = dplyr::full_join(obs, perms, by = c("r", "Theoretical CSR"))
+          final = suppressMessages(dplyr::full_join(obs, perms, by = c("r", "Theoretical CSR")))
           final$Marker = marker
           final$Label = spat[1,1] #hard coded for example
         } else {
@@ -176,11 +176,11 @@ ripleys_k = function(mif,
                               check.names = FALSE))
           }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
             do.call(dplyr::bind_rows, .)
-          final = dplyr::full_join(data.frame(r = r_range,
+          final = suppressMessages(dplyr::full_join(data.frame(r = r_range,
                                               `Theoretical CSR` = theo,
                                               `Observed K` = obs,
                                               check.names = FALSE),
-                                   perms, by = c("r", "Theoretical CSR"))
+                                   perms, by = c("r", "Theoretical CSR")))
           final$Marker = marker
           final$Label = spat[1,1] #hard coded for example
         }
@@ -217,8 +217,8 @@ ripleys_k = function(mif,
         }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
           do.call(dplyr::bind_rows, .) %>% 
           mutate(`Exact CSR` = NA)
-        K = dplyr::full_join(kobs, kperms,
-                             by = c("Label", "Marker", "r", "Theoretical CSR")) %>%
+        K = suppressMessages(dplyr::full_join(kobs, kperms,
+                             by = c("Label", "Marker", "r", "Theoretical CSR"))) %>%
           relocate(iter, .before = 1)
       }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
         do.call(dplyr::bind_rows, .) %>%
@@ -300,7 +300,7 @@ ripleys_k = function(mif,
                             `Exact CSR` = k, check.names = FALSE)
       }
       
-      res = dplyr::full_join(marker_res, k_est2) %>%
+      res = suppressMessages(dplyr::full_join(marker_res, k_est2)) %>%
         dplyr::mutate(iter = "Estimater", .before = 1) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = NA,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,

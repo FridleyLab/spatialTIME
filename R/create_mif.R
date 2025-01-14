@@ -59,13 +59,13 @@ create_mif <- function(clinical_data,
     "Each item in spatial_list must be named" =
      all(!sapply(names(spatial_list), is.null))
     )
-
+  
   clinical_data <- clinical_data %>%
     dplyr::mutate(patient_id = as.character(!!(as.name(patient_id))))
 
   sample_data <- sample_data %>%
     dplyr::mutate(patient_id = as.character(!!(as.name(patient_id))))
-
+    
   sample_data_clean <- sample_data %>%
     dplyr::full_join(clinical_data %>%
                 dplyr::select(!!patient_id), by = patient_id) %>%
@@ -145,14 +145,12 @@ create_mif <- function(clinical_data,
 #' if (!("VectraPolarisData" %in% installed.packages())) {
 #'  BiocManager::install("VectraPolarisData")
 #' }
-#' # Ovarian cancer example
 #' ovarian <- VectraPolarisData::HumanOvarianCancerVP()
 #'
 #' ova_mif <- spatial_exp_to_mif(spatial_exp = ovarian,
 #'                               patient_id = "sample_id",
 #'                               markers = c("phenotype_cd68", "phenotype_cd3", "phenotype_cd8"))
 #'
-#' # Lung cancer example
 #' spe_lung <- VectraPolarisData::HumanLungCancerV3()
 #'
 #'
@@ -244,12 +242,12 @@ spatial_exp_to_mif <- function(spatial_exp,
 
   # create summary by sample
   spat_summ <- spat_df %>%
-    dplyr::group_by(sample_id) %>% # for each sample
-    dplyr::summarise(across(any_of(markers), # across all markers
+    group_by(sample_id) %>% # for each sample
+    summarise(across(any_of(markers), # across all markers
                      ~ sum(.x), # count the number positive
                      .names = "{col} Cells"),
               `Total Cells` = n()) %>% # total number of cells in sample
-    dplyr::mutate(across(contains(markers), # across all markers
+    mutate(across(contains(markers), # across all markers
                   ~ .x / `Total Cells` * 100, #calculate percent of total
                   .names = "Percent {col} Cells"),
            .before = `Total Cells`) %>%
