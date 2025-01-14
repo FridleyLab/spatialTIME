@@ -26,6 +26,7 @@ We'll be using data from the [VectraPolarisData Bioconductor package](https://ww
 if (!("VectraPolarisData" %in% installed.packages())) {
   BiocManager::install("VectraPolarisData")
 }
+library(ggplot2)
 ```
 
 ## About the data 
