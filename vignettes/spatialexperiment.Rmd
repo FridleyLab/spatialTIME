@@ -25,7 +25,9 @@ We'll be using data from the [VectraPolarisData Bioconductor package](https://ww
 ```{r}
 if (!("VectraPolarisData" %in% installed.packages())) {
   BiocManager::install("VectraPolarisData")
+  
 }
+if(!require("survival", quietly = TRUE)) BiocManager::install("survival")
 library(ggplot2)
 ```
 
@@ -247,12 +249,11 @@ ova_mif_tumor$derived$univariate_Count %>%
 For this data, we might pick a radius of 50 pixels because after that most values don't drastically change, so we can subset and move forward.
 
 ```{r}
-analysis_dat <- ova_mif_tumor$derived$univariate_Count %>%
-  filter(Marker == "phenotype_cd3", r == 50) %>% # filter ripley's k output to CD3 cells and radius of 50
-  full_join(
-    ova_mif_tumor$clinical, # merge with clinical (on left side)
-    .
-  ) # ripleys k on right
+analysis_dat = ovarian_mif_tumor$derived$univariate_Count %>%
+  filter(Marker == 'phenotype_cd3', r == 50) %>% #filter ripley's k output to CD3 cells and radius of 50
+  full_join(ovarian_mif_tumor$clinical, #merge with clinical (on left side)
+            .)#ripleys k on right
+
 head(analysis_dat)
 ```
 
@@ -270,8 +271,15 @@ analysis_dat <- analysis_dat %>%
     cluster_group = factor(cluster_group, levels = c("Low Clustering", "High Clustering"))
   ) %>% # convert to factor to control reference
   filter(!is.na(cluster_group)) # must remove extra rows that do not have clustering group
-# create formula with columns in analysis_data
+```
+
+Create formula with columns in analysis_data.
+
+```{r}
 form1 <- formula(Surv(survival_time, as.numeric(death)) ~ age_at_diagnosis + stage + grade + cluster_group)
+```
+
+```{r}
 # fit the model with the data
 model1 <- coxph(form1, data = analysis_dat)
 # view the fit
