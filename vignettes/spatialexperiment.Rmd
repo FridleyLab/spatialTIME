@@ -25,9 +25,8 @@ We'll be using data from the [VectraPolarisData Bioconductor package](https://ww
 ```{r}
 if (!("VectraPolarisData" %in% installed.packages())) {
   BiocManager::install("VectraPolarisData")
-  
 }
-if(!require("survival", quietly = TRUE)) BiocManager::install("survival")
+if (!require("survival", quietly = TRUE)) BiocManager::install("survival")
 library(ggplot2)
 ```
 
@@ -77,8 +76,8 @@ There are three required arguments in this function to create our mif object.
 3) The names of the columns that contain any markers we'd like to use for the analysis that are included in the data as column names
 
 ```{r}
-# These are the genes we will be using as markers that exist in these data. 
-markers = c("phenotype_cd68", "phenotype_cd3", "phenotype_cd8")
+# These are the genes we will be using as markers that exist in these data.
+markers <- c("phenotype_cd68", "phenotype_cd3", "phenotype_cd8")
 ```
 
 Now we can pass all of this into the `spatial_exp_to_mif` function to create our `mif` object for use with `spatialTIME`.
@@ -111,7 +110,7 @@ ova_mif <- plot_immunoflo(ova_mif,
 We can view individual plots by pulling them out using the indexing notation. 
 Where `[[1]]` would be the first sample in the list and `[[3]]`, the third sample in the list, etc. 
 
-````{r}
+```{r}
 ova_mif$derived$spatial_plots[[3]] +
   ggplot2::coord_equal()
 ```
@@ -197,7 +196,6 @@ ova_mif_tumor <- NN_G(
   xloc = "x",
   yloc = "y"
 )
-
 ```
 
 Now let's plot `phenotype_cd3` again but with NNG results to view t-cell clustering.
@@ -249,17 +247,18 @@ ova_mif_tumor$derived$univariate_Count %>%
 For this data, we might pick a radius of 50 pixels because after that most values don't drastically change, so we can subset and move forward.
 
 ```{r}
-analysis_dat = ovarian_mif_tumor$derived$univariate_Count %>%
-  filter(Marker == 'phenotype_cd3', r == 50) %>% #filter ripley's k output to CD3 cells and radius of 50
-  full_join(ovarian_mif_tumor$clinical, #merge with clinical (on left side)
-            .)#ripleys k on right
+analysis_dat <- ova_mif_tumor$derived$univariate_Count %>%
+  filter(Marker == "phenotype_cd3", r == 50) %>% # filter ripley's k output to CD3 cells and radius of 50
+  full_join(
+    ova_mif_tumor$clinical, # merge with clinical (on left side)
+    ., by = c("patient_id" = "sample_id")) # ripleys k on right
 
 head(analysis_dat)
 ```
 
 ## Performing Association with Survival
 
-For simplicity we can dichotimize the clustering values
+For simplicity we can dichotimize the clustering values.
 
 ```{r}
 analysis_dat <- analysis_dat %>%
@@ -273,15 +272,22 @@ analysis_dat <- analysis_dat %>%
   filter(!is.na(cluster_group)) # must remove extra rows that do not have clustering group
 ```
 
-Create formula with columns in analysis_data.
+Create formula with columns in `analysis_data`.
 
 ```{r}
 form1 <- formula(Surv(survival_time, as.numeric(death)) ~ age_at_diagnosis + stage + grade + cluster_group)
 ```
 
+Now let's fit the model using Cox proportional hazards regression model using the `survival` package. 
+
 ```{r}
 # fit the model with the data
 model1 <- coxph(form1, data = analysis_dat)
+```
+
+We can take a look at the summary of this fitting. 
+
+```{r}
 # view the fit
 summary(model1)
 ```
@@ -300,16 +306,17 @@ Create formula with columns in analysis_data
 form2 <- formula(Surv(survival_time, as.numeric(death)) ~ age_at_diagnosis + stage + grade)
 ```
 
-Now we can fit the model with the data. 
+Now we can fit the model with the data in the same way as we did previously.
 
 ```{r}
 # fit the model with the data
 model2 <- coxph(form2, data = analysis_dat)
 ```
 
-To identify the significance, we can perform a likelihood ratio test
+To identify the significance, we can perform a likelihood ratio test. 
+
 ```{r}
-lrt <- lrtest(
+lrt <- lmtest::lrtest(
   model2,
   model1
 )
@@ -318,7 +325,7 @@ lrt <- lrtest(
 lrt
 ```
 
-It doesn't appear that adding in the spatial information signficantly improves the survival model fit for the data
+Based on this output, we can see probability between these two models is 0.07, so it doesn't appear that adding in the spatial information significantly improves the survival model fit for the data.
 
 ## Session info 
 
