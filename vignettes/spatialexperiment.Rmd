@@ -18,7 +18,7 @@ knitr::opts_chunk$set(
 library(spatialTIME)
 ```
 
-Multiplex single-cell imaging datasets
+## Multiplex single-cell imaging datasets
 
 We'll be using data from the [VectraPolarisData Bioconductor package](https://www.bioconductor.org/packages/release/data/experiment/vignettes/VectraPolarisData/inst/doc/VectraPolarisData.html) (Wrobel, J and Ghosh, T, 2022). This provides two datasets from the Vectra Polaris imaging system in the form of SpatialExperiment objects. [See this vignette for more details](http://juliawrobel.com/MI_tutorial/MI_VectraPolarisData.html).
 
@@ -144,9 +144,7 @@ Summary of the samples has also been updated to reflect new compartment.
 names(ova_mif_tumor$sample)
 ```
 
-
 ## Ripley's K 
-
 
 Now we can use Ripley's K stat to quantify our spatial clustering. 
 
