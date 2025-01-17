@@ -7,7 +7,7 @@ vignette: >
   %\VignetteEncoding{UTF-8}
 ---
 
-This is going to be a short vignette for the use of the functions used to derive spatial metrics. 
+This is going to be a short vignette for the use of the functions used to derive spatial metrics.
 
 ```{r, include = FALSE}
 knitr::opts_chunk$set(
@@ -20,16 +20,18 @@ knitr::opts_chunk$set(
 library(dplyr)
 library(ggplot2)
 devtools::load_all()
-mif = create_mif(clinical_data = example_clinical,
-                 sample_data = example_summary,
-                 spatial_list = example_spatial,
-                 patient_id = "deidentified_id", 
-                 sample_id = "deidentified_sample")
+mif <- create_mif(
+  clinical_data = example_clinical,
+  sample_data = example_summary,
+  spatial_list = example_spatial,
+  patient_id = "deidentified_id",
+  sample_id = "deidentified_sample"
+)
 
-markers = colnames(mif$spatial[[1]]) %>% 
-  grep("CD3|Pos", ., value = T) %>% 
+markers <- colnames(mif$spatial[[1]]) %>%
+  grep("CD3|Pos", ., value = T) %>%
   grep("Cyto|Nucle", ., value = T, invert = T)
-markers = markers[c(1,2,4,5,8)]
+markers <- markers[c(1, 2, 4, 5, 8)]
 ```
 
 ## Ripley's K
@@ -37,17 +39,19 @@ markers = markers[c(1,2,4,5,8)]
 ### Univariate
 
 ```{r}
-mif = ripleys_k(mif = mif,
-                mnames = markers[1:2], 
-                r_range = 0:100, 
-                num_permutations = 25,
-                edge_correction = 'translation', 
-                permute = TRUE, 
-                keep_permutation_distribution = FALSE, 
-                workers = 1, 
-                overwrite = TRUE, 
-                xloc = NULL, 
-                yloc = NULL)
+mif <- ripleys_k(
+  mif = mif,
+  mnames = markers[1:2],
+  r_range = 0:100,
+  num_permutations = 25,
+  edge_correction = "translation",
+  permute = TRUE,
+  keep_permutation_distribution = FALSE,
+  workers = 1,
+  overwrite = TRUE,
+  xloc = NULL,
+  yloc = NULL
+)
 mif$derived$univariate_Count %>%
   ggplot() +
   geom_line(aes(x = r, y = `Degree of Clustering Permutation`, color = deidentified_sample)) +
@@ -57,17 +61,19 @@ mif$derived$univariate_Count %>%
 ### Bivariate
 
 ```{r}
-mif = bi_ripleys_k(mif = mif, 
-                   mnames = markers[1:2],
-                   r_range = 0:100,
-                   num_permutations = 25,
-                   edge_correction = "translation",
-                   permute = TRUE,
-                   keep_permutation_distribution = FALSE,
-                   workers = 1, 
-                   overwrite = TRUE,
-                   xloc = NULL, 
-                   yloc = NULL)
+mif <- bi_ripleys_k(
+  mif = mif,
+  mnames = markers[1:2],
+  r_range = 0:100,
+  num_permutations = 25,
+  edge_correction = "translation",
+  permute = TRUE,
+  keep_permutation_distribution = FALSE,
+  workers = 1,
+  overwrite = TRUE,
+  xloc = NULL,
+  yloc = NULL
+)
 
 mif$derived$bivariate_Count %>%
   ggplot() +
@@ -80,16 +86,18 @@ mif$derived$bivariate_Count %>%
 ### Univariate
 
 ```{r}
-mif = NN_G(mif = mif, 
-           mnames = markers[1:2], 
-           r_range = 0:100, 
-           num_permutations = 25, 
-           edge_correction = "rs", 
-           keep_perm_dis = FALSE, 
-           workers = 1, 
-           overwrite = TRUE, 
-           xloc = NULL,
-           yloc = NULL)
+mif <- NN_G(
+  mif = mif,
+  mnames = markers[1:2],
+  r_range = 0:100,
+  num_permutations = 25,
+  edge_correction = "rs",
+  keep_perm_dis = FALSE,
+  workers = 1,
+  overwrite = TRUE,
+  xloc = NULL,
+  yloc = NULL
+)
 
 mif$derived$univariate_NN %>%
   ggplot() +
@@ -100,16 +108,18 @@ mif$derived$univariate_NN %>%
 ### Bivariate
 
 ```{r}
-mif = bi_NN_G(mif = mif, 
-           mnames = markers[1:2], 
-           r_range = 0:100, 
-           num_permutations = 25, 
-           edge_correction = "rs", 
-           keep_perm_dis = FALSE, 
-           workers = 1, 
-           overwrite = TRUE, 
-           xloc = NULL,
-           yloc = NULL)
+mif <- bi_NN_G(
+  mif = mif,
+  mnames = markers[1:2],
+  r_range = 0:100,
+  num_permutations = 25,
+  edge_correction = "rs",
+  keep_perm_dis = FALSE,
+  workers = 1,
+  overwrite = TRUE,
+  xloc = NULL,
+  yloc = NULL
+)
 
 mif$derived$bivariate_NN %>%
   ggplot() +
@@ -122,16 +132,18 @@ mif$derived$bivariate_NN %>%
 ### Univariate
 
 ```{r}
-mif = pair_correlation(mif = mif, 
-                       mnames = markers[1:2],
-                       r_range = 0:100, 
-                       num_permutations = 25, 
-                       edge_correction = "translation", 
-                       keep_permutation_distribution = FALSE, 
-                       workers = 1, 
-                       overwrite = TRUE, 
-                       xloc = NULL, 
-                       yloc = NULL)
+mif <- pair_correlation(
+  mif = mif,
+  mnames = markers[1:2],
+  r_range = 0:100,
+  num_permutations = 25,
+  edge_correction = "translation",
+  keep_permutation_distribution = FALSE,
+  workers = 1,
+  overwrite = TRUE,
+  xloc = NULL,
+  yloc = NULL
+)
 
 mif$derived$univariate_pair_correlation %>%
   ggplot() +
@@ -142,16 +154,18 @@ mif$derived$univariate_pair_correlation %>%
 ### Bivariate
 
 ```{r}
-mif = bi_pair_correlation(mif = mif, 
-                       mnames = markers[1:2],
-                       r_range = 0:100, 
-                       num_permutations = 25, 
-                       edge_correction = "translation", 
-                       keep_permutation_distribution = FALSE, 
-                       workers = 1, 
-                       overwrite = TRUE, 
-                       xloc = NULL, 
-                       yloc = NULL)
+mif <- bi_pair_correlation(
+  mif = mif,
+  mnames = markers[1:2],
+  r_range = 0:100,
+  num_permutations = 25,
+  edge_correction = "translation",
+  keep_permutation_distribution = FALSE,
+  workers = 1,
+  overwrite = TRUE,
+  xloc = NULL,
+  yloc = NULL
+)
 
 mif$derived$bivariate_pair_correlation %>%
   ggplot() +
@@ -162,15 +176,17 @@ mif$derived$bivariate_pair_correlation %>%
 ## Interaction Variable
 
 ```{r}
-mif = interaction_variable(mif = mif,
-                           mnames = markers[1:2],
-                           r_range = 0:100,
-                           num_permutations = 25,
-                           keep_permutation_distribution = FALSE,
-                           workers = 1,
-                           overwrite = TRUE,
-                           xloc = NULL,
-                           yloc = NULL)
+mif <- interaction_variable(
+  mif = mif,
+  mnames = markers[1:2],
+  r_range = 0:100,
+  num_permutations = 25,
+  keep_permutation_distribution = FALSE,
+  workers = 1,
+  overwrite = TRUE,
+  xloc = NULL,
+  yloc = NULL
+)
 
 mif$derived$interaction_variable %>%
   ggplot() +
@@ -181,19 +197,20 @@ mif$derived$interaction_variable %>%
 ## Dixon's Segregation S
 
 ```{r}
-mif = dixons_s(mif = mif, 
-               mnames = markers[1:2], 
-               num_permutations = 25, 
-               type = "Z", 
-               workers = 1, 
-               overwrite = TRUE, 
-               xloc = NULL, 
-               yloc = NULL)
+mif <- dixons_s(
+  mif = mif,
+  mnames = markers[1:2],
+  num_permutations = 25,
+  type = "Z",
+  workers = 1,
+  overwrite = TRUE,
+  xloc = NULL,
+  yloc = NULL
+)
 
 mif$derived$Dixon_Z %>%
-    filter(From != To) %>%
-    ggplot() +
-    geom_point(aes(x = Z, y = S, color = deidentified_sample)) +
-    facet_grid(~From)
+  filter(From != To) %>%
+  ggplot() +
+  geom_point(aes(x = Z, y = S, color = deidentified_sample)) +
+  facet_grid(~From)
 ```
-

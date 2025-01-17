@@ -16,14 +16,14 @@ create_mif(
 \item{clinical_data}{A data frame containing patient level data with one row
 per participant.}
 
-\item{sample_data}{A data frame containing sample level data with one row per 
-sample. Should at a minimum contain a 2 columns: one for sample names and 
+\item{sample_data}{A data frame containing sample level data with one row per
+sample. Should at a minimum contain a 2 columns: one for sample names and
 one for the corresponding patient name.}
 
-\item{spatial_list}{A named list of data frames with the spatial data from 
+\item{spatial_list}{A named list of data frames with the spatial data from
 each sample making up each individual data frame}
 
-\item{patient_id}{A character string indicating the column name for patient id in 
+\item{patient_id}{A character string indicating the column name for patient id in
 sample and clinical data frames.}
 
 \item{sample_id}{A character string indicating the column name for sample id
@@ -44,13 +44,13 @@ Returns a custom MIF
 Creates an MIF object for use in spatialIF functions
 }
 \examples{
-#Create mif object
-library(dplyr)
-x <- create_mif(clinical_data = example_clinical \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-sample_data = example_summary \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-spatial_list = example_spatial,
-patient_id = "deidentified_id", 
-sample_id = "deidentified_sample")
+# Create mif object
+mif <- create_mif(
+  clinical_data = example_clinical,
+.  sample_data = example_summary,
+  spatial_list = example_spatial,
+  patient_id = "deidentified_id",
+  sample_id = "deidentified_sample"
+)
+
 }

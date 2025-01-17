@@ -17,7 +17,7 @@
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
 #' YMin and YMax will be used 
 #' @importFrom magrittr %>%
-#' 
+#' @import dplyr
 #' @return Returns a data frame for Z-statistic
 #'    \item{From}{}
 #'    \item{To}{}
@@ -41,14 +41,14 @@
 #'    \item{Image.Tag}{}
 #' @examples 
 #' #' #Create mif object
-#' library(dplyr)
-#' x <- create_mif(clinical_data = example_clinical %>% 
-#' mutate(deidentified_id = as.character(deidentified_id)),
-#' sample_data = example_summary %>% 
-#' mutate(deidentified_id = as.character(deidentified_id)),
-#' spatial_list = example_spatial,
-#' patient_id = "deidentified_id", 
-#' sample_id = "deidentified_sample")
+#' mif <- create_mif(
+#'   clinical_data = example_clinical,
+#'.  sample_data = example_summary,
+#'   spatial_list = example_spatial,
+#'   patient_id = "deidentified_id",
+#'   sample_id = "deidentified_sample"
+#' )
+#' 
 #' 
 #' @export
 
