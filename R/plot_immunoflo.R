@@ -8,7 +8,7 @@
 #' @param mcolors Character vector of color names to display markers in the plot.
 #' @param cell_type Character vector of cell type
 #' @param path Different path than file name or to use in conjunction with filename ???
-#' @param xloc,yloc columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `XMin`/`YMin` and `XMax`/`YMax`
+#' @param xloc,yloc columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `x_min`/`y_min` and `x_max`/`y_max`
 #' 
 #' @return mif object and the ggplot objects can be viewed form the derived slot of the mif object
 #' 

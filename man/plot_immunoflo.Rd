@@ -31,7 +31,7 @@ plot_immunoflo(
 
 \item{path}{Different path than file name or to use in conjunction with filename ???}
 
-\item{xloc, yloc}{columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `XMin`/`YMin` and `XMax`/`YMax`}
+\item{xloc, yloc}{columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `x_min`/`y_min` and `x_max`/`y_max`}
 }
 \value{
 mif object and the ggplot objects can be viewed form the derived slot of the mif object
@@ -42,20 +42,20 @@ This function generates plot of point process in rectangular or circular window.
 \examples{
 #Create mif object
 library(dplyr)
-x <- create_mif(clinical_data = example_clinical \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-sample_data = example_summary \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
+mif <- create_mif(
+clinical_data = example_clinical,
+sample_data = example_summary,
 spatial_list = example_spatial,
-patient_id = "deidentified_id", 
-sample_id = "deidentified_sample")
+patient_id = "deidentified_id",
+sample_id = "deidentified_sample"
+)
 
-mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-"FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-"PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
+mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+"cd8_opal_520_positive", "foxp3_opal_620_positive",
+"pdl1_opal_540_positive", "pd1_opal_650_positive")
 
-x <- plot_immunoflo(x, plot_title = "deidentified_sample", mnames = mnames_good, 
-cell_type = "Classifier.Label")
+mif <- plot_immunoflo(mif, plot_title = "deidentified_sample", mnames = mnames_good, 
+cell_type = "classifier_label")
 
-x[["derived"]][["spatial_plots"]][[4]]
+mif[["derived"]][["spatial_plots"]][[4]]
 }

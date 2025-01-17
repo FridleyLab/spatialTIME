@@ -42,9 +42,9 @@ permutation calculation}
 
 \item{overwrite}{whether to overwrite the `univariate_Count` slot within `mif$derived`}
 
-\item{xloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+\item{xloc}{the location of the center of cells. If left `NULL`, `x_min`, `x_max`, `y_min`, and `y_max` must be present.}
 
-\item{yloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+\item{yloc}{the location of the center of cells. If left `NULL`, `x_min`, `x_max`, `y_min`, and `y_max` must be present.}
 
 \item{big}{the number of cells at which to flip from an edge correction method other than 'none' to 'none' due to size}
 }
@@ -68,18 +68,26 @@ Due to the introduction of Whole Slide Imaging (WSI), this can easily be well ov
 edge correction for these spatial files will not succeed when attempting to force an edge correction on it.
 }
 \examples{
-x <- spatialTIME::create_mif(clinical_data =spatialTIME::example_clinical \%>\% 
-  dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-  sample_data = spatialTIME::example_summary \%>\% 
-  dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-  spatial_list = spatialTIME::example_spatial,
-  patient_id = "deidentified_id", 
-  sample_id = "deidentified_sample")
-mnames = x$spatial[[1]] \%>\%
+#Create mif object
+library(dplyr)
+mif <- create_mif(
+clinical_data = example_clinical,
+sample_data = example_summary,
+spatial_list = example_spatial,
+patient_id = "deidentified_id",
+sample_id = "deidentified_sample"
+)
+
+mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+"cd8_opal_520_positive", "foxp3_opal_620_positive",
+"pdl1_opal_540_positive", "pd1_opal_650_positive")
+
+mnames = mif$spatial[[1]] \%>\%
   colnames() \%>\%
   grep("Pos|CD", ., value =TRUE) \%>\%
   grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
-x2 = ripleys_k(mif = x, 
+  
+mif2 = ripleys_k(mif = mif, 
   mnames = mnames[1], 
   r_range = seq(0, 100, 1), 
   num_permutations = 100,

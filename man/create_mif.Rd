@@ -45,12 +45,12 @@ Creates an MIF object for use in spatialIF functions
 }
 \examples{
 # Create mif object
-
-x <- create_mif(
+mif <- create_mif(
   clinical_data = example_clinical,
-  sample_data = example_summary,
+.  sample_data = example_summary,
   spatial_list = example_spatial,
   patient_id = "deidentified_id",
   sample_id = "deidentified_sample"
-  )
+)
+
 }

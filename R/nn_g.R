@@ -50,12 +50,12 @@ NN_G = function(mif,
   }
   out = parallel::mclapply(mif$spatial, function(spat){
     if(is.null(xloc)){
-      spat$xloc = (spat$XMax + spat$XMin)/2
+      spat$xloc = (spat$x_max + spat$x_min)/2
     } else {
       spat$xloc = spat[[xloc]]
     }
     if(is.null(yloc)){
-      spat$yloc = (spat$YMax + spat$YMin)/2
+      spat$yloc = (spat$y_max + spat$y_min)/2
     } else {
       spat$yloc = spat[[yloc]]
     }

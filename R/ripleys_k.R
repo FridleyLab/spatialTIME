@@ -11,8 +11,8 @@
 #' permutation calculation
 #' @param workers number of cores to use for calculations
 #' @param overwrite whether to overwrite the `univariate_Count` slot within `mif$derived`
-#' @param xloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
-#' @param yloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
+#' @param xloc the location of the center of cells. If left `NULL`, `x_min`, `x_max`, `y_min`, and `y_max` must be present.
+#' @param yloc the location of the center of cells. If left `NULL`, `x_min`, `x_max`, `y_min`, and `y_max` must be present.
 #' @param big the number of cells at which to flip from an edge correction method other than 'none' to 'none' due to size
 #' 
 #' @description 
@@ -94,8 +94,8 @@ ripleys_k = function(mif,
     #get center of the cells
     if(is.null(xloc) | is.null(yloc)){
       spat = spat %>%
-        dplyr::mutate(xloc = (XMax + XMin)/2,
-                      yloc = (YMax + YMin)/2)
+        dplyr::mutate(xloc = (x_max + x_min)/2,
+                      yloc = (y_max + y_min)/2)
     } else {
       #rename columns to follow xloc and yloc names
       spat = spat %>%

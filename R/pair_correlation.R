@@ -16,7 +16,7 @@
 #' 
 #' The Pair Correlation Function uses the derivative of Ripley's K so it does take slightly longer to calculate
 #' 
-#' `xloc` and `yloc`, if NULL, will be calculated from columns `XMax`, `XMin`, `YMax`, and `YMin`.
+#' `xloc` and `yloc`, if NULL, will be calculated from columns `x_max`, `x_min`, `y_max`, and `y_min`.
 #'
 #' @return mif object with with the univariate_pair_correlation derived slot filled or appended to
 #' @export
@@ -50,8 +50,8 @@ pair_correlation = function(mif,
     #get center of the cells
     if(is.null(xloc) | is.null(yloc)){
       spat = spat %>%
-        dplyr::mutate(xloc = (XMax + XMin)/2,
-                      yloc = (YMax + YMin)/2)
+        dplyr::mutate(xloc = (x_max + x_min)/2,
+                      yloc = (y_max + y_min)/2)
     } else {
       #rename columns to follow xloc and yloc names
       spat = spat %>%

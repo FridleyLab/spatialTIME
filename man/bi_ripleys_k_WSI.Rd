@@ -43,9 +43,9 @@ bi_ripleys_k_WSI(
 
 \item{nlarge}{number of cells in either *i* or *j* to flip to no edge correction - at small (relative to whole spatial region) *r* values differences in results between correction methods is negligible so running a few samples is recommended. Perhaps compute outweighs small differences in correction methods.}
 
-\item{xloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
+\item{xloc}{the x and y positions that correspond to cells. If left as NULL, x_min, x_max, y_min, and y_max must be present in the spatial files}
 
-\item{yloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
+\item{yloc}{the x and y positions that correspond to cells. If left as NULL, x_min, x_max, y_min, and y_max must be present in the spatial files}
 }
 \value{
 mif object with bivariate Ripley's K calculated

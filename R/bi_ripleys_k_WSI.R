@@ -11,8 +11,8 @@
 #' @param workers integer number of CPU workers to use
 #' @param big integer used as the threshold for subsetting large samples, default is 1000 either *i* or *j*
 #' @param nlarge number of cells in either *i* or *j* to flip to no edge correction - at small (relative to whole spatial region) *r* values differences in results between correction methods is negligible so running a few samples is recommended. Perhaps compute outweighs small differences in correction methods.
-#' @param xloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
-#' @param yloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
+#' @param xloc the x and y positions that correspond to cells. If left as NULL, x_min, x_max, y_min, and y_max must be present in the spatial files
+#' @param yloc the x and y positions that correspond to cells. If left as NULL, x_min, x_max, y_min, and y_max must be present in the spatial files
 #'
 #' @return mif object with bivariate Ripley's K calculated
 #' 
@@ -85,8 +85,8 @@ bi_ripleys_k_WSI = function(mif,
     
     if(is.null(xloc) & is.null(yloc)){
       spat = spat %>%
-        dplyr::mutate(xloc = (XMin + XMax)/2,
-                      yloc = (YMin + YMax)/2)
+        dplyr::mutate(xloc = (x_min + x_max)/2,
+                      yloc = (y_min + y_max)/2)
     } else {
       spat = spat %>%
         dplyr::rename('xloc' := xloc,

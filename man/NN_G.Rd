@@ -43,20 +43,21 @@ object of class `mif` containing a new slot under `derived` got nearest neighbor
 Univariate Nearest Neighbor G(r)
 }
 \examples{
+#Create mif object
 library(dplyr)
-x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\% 
-  dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-  sample_data = spatialTIME::example_summary \%>\% 
-  dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-  spatial_list = spatialTIME::example_spatial,
-  patient_id = "deidentified_id", 
-  sample_id = "deidentified_sample")
-    
-mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
+mif <- create_mif(
+  clinical_data = example_clinical,
+.  sample_data = example_summary,
+  spatial_list = example_spatial,
+  patient_id = "deidentified_id",
+  sample_id = "deidentified_sample"
+)
+
+mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+"cd8_opal_520_positive", "foxp3_opal_620_positive",
+"pdl1_opal_540_positive", "pd1_opal_650_positive")
   
-x2 = NN_G(mif = x, mnames = mnames_good[1:2], 
+mif2 = NN_G(mif = mif, mnames = mnames_good[1:2], 
 r_range = 0:100, num_permutations = 10, 
 edge_correction = "rs", keep_perm_dis = FALSE, 
 workers = 1, overwrite = TRUE)

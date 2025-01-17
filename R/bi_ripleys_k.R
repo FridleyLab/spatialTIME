@@ -9,7 +9,7 @@
 #' @param keep_permutation_distribution boolean as to whether to summarise permutations to mean
 #' @param overwrite boolean as to whether to replace existing bivariate_Count if exists
 #' @param workers integer number of CPU workers to use
-#' @param xloc,yloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
+#' @param xloc,yloc the x and y positions that correspond to cells. If left as NULL, x_min, x_max, y_min, and y_max must be present in the spatial files
 #' @param force logical whether or not to continue if sample has more than 10,000 cells
 #'
 #' @return mif object with bivariate Ripley's K calculated
@@ -88,8 +88,8 @@ bi_ripleys_k = function(mif,
     
     if(is.null(xloc) & is.null(yloc)){
       spat = spat %>%
-        dplyr::mutate(xloc = (XMin + XMax)/2,
-                      yloc = (YMin + YMax)/2)
+        dplyr::mutate(xloc = (x_min + x_max)/2,
+                      yloc = (y_min + y_max)/2)
     } else {
       spat = spat %>%
         dplyr::rename('xloc' := xloc,

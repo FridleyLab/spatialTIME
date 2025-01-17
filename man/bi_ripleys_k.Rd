@@ -38,7 +38,7 @@ bi_ripleys_k(
 
 \item{workers}{integer number of CPU workers to use}
 
-\item{xloc, yloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
+\item{xloc, yloc}{the x and y positions that correspond to cells. If left as NULL, x_min, x_max, y_min, and y_max must be present in the spatial files}
 
 \item{force}{logical whether or not to continue if sample has more than 10,000 cells}
 }
@@ -62,17 +62,19 @@ Ripley's K uses a default of 3000 but we have defaulted to 1000 to keep compute 
 of RAM over 'none'.
 }
 \examples{
-x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\% 
-                               dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-                             sample_data = spatialTIME::example_summary \%>\% 
-                               dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-                             spatial_list = spatialTIME::example_spatial,
-                             patient_id = "deidentified_id", 
-                             sample_id = "deidentified_sample")
-mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-                 "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-                 "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-x2 = bi_ripleys_k(mif = x, mnames = mnames_good[1:2], 
+mif <- create_mif(
+  clinical_data = example_clinical,
+.  sample_data = example_summary,
+  spatial_list = example_spatial,
+  patient_id = "deidentified_id",
+  sample_id = "deidentified_sample"
+)
+
+mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+"cd8_opal_520_positive", "foxp3_opal_620_positive",
+"pdl1_opal_540_positive", "pd1_opal_650_positive")
+
+mif2 = bi_ripleys_k(mif = mif, mnames = mnames_good[1:2], 
                    r_range = 0:100, edge_correction = "none", permute = FALSE,
                    num_permutations = 50, keep_permutation_distribution = FALSE, 
                    workers = 1)
