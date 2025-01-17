@@ -40,13 +40,13 @@ getColors <- function(n) {
 }
 ```
 
-# Background for Tissue Microarray (TMA) Data 
+# Background for Tissue Microarray (TMA) Data
 
 A tissue microarray (TMA) is an array of samples which are obtained by taking a slice of a biopsied FFPE tumor. Each individual slice is referred to as a core. Each core is placed on a TMA and is then stained with multiple antibodies and fluorophores which illuminate when a laser is shined at them with varying wavelengths. The intensity is measured and then a random forest algorithm is used to classify the cells as being positive for a particular marker which allows us to phenotype cells. A schematic of this process is provided in [Figure 1](https://www.mdpi.com/2072-6694/13/12/3031).    
 
-# Create Multiplex ImmunoFlourescent (mif) Object 
+# Create Multiplex ImmunoFlourescent (mif) Object
 
-spatialTIME functions use a custom `mif` object which can be created using `create_mif`. The `mif` object has 6 slots storing the: 
+spatialTIME functions use a custom `mif` object which can be created using `create_mif`. The `mif` object has 6 slots storing the:
 
 * Clinical data which must contain:
   - a column whose column name matches one in the sample dataset.
@@ -56,7 +56,7 @@ spatialTIME functions use a custom `mif` object which can be created using `crea
 * Spatial list (1 per each core):
   - This object should be a list object where each element of the list corresponds to a core and each element should be a  $n\times p$ dataframe ($n$ = number of cells)  containing:
     1. a column name that matches a column name for the sample file (for merging and potential downstream analysis linking to clinical variables),
-    2. `XMin`, `XMax`, `YMin`, and `YMax` which defines the area that a cell occupies which is eventually used to assign a location for each cell with the x-position being the mean of the `XMin` and `XMax` and y-position being the mean of the `YMin` and `YMax`, and 
+    2. `XMin`, `XMax`, `YMin`, and `YMax` which defines the area that a cell occupies which is eventually used to assign a location for each cell with the x-position being the mean of the `XMin` and `XMax` and y-position being the mean of the `YMin` and `YMax`, and
     3. a set of columns that indicate whether a cell is positive to one or multiple markers.
 * patient id:
   - a column name used to merge clinical and summary data
@@ -84,9 +84,9 @@ mif # prints a summary of how many patients, samples, and spatial files are pres
 
 # Plotting Cores
 
-An individual plot for each core (each sample) is created. 
-Plots can be assigned to an R object, such as within the empty `derived` 
-slot and printed to a PDF if a file name is provided. 
+An individual plot for each core (each sample) is created.
+Plots can be assigned to an R object, such as within the empty `derived`
+slot and printed to a PDF if a file name is provided.
 
 When studying phenotype and individual markers, note that it is important to have the individual before the phenotype markers. This will ensure that the phenotype that are derived by multiple markers are not plotted over by the individual marker. For instance, below the the first plot appears to have no cytotoxic T cells (CD3+ and CD8+), but then the order is changed we see the cytotoxic T cells. Moral of the story: Put the marker combinations before the single markers.
 
@@ -161,7 +161,7 @@ which is interpreted as the proportion of cells whose distance to its nearest ne
 
 ## Need for Permutations
 
-An underlying assumption used for many spatial clustering metrics is that the cells are randomly distributed across the region, no evidence of clustering or repulsion, and that the cell intensity is constant across the entire region. This assumption is the so-called complete spatial randomness (CSR). Damage can occur to tissue cores due to how they are collected. This damage can lead to rips and tears in the cores which results in regions where it appears that cells are not located and is not actually the case. Due to these violations of the CSR assumption, the theoretical estimate for CSR may not be accurate. To address this the cell positivity can be permuted across all observed locations and the permutation distribution of $K$, $L$, $M$, and $G$ is a core specific measure of CSR than theoretical. Also, with the permutations of CSR we are able to determine whether the observed clustering is significant by lying above or below a 95% of permuted CSR estimates. 
+An underlying assumption used for many spatial clustering metrics is that the cells are randomly distributed across the region, no evidence of clustering or repulsion, and that the cell intensity is constant across the entire region. This assumption is the so-called complete spatial randomness (CSR). Damage can occur to tissue cores due to how they are collected. This damage can lead to rips and tears in the cores which results in regions where it appears that cells are not located and is not actually the case. Due to these violations of the CSR assumption, the theoretical estimate for CSR may not be accurate. To address this the cell positivity can be permuted across all observed locations and the permutation distribution of $K$, $L$, $M$, and $G$ is a core specific measure of CSR than theoretical. Also, with the permutations of CSR we are able to determine whether the observed clustering is significant by lying above or below a 95% of permuted CSR estimates.
 
 ## Calculating Exact CSR
 
@@ -177,14 +177,14 @@ Currently, the number of permutations is 10, but this should be increased to at 
 
 ```{r, ripleys, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 mif <- ripleys_k(
-  mif = mif, 
+  mif = mif,
   mnames = mnames_good,
-  num_permutations = 10, 
+  num_permutations = 10,
   method = "K",
-  edge_correction = "translation", 
+  edge_correction = "translation",
   r_range = 0:100,
   permute = TRUE,
-  keep_permutation_distribution = FALSE, 
+  keep_permutation_distribution = FALSE,
   overwrite = TRUE,
   workers = 1
 )
@@ -206,15 +206,15 @@ We can also run using the exact CSR approach which is faster and produces a more
 
 ```{r, ripleys_exact, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 mif <- ripleys_k(
-  mif = mif, 
+  mif = mif,
   mnames = mnames_good,
-  num_permutations = 10, 
+  num_permutations = 10,
   method = "K",
-  edge_correction = "translation", 
+  edge_correction = "translation",
   r_range = 0:100,
   permute = FALSE,
-  keep_permutation_distribution = FALSE, 
-  overwrite = TRUE, 
+  keep_permutation_distribution = FALSE,
+  overwrite = TRUE,
   workers = 1
 )
 
@@ -231,7 +231,7 @@ mif$derived$univariate_Count %>%
   scale_color_manual(values = values)
 ```
 
-Positive values for degree of cluster when using `method = 'K'` indicates evidence of spatial clustering, while negative values correspond to spatial regularity. We can also observe that the `permute = TRUE` method is slightly more jagged in it's curve smoothness than the `permute = FALSE` method (FOXP3 negative curves in particular). 
+Positive values for degree of cluster when using `method = 'K'` indicates evidence of spatial clustering, while negative values correspond to spatial regularity. We can also observe that the `permute = TRUE` method is slightly more jagged in it's curve smoothness than the `permute = FALSE` method (FOXP3 negative curves in particular).
 
 ## Sensitivity of r
 
@@ -253,20 +253,20 @@ In the univariate case, we consider each cell of a single cell type and center c
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
 mif <- bi_ripleys_k(
-  mif = mif, 
+  mif = mif,
   mnames = mnames_good,
   num_permutations = 10,
   permute = TRUE,
-  edge_correction = "translation", 
+  edge_correction = "translation",
   r_range = 0:100,
-  keep_permutation_distribution = FALSE, 
+  keep_permutation_distribution = FALSE,
   workers = 1
 )
 
 mif$derived$bivariate_Count %>%
   filter(
-    Anchor == "CD3..FOXP3.",
-    Counted == "CD3..CD8."
+    Anchor == "cd3_foxp3",
+    Counted == "cd3_cd8"
   ) %>%
   ggplot(aes(x = r, y = `Degree of Clustering Permutation`)) +
   geom_line(aes(color = get(mif$sample_id)), show.legend = TRUE) +
@@ -278,21 +278,21 @@ We can also do the same as with the univariate Ripley's K and set `permute = FAL
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
 mif <- bi_ripleys_k(
-  mif = mif, 
+  mif = mif,
   mnames = mnames_good,
   num_permutations = 10,
   permute = FALSE,
-  edge_correction = "translation", 
+  edge_correction = "translation",
   r_range = 0:100,
   keep_permutation_distribution = FALSE,
-  overwrite = TRUE, 
+  overwrite = TRUE,
   workers = 1
 )
 
 mif$derived$bivariate_Count %>%
   filter(
-    Anchor == "CD3..FOXP3.",
-    Counted == "CD3..CD8."
+    Anchor == "cd3_foxp3",
+    Counted == "cd3_cd8"
   ) %>%
   ggplot(aes(x = r, y = `Degree of Clustering Exact`)) +
   geom_line(aes(color = get(x$sample_id)), show.legend = TRUE) +
@@ -310,11 +310,11 @@ Currently, the number of permutations is 10, but this should be increased to at 
 
 ```{r, NN, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 mif <- NN_G(
-  mif = mif, 
-  mnames = mnames_good, 
+  mif = mif,
+  mnames = mnames_good,
   num_permutations = 10,
-  edge_correction = "rs", 
-  r = 0:100, 
+  edge_correction = "rs",
+  r = 0:100,
   workers = 1
 )
 
@@ -332,7 +332,7 @@ The interpretation of the degree of clustering for $G$ that values greater than 
 
 ## Bivariate Nearest-Neighbor Methods
 
-The interpretation of the bivariate nearest neighbor distribution is similar to bivariate Ripley's $K$, in that we are measuring the degree of clustering of one cell type with respect to another. The actual value of degree of clustering is interpreted in the same manner as the univariate nearest neighbor distribution. 
+The interpretation of the bivariate nearest neighbor distribution is similar to bivariate Ripley's $K$, in that we are measuring the degree of clustering of one cell type with respect to another. The actual value of degree of clustering is interpreted in the same manner as the univariate nearest neighbor distribution.
 
 ```{r,fig.width=10, fig.height=6, fig.align = 'center'}
 mif <- bi_NN_G(
@@ -362,18 +362,18 @@ mif[["derived"]][["spatial_plots"]][[4]]
 ```
 
 
-Below is an example that shows how to select a single value for $r$, and how one can visualize the permutation distribution as it relates to the theoretical and observed values. Here we plot the permutation distribution for the CD3+ cells with $r = 50$. Note that the range of $r$ that is included must contain 0 and the output will not include the degree of clustering at $r = 0$, which is 0 for $K$ and $L$, and $\infty$ for $M$. Notice that the theoretical value is smaller than all 100 values from the permutation distribution. 
+Below is an example that shows how to select a single value for $r$, and how one can visualize the permutation distribution as it relates to the theoretical and observed values. Here we plot the permutation distribution for the CD3+ cells with $r = 50$. Note that the range of $r$ that is included must contain 0 and the output will not include the degree of clustering at $r = 0$, which is 0 for $K$ and $L$, and $\infty$ for $M$. Notice that the theoretical value is smaller than all 100 values from the permutation distribution.
 
 ```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap = 'Histogram displaying how much the permuted estimates of K (100 permutations) can vary. This also illustrates how different the permutation distribution and its mean (green vertical line) can be from the theoretical value (red vertical line) or observed value (blue vertical line). Lastly, this plot confirms what we see visually above in that the CD3+ cells are not uniformly distributed throughout this slide, but clustered.'}
 mif <- ripleys_k(
-  mif = mif, 
-  mnames = mnames_good[1], 
+  mif = mif,
+  mnames = mnames_good[1],
   num_permutations = 100,
-  edge_correction = "translation", 
+  edge_correction = "translation",
   r = c(0, 50),
   permute = TRUE,
-  keep_permutation_distribution = TRUE, 
-  workers = 1, 
+  keep_permutation_distribution = TRUE,
+  workers = 1,
   overwrite = TRUE
 )
 
@@ -405,9 +405,9 @@ Many studies may only interested in the spatial location within the tumor or str
 
 ```{r}
 x_tumor <- subset_mif(
-  mif, 
-  classifier = "Classifier.Label", 
-  level = "Tumor", 
+  mif,
+  classifier = "Classifier.Label",
+  level = "Tumor",
   markers = mnames_good)
 
 table(mif$spatial[[1]]$classifier_label)
@@ -422,14 +422,14 @@ Due to space constraints, there are only 5 TMA cores included in the example dat
 
 ```{r, fig.width=10, fig.height=6, fig.align = 'center', fig.cap='Scatter plots showing the difference in degree of spatial clustering for CD3+, and CD8+ cells. These markers were selected since all 5 examples spatial files had at least 2 to these cells.'}
 mif <- ripleys_k(
-  mif = mif, 
-  mnames = mnames_good, 
+  mif = mif,
+  mnames = mnames_good,
   num_permutations = 10,
   edge_correction = "translation",
-  r = c(0, 50), 
+  r = c(0, 50),
   permute = T,
-  keep_permutation_distribution = FALSE, 
-  workers = 1, 
+  keep_permutation_distribution = FALSE,
+  workers = 1,
   overwrite = TRUE
 )
 
