@@ -56,7 +56,7 @@ spatialTIME functions use a custom `mif` object which can be created using `crea
 * Spatial list (1 per each core):
   - This object should be a list object where each element of the list corresponds to a core and each element should be a  $n\times p$ dataframe ($n$ = number of cells)  containing:
     1. a column name that matches a column name for the sample file (for merging and potential downstream analysis linking to clinical variables),
-    2. `XMin`, `XMax`, `YMin`, and `YMax` which defines the area that a cell occupies which is eventually used to assign a location for each cell with the x-position being the mean of the `XMin` and `XMax` and y-position being the mean of the `YMin` and `YMax`, and
+    2. `x_min`, `x_max`, `y_min`, and `y_max` which defines the area that a cell occupies which is eventually used to assign a location for each cell with the x-position being the mean of the `x_min` and `x_max` and y-position being the mean of the `y_min` and `y_max`, and
     3. a set of columns that indicate whether a cell is positive to one or multiple markers.
 * patient id:
   - a column name used to merge clinical and summary data
@@ -104,7 +104,7 @@ names(values) <- mnames_bad
 # add an element in the `derived` object position
 mif <- plot_immunoflo(mif,
   plot_title = "deidentified_sample", mnames = mnames_bad,
-  cell_type = "Classifier.Label"
+  cell_type = "classifier_label"
 )
 
 bad_names <- mif[["derived"]][["spatial_plots"]][[4]] +
@@ -121,7 +121,7 @@ mnames_good <- c("cd3_opal_570_positive", "cd8_opal_520_positive",
 
 mif <- plot_immunoflo(mif,
   plot_title = "deidentified_sample", mnames = mnames_good,
-  cell_type = "Classifier.Label"
+  cell_type = "classifier_label"
 )
 
 good_names <- mif[["derived"]][["spatial_plots"]][[4]] +
@@ -479,13 +479,13 @@ pheatmap(Rip_K_matrix,
 
 # Using Custom Cell Locations
 
-If `xloc` and `yloc` are set as `NULL`, when computing spatial clustering than the cell location is the center of the cell (x-coordinate is the average of `XMin` and `XMax`, and y-coordinate is the average of `YMin` and `YMax`). If you desire to use custom points, this is possible by identifying which column the new coordinates are from. Here were compute Ripley's $K$ with the minimum coordinate of x and y.  
+If `xloc` and `yloc` are set as `NULL`, when computing spatial clustering than the cell location is the center of the cell (x-coordinate is the average of `x_min` and `x_max`, and y-coordinate is the average of `y_min` and `y_max`). If you desire to use custom points, this is possible by identifying which column the new coordinates are from. Here were compute Ripley's $K$ with the minimum coordinate of x and y.  
 
 ```{r}
 mif <- ripleys_k(
   mif = mif, mnames = mnames_good[1], num_permutations = 100,
   edge_correction = "translation", r = c(0, 50), permute = TRUE,
   keep_permutation_distribution = TRUE, workers = 1, overwrite = TRUE,
-  xloc = "XMin", yloc = "YMin"
+  xloc = "x_min", yloc = "y_min"
 )
 ```
