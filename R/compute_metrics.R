@@ -25,9 +25,9 @@
 #' @param k_trans Character value of the transformation to apply to count based 
 #' metrics (none, M, or L)
 #' @param xloc a string corresponding to the x coordinates. If null the average of 
-#' XMin and XMax will be used 
+#' x_min and x_max will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
-#' YMin and YMax will be used 
+#' y_min and y_max will be used 
 #' @param exhaustive whether or not to compute all combinations of markers
 #' @importFrom magrittr %>%
 #'  
@@ -45,7 +45,7 @@
 #' library(dplyr)
 #' mif <- create_mif(
 #'   clinical_data = example_clinical,
-#'.  sample_data = example_summary,
+#'  sample_data = example_summary,
 #'   spatial_list = example_spatial,
 #'   patient_id = "deidentified_id",
 #'   sample_id = "deidentified_sample"

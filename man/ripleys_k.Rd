@@ -42,9 +42,9 @@ permutation calculation}
 
 \item{overwrite}{whether to overwrite the `univariate_Count` slot within `mif$derived`}
 
-\item{xloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+\item{xloc}{the location of the center of cells. If left `NULL`, `x_min`, `x_max`, `y_min`, and `y_max` must be present.}
 
-\item{yloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+\item{yloc}{the location of the center of cells. If left `NULL`, `x_min`, `x_max`, `y_min`, and `y_max` must be present.}
 
 \item{big}{the number of cells at which to flip from an edge correction method other than 'none' to 'none' due to size}
 }
@@ -58,13 +58,13 @@ with a program such as HALO for cell phenotyping.
 
 In the `ripleys_k` function, there is the ability to perform permutations in order to assess whether the clustering
 of a cell type is significant, or the ability to derive the exact CSR and forgo permutations for much faster sample
-processing. Permutations can be helpful if the significance of clustering wasnts to be identified - run 1000 permutations 
+processing. Permutations can be helpful if the significance of clustering wasnts to be identified - run 1000 permutations
 and if observed is outside 95-percentile then significant clustering. We, however, recommend using the exact CSR estimate
 due to speed.
 
-Some things to be aware of when computing the exact Ripley's K estimate, if your spatial file is greater than 
-the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time. 
-Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating 
+Some things to be aware of when computing the exact Ripley's K estimate, if your spatial file is greater than
+the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time.
+Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating
 edge correction for these spatial files will not succeed when attempting to force an edge correction on it.
 }
 \examples{
@@ -84,17 +84,26 @@ mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 
 mnames = mif$spatial[[1]] \%>\%
   colnames() \%>\%
+<<<<<<< HEAD
   grep("Pos|CD", ., value =TRUE) \%>\%
   grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
   
 mif2 = ripleys_k(mif = mif, 
   mnames = mnames[1], 
   r_range = seq(0, 100, 1), 
+=======
+  grep("pos|cd", ., value =TRUE) \%>\%
+  grep("cyto|nucle", ., value =TRUE, invert =TRUE)
+
+mif2 = ripleys_k(mif = mif,
+  mnames = mnames[1],
+  r_range = seq(0, 100, 1),
+>>>>>>> cansavvy/spatialexperiment
   num_permutations = 100,
-  edge_correction = "translation", 
-  method = "K", 
+  edge_correction = "translation",
+  method = "K",
   permute = FALSE,
-  keep_permutation_distribution =FALSE, 
-  workers = 1, 
+  keep_permutation_distribution =FALSE,
+  workers = 1,
   overwrite =TRUE)
 }

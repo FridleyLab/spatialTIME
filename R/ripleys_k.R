@@ -1,4 +1,4 @@
-#' Calculate Ripley's K 
+#' Calculate Ripley's K
 #'
 #' @param mif object of class `mif` created with `create_mif`
 #' @param mnames cell phenotype markers to calculate Ripley's K for
@@ -11,26 +11,26 @@
 #' permutation calculation
 #' @param workers number of cores to use for calculations
 #' @param overwrite whether to overwrite the `univariate_Count` slot within `mif$derived`
-#' @param xloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
-#' @param yloc the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.
+#' @param xloc the location of the center of cells. If left `NULL`, `x_min`, `x_max`, `y_min`, and `y_max` must be present.
+#' @param yloc the location of the center of cells. If left `NULL`, `x_min`, `x_max`, `y_min`, and `y_max` must be present.
 #' @param big the number of cells at which to flip from an edge correction method other than 'none' to 'none' due to size
-#' 
-#' @description 
+#'
+#' @description
 #' ripleys_k() calculates the emperical Ripley's K measurement for the cell types specified by mnames in the mIF object. This
 #' is very useful when exploring the spatial clustering of single cell types on TMA cores or ROI spots following proccessing
 #' with a program such as HALO for cell phenotyping.
-#' 
+#'
 #' In the `ripleys_k` function, there is the ability to perform permutations in order to assess whether the clustering
 #' of a cell type is significant, or the ability to derive the exact CSR and forgo permutations for much faster sample
-#' processing. Permutations can be helpful if the significance of clustering wasnts to be identified - run 1000 permutations 
+#' processing. Permutations can be helpful if the significance of clustering wasnts to be identified - run 1000 permutations
 #' and if observed is outside 95-percentile then significant clustering. We, however, recommend using the exact CSR estimate
 #' due to speed.
-#' 
-#' Some things to be aware of when computing the exact Ripley's K estimate, if your spatial file is greater than 
-#' the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time. 
-#' Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating 
+#'
+#' Some things to be aware of when computing the exact Ripley's K estimate, if your spatial file is greater than
+#' the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time.
+#' Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating
 #' edge correction for these spatial files will not succeed when attempting to force an edge correction on it.
-#' 
+#'
 #' @return object of class `mif`
 #' @export
 #'
@@ -44,32 +44,32 @@
 #' patient_id = "deidentified_id",
 #' sample_id = "deidentified_sample"
 #' )
-#' 
+#'
 #' mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 #' "cd8_opal_520_positive", "foxp3_opal_620_positive",
 #' "pdl1_opal_540_positive", "pd1_opal_650_positive")
-#' 
+#'
 #' mnames = mif$spatial[[1]] %>%
 #'   colnames() %>%
-#'   grep("Pos|CD", ., value =TRUE) %>%
-#'   grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
-#'   
-#' mif2 = ripleys_k(mif = mif, 
-#'   mnames = mnames[1], 
-#'   r_range = seq(0, 100, 1), 
+#'   grep("pos|cd", ., value =TRUE) %>%
+#'   grep("cyto|nucle", ., value =TRUE, invert =TRUE)
+#'
+#' mif2 = ripleys_k(mif = mif,
+#'   mnames = mnames[1],
+#'   r_range = seq(0, 100, 1),
 #'   num_permutations = 100,
-#'   edge_correction = "translation", 
-#'   method = "K", 
+#'   edge_correction = "translation",
+#'   method = "K",
 #'   permute = FALSE,
-#'   keep_permutation_distribution =FALSE, 
-#'   workers = 1, 
+#'   keep_permutation_distribution =FALSE,
+#'   workers = 1,
 #'   overwrite =TRUE)
-ripleys_k = function(mif, 
+ripleys_k = function(mif,
                      mnames,
-                     r_range = seq(0, 100, 1), 
-                     num_permutations = 50, 
+                     r_range = seq(0, 100, 1),
+                     num_permutations = 50,
                      edge_correction = "translation",
-                     method = "K", 
+                     method = "K",
                      permute = FALSE,
                      keep_permutation_distribution = FALSE,
                      workers = 1,
@@ -77,7 +77,7 @@ ripleys_k = function(mif,
                      xloc = NULL,
                      yloc = NULL,
                      big = 10000){
-  
+
   if(keep_permutation_distribution == TRUE & permute == FALSE){
     stop("Conflicting `perm` and `keep_permutation_distribution` parameters. Using estimate\n
          \tIf wanting to use permutatations, set `permute = TRUE`")
@@ -89,17 +89,17 @@ ripleys_k = function(mif,
   if(!inherits(mif, "mif")){
     stop("mIF should be of class `mif` created with function `createMIF()`\n\tTo check use `inherits(mif, 'mif')`")
   }
-  
+
   out = parallel::mclapply(mif$spatial, function(spat){
     #get center of the cells
     if(is.null(xloc) | is.null(yloc)){
       spat = spat %>%
-        dplyr::mutate(xloc = (XMax + XMin)/2,
-                      yloc = (YMax + YMin)/2)
+        dplyr::mutate(xloc = (x_max + x_min)/2,
+                      yloc = (y_max + y_min)/2)
     } else {
       #rename columns to follow xloc and yloc names
       spat = spat %>%
-        dplyr::rename("xloc" = !!xloc, 
+        dplyr::rename("xloc" = !!xloc,
                       "yloc" = !!yloc)
     }
     if(nrow(spat) > big){
@@ -114,17 +114,17 @@ ripleys_k = function(mif,
     if(nrow(spat)<10000 & permute == TRUE){ #have to calculate the permutation distribution
       dists = as.matrix(dist(spat[,c("xloc", "yloc")]))
       area = spatstat.geom::area(win)
-      
+
       #calculate the edge corrections
       if(edge_correction %in% c("translation", "trans")){
         edge = spatstat.explore::edge.Trans(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win), W = win)
       } else if(edge_correction %in% c("isotropic", "iso")){
-        edge = spatstat.explore::edge.Ripley(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win), 
+        edge = spatstat.explore::edge.Ripley(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win),
                                              r = spatstat.geom::pairdist(spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win)))
       } else if(edge_correction == "none"){
         edge = matrix(nrow = nrow(spat), ncol = nrow(spat), data = 1)
       }
-      
+
       #dists = fast_mm(dists, edge)
       res = parallel::mclapply(mnames, function(marker){
         #find the rows that are positive for marker
@@ -143,13 +143,13 @@ ripleys_k = function(mif,
             dplyr::mutate(`Theoretical CSR` = pi * r^2)
           return(d)
         }
-        
+
         if(edge_correction == "border"){
           ppp = spatstat.geom::ppp(spat$xloc, spat$yloc, window = win, marks = as.factor(spat[[marker]]))
           obs = spatstat.explore::Kest(subset(ppp, marks == 1), r = r_range, correction = 'border') %>%
             data.frame(check.names = FALSE) %>% rename("Theoretical CSR" = 2, "Observed K" = 3)
           perms = parallel::mclapply(seq(num_permutations), function(x){
-            pout = spatstat.explore::Kest(subset(ppp, sample(1:nrow(spat), sum(spat[[marker]]), replace = FALSE)), 
+            pout = spatstat.explore::Kest(subset(ppp, sample(1:nrow(spat), sum(spat[[marker]]), replace = FALSE)),
                                    r = r_range, correction = 'border') %>%
               data.frame(check.names = FALSE) %>%
               mutate(iter = as.character(x), .before = 1)
@@ -169,7 +169,7 @@ ripleys_k = function(mif,
           counts = sapply(r_range, function(r) sum(edge_pos[which(dists[pos, pos] > 0 & dists[pos, pos] < r)]))
           obs = (counts * area)/(length(pos)*(length(pos)-1))
           theo = pi * r_range^2
-          
+
           perms = parallel::mclapply(seq(num_permutations), function(x){
             n_pos = sample(1:nrow(spat), length(pos), replace =FALSE)
             edge_pos = edge[n_pos, n_pos]
@@ -223,7 +223,7 @@ ripleys_k = function(mif,
                           Marker = marker,.before=1) %>%
             dplyr::mutate(iter = as.character(perm), .before = 1)
         }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>%
-          do.call(dplyr::bind_rows, .) %>% 
+          do.call(dplyr::bind_rows, .) %>%
           mutate(`Exact CSR` = NA)
         K = suppressMessages(dplyr::full_join(kobs, kperms,
                              by = c("Label", "Marker", "r", "Theoretical CSR"))) %>%
@@ -240,9 +240,9 @@ ripleys_k = function(mif,
           dplyr::select(xloc, yloc, !!marker)
         #select columns that are postive for marker
         dat2 = dat %>% dplyr::filter(get(marker) != 0)
-        
+
         if(nrow(dat2) < 3){
-          return(data.frame(iter = "Estimator", 
+          return(data.frame(iter = "Estimator",
                             Label = unique(spat[[mif$sample_id]]),
                             Marker = marker,
                             r = r_range,
@@ -261,7 +261,7 @@ ripleys_k = function(mif,
         return(kobs)
       }, mc.allow.recursive = TRUE, mc.preschedule = FALSE) %>% #collapse all markers for spat
         do.call(dplyr::bind_rows, .)
-      
+
       if(nrow(spat) < big){
         pp_obj = spatstat.geom::ppp(x = spat$xloc, y = spat$yloc, window = win)
         k_est = spatstat.explore::Kest(pp_obj, r = r_range, correction = edge_correction)
@@ -282,12 +282,12 @@ ripleys_k = function(mif,
               j_tmp = spatstat.geom::ppp(x = spat$xloc[j_range], y = spat$yloc[j_range], window = win)
               dists = spatstat.geom::crossdist(i_tmp, j_tmp)
               dists[dists == 0 | dists > max(r_range)] = NA
-            
+
               if(edge_correction == "none"){
-                counts = cumsum(spatstat.univar::whist(dists, 
+                counts = cumsum(spatstat.univar::whist(dists,
                                                      spatstat.geom::handle.r.b.args(r_range, breaks=NULL, win, rmaxdefault = max(r_range))$val))
-              } else {            
-                
+              } else {
+
                 edge = spatstat.explore::edge.Trans(i_tmp, j_tmp)
                 edge[edge == 0] = NA
                 diag(edge) = NA
@@ -307,13 +307,18 @@ ripleys_k = function(mif,
                             `Permuted CSR` = NA,
                             `Exact CSR` = k, check.names = FALSE)
       }
+<<<<<<< HEAD
       
       res = suppressMessages(dplyr::full_join(marker_res, k_est2)) %>%
+=======
+
+      res = dplyr::full_join(marker_res, k_est2) %>%
+>>>>>>> cansavvy/spatialexperiment
         dplyr::mutate(iter = "Estimater", .before = 1) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = NA,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
                       `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
-      
+
     }
     #return final results
     return(res)
@@ -321,14 +326,14 @@ ripleys_k = function(mif,
     do.call(dplyr::bind_rows, .)
   out = out%>% #collapse all samples to single data frame
     dplyr::rename(!!mif$sample_id := Label)
-  
+
   if(permute == TRUE & keep_permutation_distribution == FALSE){
     out = out %>%
       dplyr::mutate(iter = "Permuted") %>%
       dplyr::group_by(iter, across(mif$sample_id), Marker, r) %>%
       dplyr::summarise_all(~mean(., na.rm=TRUE))
   }
-  
+
   if(overwrite){ #overwrite existing data in univariate_Count slot
     mif$derived$univariate_Count = out %>%
       dplyr::mutate(Run = 1)
@@ -339,6 +344,6 @@ ripleys_k = function(mif,
                                                     max(mif$derived$univariate_Count$Run) + 1,
                                                     1)))
   }
-  
+
   return(mif)
 }

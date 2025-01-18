@@ -93,15 +93,15 @@ uni_Rip_K = function(data, markers, id, num_iters, correction = 'trans', method 
   
   if(!is.null(xloc) && !is.null(yloc)){
     data = data %>%
-      dplyr::mutate(XMin = get(xloc),
-             XMax = get(xloc),
-             YMin = get(yloc),
-             YMax = get(yloc))
+      dplyr::mutate(x_min = get(xloc),
+             x_max = get(xloc),
+             y_min = get(yloc),
+             y_max = get(yloc))
   }
   #Use set the cell location as the center of the cell
   data = data %>% 
-    dplyr::mutate(xloc = (XMin + XMax)/2,
-           yloc = (YMin + YMax)/2
+    dplyr::mutate(xloc = (x_min + x_max)/2,
+           yloc = (y_min + y_max)/2
     )
   
   #Create the region that the point process exists. This only needs to be done
@@ -259,16 +259,16 @@ bi_Rip_K = function(data, markers, id, num_iters, correction = 'trans',
   
   if(!is.null(xloc) && !is.null(yloc)){
     data = data %>%
-      dplyr::mutate(XMin = get(xloc),
-                    XMax = get(xloc),
-                    YMin = get(yloc),
-                    YMax = get(yloc))
+      dplyr::mutate(x_min = get(xloc),
+                    x_max = get(xloc),
+                    y_min = get(yloc),
+                    y_max = get(yloc))
   }
   
   #Use set the cell location as the center of the cell
   data = data %>% 
-    dplyr::mutate(xloc = (XMin + XMax)/2,
-           yloc = (YMin + YMax)/2
+    dplyr::mutate(xloc = (x_min + x_max)/2,
+           yloc = (y_min + y_max)/2
     )
   
   #Create the region that the point process exists. This only needs to be done
@@ -418,16 +418,16 @@ uni_NN_G = function(data, markers, id, num_iters, correction,
   
   if(!is.null(xloc) && !is.null(yloc)){
     data = data %>%
-      dplyr::mutate(XMin = get(xloc),
-                    XMax = get(xloc),
-                    YMin = get(yloc),
-                    YMax = get(yloc))
+      dplyr::mutate(x_min = get(xloc),
+                    x_max = get(xloc),
+                    y_min = get(yloc),
+                    y_max = get(yloc))
   }
   
   #Use set the cell location as the center of the cell
   data = data %>% 
-    dplyr::mutate(xloc = (XMin + XMax)/2,
-           yloc = (YMin + YMax)/2
+    dplyr::mutate(xloc = (x_min + x_max)/2,
+           yloc = (y_min + y_max)/2
     )
   
   #Create the region that the point process exists. This only needs to be done
@@ -546,16 +546,16 @@ bi_NN_G_sample = function(data, markers, id, num_iters, correction,
   
   if(!is.null(xloc) && !is.null(yloc)){
     data = data %>%
-      dplyr::mutate(XMin = get(xloc),
-                    XMax = get(xloc),
-                    YMin = get(yloc),
-                    YMax = get(yloc))
+      dplyr::mutate(x_min = get(xloc),
+                    x_max = get(xloc),
+                    y_min = get(yloc),
+                    y_max = get(yloc))
   }
   
   #Use set the cell location as the center of the cell
   data = data %>% 
-    dplyr::mutate(xloc = (XMin + XMax)/2,
-           yloc = (YMin + YMax)/2
+    dplyr::mutate(xloc = (x_min + x_max)/2,
+           yloc = (y_min + y_max)/2
     )
   
   #Create the region that the point process exists. This only needs to be done
@@ -817,16 +817,16 @@ dix_s_z = function(data, markers, num_permutations, xloc, yloc){
   #see uni_rip_k function 
   if(!is.null(xloc) && !is.null(yloc)){
     data = data %>%
-      dplyr::mutate(XMin = get(xloc),
-                    XMax = get(xloc),
-                    YMin = get(yloc),
-                    YMax = get(yloc))
+      dplyr::mutate(x_min = get(xloc),
+                    x_max = get(xloc),
+                    y_min = get(yloc),
+                    y_max = get(yloc))
   }
   
   #Use set the cell location as the center of the cell
   data = data %>% 
-    dplyr::mutate(xloc = (XMin + XMax)/2,
-                  yloc = (YMin + YMax)/2
+    dplyr::mutate(xloc = (x_min + x_max)/2,
+                  yloc = (y_min + y_max)/2
     )
   #identify the different classifier levels
   #loop through for markers
@@ -919,16 +919,16 @@ dix_s_c = function(data, markers, classifier_label, num_permutations, xloc, yloc
   #see uni_rip_k function 
   if(!is.null(xloc) && !is.null(yloc)){
     data = data %>%
-      dplyr::mutate(XMin = get(xloc),
-                    XMax = get(xloc),
-                    YMin = get(yloc),
-                    YMax = get(yloc))
+      dplyr::mutate(x_min = get(xloc),
+                    x_max = get(xloc),
+                    y_min = get(yloc),
+                    y_max = get(yloc))
   }
   
   #Use set the cell location as the center of the cell
   data = data %>% 
-    dplyr::mutate(xloc = (XMin + XMax)/2,
-                  yloc = (YMin + YMax)/2
+    dplyr::mutate(xloc = (x_min + x_max)/2,
+                  yloc = (y_min + y_max)/2
     )
   #identify the different classifier levels
   

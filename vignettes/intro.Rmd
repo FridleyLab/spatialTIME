@@ -189,7 +189,7 @@ mif <- ripleys_k(
   workers = 1
 )
 
-# This will keeps the colors in evx$ery plot for the remainder of the vignette compatible
+# This will keeps the colors in every plot for the remainder of the vignette compatible
 values <- RColorBrewer::brewer.pal(length(unique(mif$derived$univariate_Count[[mif$sample_id]])), "Accent")
 names(values) <- unique(mif$derived$univariate_Count$deidentified_sample)
 
@@ -218,7 +218,7 @@ mif <- ripleys_k(
   workers = 1
 )
 
-# This will keeps the colors in evx$ery plot for the remainder of the vignette compatible
+# This will keeps the colors in every plot for the remainder of the vignette compatible
 values <- RColorBrewer::brewer.pal(length(unique(mif$derived$univariate_Count[[mif$sample_id]])), "Accent")
 names(values) <- unique(mif$derived$univariate_Count$deidentified_sample)
 
@@ -295,7 +295,7 @@ mif$derived$bivariate_Count %>%
     Counted == "cd3_cd8"
   ) %>%
   ggplot(aes(x = r, y = `Degree of Clustering Exact`)) +
-  geom_line(aes(color = get(x$sample_id)), show.legend = TRUE) +
+  geom_line(aes(color = get(mif$sample_id)), show.legend = TRUE) +
   theme_bw() +
   scale_color_manual(values = values)
 ```
@@ -406,7 +406,7 @@ Many studies may only interested in the spatial location within the tumor or str
 ```{r}
 x_tumor <- subset_mif(
   mif,
-  classifier = "Classifier.Label",
+  classifier = "classifier_label",
   level = "Tumor",
   markers = mnames_good)
 

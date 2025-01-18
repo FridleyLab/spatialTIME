@@ -51,10 +51,10 @@ distribution of permuted K or G values}
 current output (TRUE) or be to be appended (FALSE).}
 
 \item{xloc}{a string corresponding to the x coordinates. If null the average of 
-XMin and XMax will be used}
+x_min and x_max will be used}
 
 \item{yloc}{a string corresponding to the y coordinates. If null the average of 
-YMin and YMax will be used}
+y_min and y_max will be used}
 
 \item{exhaustive}{whether or not to compute all combinations of markers}
 }
@@ -81,7 +81,11 @@ This function calculates count based Measures (Ripley's K, Besag
 library(dplyr)
 mif <- create_mif(
   clinical_data = example_clinical,
+<<<<<<< HEAD
 .  sample_data = example_summary,
+=======
+ sample_data = example_summary,
+>>>>>>> cansavvy/spatialexperiment
   spatial_list = example_spatial,
   patient_id = "deidentified_id",
   sample_id = "deidentified_sample"

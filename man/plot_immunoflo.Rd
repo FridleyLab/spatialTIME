@@ -31,7 +31,7 @@ plot_immunoflo(
 
 \item{path}{Different path than file name or to use in conjunction with filename ???}
 
-\item{xloc, yloc}{columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `XMin`/`YMin` and `XMax`/`YMax`}
+\item{xloc, yloc}{columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `x_min`/`y_min` and `x_max`/`y_max`}
 }
 \value{
 mif object and the ggplot objects can be viewed form the derived slot of the mif object
@@ -50,11 +50,19 @@ patient_id = "deidentified_id",
 sample_id = "deidentified_sample"
 )
 
+<<<<<<< HEAD
 mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 "cd8_opal_520_positive", "foxp3_opal_620_positive",
 "pdl1_opal_540_positive", "pd1_opal_650_positive")
 
 mif <- plot_immunoflo(mif, plot_title = "deidentified_sample", mnames = mnames_good, 
+=======
+mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+"cd8_opal_520_positive", "foxp3_opal_620_positive",
+"pdl1_opal_540_positive", "pd1_opal_650_positive")
+
+mif <- plot_immunoflo(mif, plot_title = "deidentified_sample", mnames = mnames_good,
+>>>>>>> cansavvy/spatialexperiment
 cell_type = "classifier_label")
 
 mif[["derived"]][["spatial_plots"]][[4]]

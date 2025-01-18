@@ -29,12 +29,12 @@
 #' # Create mif object
 #' mif <- create_mif(
 #'   clinical_data = example_clinical,
-#'.  sample_data = example_summary,
+#'  sample_data = example_summary,
 #'   spatial_list = example_spatial,
 #'   patient_id = "deidentified_id",
 #'   sample_id = "deidentified_sample"
 #' )
-#' 
+#'
 
 create_mif <- function(clinical_data,
                        sample_data,
@@ -264,3 +264,6 @@ spatial_exp_to_mif <- function(spatial_exp,
 
   return(mif)
 }
+
+
+utils::globalVariables(c("Total Cells", "colData", "metadata", "spatialCoords"))
