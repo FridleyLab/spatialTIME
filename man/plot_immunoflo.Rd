@@ -50,11 +50,11 @@ patient_id = "deidentified_id",
 sample_id = "deidentified_sample"
 )
 
-mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 "cd8_opal_520_positive", "foxp3_opal_620_positive",
 "pdl1_opal_540_positive", "pd1_opal_650_positive")
 
-mif <- plot_immunoflo(mif, plot_title = "deidentified_sample", mnames = mnames_good, 
+mif <- plot_immunoflo(mif, plot_title = "deidentified_sample", mnames = mnames_good,
 cell_type = "classifier_label")
 
 mif[["derived"]][["spatial_plots"]][[4]]

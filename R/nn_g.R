@@ -9,7 +9,7 @@
 #' @param workers integer number for the number of CPU cores to use in parallel to calculate all samples/markers
 #' @param overwrite boolean whether to overwrite previous run of NN G(r) or increment "RUN" and maintain  previous measurements
 #' @param xloc,yloc the x and y location columns in the spatial files that indicate the center of the respective cells
-#' 
+#'
 #' @return object of class `mif` containing a new slot under `derived` got nearest neighbor distances
 #' @export
 #'
@@ -18,19 +18,19 @@
 #' library(dplyr)
 #' mif <- create_mif(
 #'   clinical_data = example_clinical,
-#'.  sample_data = example_summary,
+#'  sample_data = example_summary,
 #'   spatial_list = example_spatial,
 #'   patient_id = "deidentified_id",
 #'   sample_id = "deidentified_sample"
 #' )
-#' 
-#' mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+#'
+#' mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 #' "cd8_opal_520_positive", "foxp3_opal_620_positive",
 #' "pdl1_opal_540_positive", "pd1_opal_650_positive")
-#'   
-#' mif2 = NN_G(mif = mif, mnames = mnames_good[1:2], 
-#' r_range = 0:100, num_permutations = 10, 
-#' edge_correction = "rs", keep_perm_dis = FALSE, 
+#'
+#' mif2 = NN_G(mif = mif, mnames = mnames_good[1:2],
+#' r_range = 0:100, num_permutations = 10,
+#' edge_correction = "rs", keep_perm_dis = FALSE,
 #' workers = 1, overwrite = TRUE)
 NN_G = function(mif,
                  mnames,
@@ -61,7 +61,7 @@ NN_G = function(mif,
     }
     core = as.character(spat[1, mif$sample_id])
     spat = spat %>%
-      dplyr::select(xloc, yloc, dplyr::any_of(mnames)) %>% 
+      dplyr::select(xloc, yloc, dplyr::any_of(mnames)) %>%
       as.matrix()
     win = spatstat.geom::convexhull.xy(spat[,"xloc"], spat[,"yloc"])
     #using spatstat
@@ -70,7 +70,7 @@ NN_G = function(mif,
                                                                      window = win),
                                                   r = r_range, correction = edge_correction) %>%
       data.frame()
-    
+
     res = parallel::mclapply(mnames, function(marker){
       df = spat[spat[,marker] == 1,]
       if(sum(spat[,marker] == 1) < 3){
@@ -85,11 +85,11 @@ NN_G = function(mif,
       pp_obj = spatstat.geom::ppp(x = df[,"xloc"],
                                   y = df[,"yloc"],
                                   window= win)
-      
+
       G = spatstat.explore::nearest.neighbour(pp_obj, r = r_range, correction = edge_correction) %>%
         data.frame() %>%
         dplyr::rename("Theoretical G" = 2, "Observed G" = 3)
-      
+
       perms = parallel::mclapply(seq(num_permutations), function(n){
         df = spat[sample(1:nrow(spat), nrow(df), replace =F),]
         pp_obj = spatstat.geom::ppp(x = df[,"xloc"],
@@ -103,7 +103,7 @@ NN_G = function(mif,
         do.call(dplyr::bind_rows, .) %>%
         dplyr::full_join(G, by = c("r", "Theoretical G")) %>%
         dplyr::mutate(Marker = marker)
-      
+
       return(perms)
     }) %>%
       do.call(dplyr::bind_rows, .) %>%
@@ -119,7 +119,7 @@ NN_G = function(mif,
     #calculate the degree of clustering from both the theoretical and permuted
     dplyr::mutate(`Degree of Clustering Permutation` = `Observed G` - `Permuted G`,
                   `Degree of Clustering Theoretical` = `Observed G` - `Theoretical G`)
-  
+
   if(overwrite){
     mif$derived$univariate_NN = out %>%
       dplyr::mutate(Run = 1)

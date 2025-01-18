@@ -407,7 +407,7 @@ Many studies may only interested in the spatial location within the tumor or str
 x_tumor <- subset_mif(
   mif,
   classifier = "classifier_label",
-  level = "tumor",
+  level = "Tumor",
   markers = mnames_good)
 
 table(mif$spatial[[1]]$classifier_label)

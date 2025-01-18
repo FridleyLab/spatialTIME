@@ -3,7 +3,7 @@
 #' @param mif mIF object with spatial data frames, clinical, and per-sample summary information
 #' @param mnames vector of column names for phenotypes or data frame of marker combinations
 #' @param r_range vector range of radii to calculate co-localization *K*
-#' @param edge_correction character edge_correction method, one of "translation", "border", "or none" 
+#' @param edge_correction character edge_correction method, one of "translation", "border", "or none"
 #' @param num_permutations integer number of permutations to estimate CSR
 #' @param permute whether or not to use permutations to estimate CSR (TRUE) or to calculate exact CSR (FALSE)
 #' @param keep_permutation_distribution boolean as to whether to summarise permutations to mean
@@ -13,41 +13,41 @@
 #' @param force logical whether or not to continue if sample has more than 10,000 cells
 #'
 #' @return mif object with bivariate Ripley's K calculated
-#' 
+#'
 #' @description
-#' Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with 
+#' Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with
 #' some parameters like marker names of interest and range of radii in which to assess bivariate clustering or colocalization.
 #' In 1.3.3.3 we have introduced the ability to forsgo the need for permutations with the implementation of the exact CSR estimate.
 #' This is both faster and being the exact CSR, produces an exact degree of clustering in the spatial files.
-#' 
+#'
 #' Due to the availability of whole slide images (WSI), there's a possibility users will be running bivariate Ripley's K on samples
-#' that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and 
+#' that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and
 #' therefore easily consumers high performance compute levels of RAM. To combat this, we have implemented a tiling method that performs
 #' counts for small chunks of the distance matrix at a time before finally calculating the bivariate Ripley's K value on the total counts.
 #' When doing this there are now 2 import parameters to keep in mind. The `big` parameter is the size of the tile to use. We have found
 #' 1000 to be a good number that allows for high number of cores while maintaining low RAM usage. The other important parameter when
-#' working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate 
+#' working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate
 #' Ripley's K uses a default of 3000 but we have defaulted to 1000 to keep compute minimized as edge correction uses large amounts
 #' of RAM over 'none'.
-#' 
+#'
 #' @export
 #'
 #' @examples
 #' mif <- create_mif(
 #'   clinical_data = example_clinical,
-#'.  sample_data = example_summary,
+#'   sample_data = example_summary,
 #'   spatial_list = example_spatial,
 #'   patient_id = "deidentified_id",
 #'   sample_id = "deidentified_sample"
 #' )
-#' 
-#' mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+#'
+#' mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 #' "cd8_opal_520_positive", "foxp3_opal_620_positive",
 #' "pdl1_opal_540_positive", "pd1_opal_650_positive")
-#' 
-#' mif2 = bi_ripleys_k(mif = mif, mnames = mnames_good[1:2], 
+#'
+#' mif2 = bi_ripleys_k(mif = mif, mnames = mnames_good[1:2],
 #'                    r_range = 0:100, edge_correction = "none", permute = FALSE,
-#'                    num_permutations = 50, keep_permutation_distribution = FALSE, 
+#'                    num_permutations = 50, keep_permutation_distribution = FALSE,
 #'                    workers = 1)
 bi_ripleys_k = function(mif,
                          mnames,
@@ -85,7 +85,7 @@ bi_ripleys_k = function(mif,
   out = parallel::mclapply(names(mif$spatial), function(spatial_name){
     #prepare spatial data with x and y location (cell centers)
     spat = mif$spatial[[spatial_name]]
-    
+
     if(is.null(xloc) & is.null(yloc)){
       spat = spat %>%
         dplyr::mutate(xloc = (x_min + x_max)/2,
@@ -124,7 +124,7 @@ bi_ripleys_k = function(mif,
         dplyr::rename("Theoretical CSR" = 2,
                       "Exact CSR" = 3)
     }
-    
+
     #for the combinations of markers, do bivark and permutations
     res = parallel::mclapply(1:nrow(m_combos), function(combo){
       #pull anchor and counted marker from combos data frame
@@ -144,7 +144,7 @@ bi_ripleys_k = function(mif,
                            `Permuted CSR` = NA,
                            `Exact CSR` = NA,
                            `Observed K` = NA,
-                           check.names=FALSE) 
+                           check.names=FALSE)
         if(permute & keep_permutation_distribution){
           final = final %>%
             dplyr::full_join(expand.grid(r = r_range,
@@ -171,13 +171,13 @@ bi_ripleys_k = function(mif,
       #set the anchor and counted in final table
       K_obs$Anchor = anchor
       K_obs$Counted = counted
-      
+
       if(permute){
         #randomly sample the rows of possible cell locations for permuting
         perm_rows = lapply(seq(num_permutations), function(x){
           sample(1:nrow(spat), sum(tabs), replace = FALSE)
         })
-        
+
         #assign("perm_rows", perm_rows, envir = .GlobalEnv)
         #calculate BiK for each permutation of cells
         kpermed = parallel::mclapply(seq(perm_rows), function(perm_n){
@@ -187,7 +187,7 @@ bi_ripleys_k = function(mif,
           #subset the spatstat object
           ps = core_pp[perm]
           spatstat.geom::marks(ps) = spat_tmp$Marker
-          
+
           permed = spatstat.explore::Kcross(ps,
                                             i = anchor, j = counted,
                                             r = r_range,
@@ -215,14 +215,14 @@ bi_ripleys_k = function(mif,
         kpermed$`Permuted CSR` = NA
         kpermed$`Exact CSR` = exact_K$`Exact CSR`
       }
-      
-      
+
+
       #join the emperical K and the permuted CSR estimate
       final = dplyr::full_join(K_obs,
                                kpermed, by = c("r", "Theoretical CSR")) %>%
         #add the image label to the data frame
-        dplyr::mutate(Label = spatial_name, .before = 1) %>% 
-        dplyr::relocate(Anchor, Counted, iter, r, 
+        dplyr::mutate(Label = spatial_name, .before = 1) %>%
+        dplyr::relocate(Anchor, Counted, iter, r,
                         `Theoretical CSR`, `Permuted CSR`, `Exact CSR`, .after = 1) %>%
         dplyr::group_by(Label, Anchor, Counted, r) %>%
         dplyr::mutate(`Permutations Larger than Observed` = ifelse(permute,
@@ -234,8 +234,8 @@ bi_ripleys_k = function(mif,
           dplyr::mutate(iter = num_permutations) %>%
           dplyr::relocate(iter, .after = 3)
       }
-        
-      
+
+
       return(final)
     }, mc.preschedule = F,mc.allow.recursive = T) %>% #
       do.call(dplyr::bind_rows, .)

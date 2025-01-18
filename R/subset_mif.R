@@ -22,11 +22,11 @@
 #'   sample_id = "deidentified_sample"
 #' )
 #' 
-#' mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+#' markers <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 #' "cd8_opal_520_positive", "foxp3_opal_620_positive",
 #' "pdl1_opal_540_positive", "pd1_opal_650_positive")
 #' 
-#' mif_tumor = subset_mif(mif = mif, classifier = 'Classifier.Label', 
+#' mif_tumor = subset_mif(mif = mif, classifier = 'classifier_label', 
 #' level = 'Tumor', markers = markers)
 
 subset_mif = function(mif, classifier, level, markers){
@@ -52,6 +52,7 @@ subset_mif = function(mif, classifier, level, markers){
         dplyr::summarize_all(~sum(.)) %>%
         dplyr::mutate(`Total Cells` = nrow(tmp))
       colnames(counts) = paste0(level, ': ', colnames(counts))
+      
       out = c(patient, 
               tmp[[mif$sample_id]][1],
               unlist(counts) , unlist(percent))

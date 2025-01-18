@@ -44,12 +44,14 @@ Imports:
     tibble,
     stringr
 Suggests: 
+    BiocManager,
     knitr,
     devtools,
     rmarkdown,
     testthat (>= 3.0.0),
     gridExtra,
-    pheatmap
+    pheatmap, 
+    VectraPolarisData
 VignetteBuilder: knitr
 URL: https://github.com/FridleyLab/spatialTIME
 BugReports: https://github.com/FridleyLab/spatialTIME/issues

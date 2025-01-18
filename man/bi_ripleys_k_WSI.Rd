@@ -51,34 +51,34 @@ bi_ripleys_k_WSI(
 mif object with bivariate Ripley's K calculated
 }
 \description{
-Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with 
+Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with
 some parameters like marker names of interest and range of radii in which to assess bivariate clustering or colocalization.
 In 1.3.3.3 we have introduced the ability to forsgo the need for permutations with the implementation of the exact CSR estimate.
 This is both faster and being the exact CSR, produces an exact degree of clustering in the spatial files.
 
 Due to the availability of whole slide images (WSI), there's a possibility users will be running bivariate Ripley's K on samples
-that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and 
+that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and
 therefore easily consumers high performance compute levels of RAM. To combat this, we have implemented a tiling method that performs
 counts for small chunks of the distance matrix at a time before finally calculating the bivariate Ripley's K value on the total counts.
 When doing this there are now 2 import parameters to keep in mind. The `big` parameter is the size of the tile to use. We have found
 1000 to be a good number that allows for high number of cores while maintaining low RAM usage. The other important parameter when
-working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate 
+working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate
 Ripley's K uses a default of 3000 but we have defaulted to 1000 to keep compute minimized as edge correction uses large amounts
 of RAM over 'none'.
 }
 \examples{
-x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\% 
+x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\%
                                dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-                             sample_data = spatialTIME::example_summary \%>\% 
+                             sample_data = spatialTIME::example_summary \%>\%
                                dplyr::mutate(deidentified_id = as.character(deidentified_id)),
                              spatial_list = spatialTIME::example_spatial,
-                             patient_id = "deidentified_id", 
+                             patient_id = "deidentified_id",
                              sample_id = "deidentified_sample")
-mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-                 "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-                 "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-x2 = bi_ripleys_k_WSI(mif = x, mnames = mnames_good[1:2], 
+mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+"cd8_opal_520_positive", "foxp3_opal_620_positive",
+"pdl1_opal_540_positive", "pd1_opal_650_positive")
+x2 = bi_ripleys_k_WSI(mif = x, mnames = mnames_good[1:2],
                    r_range = 0:100, edge_correction = "none", permute = FALSE,
-                   num_permutations = 50, keep_permutation_distribution = FALSE, 
+                   num_permutations = 50, keep_permutation_distribution = FALSE,
                    workers = 1, big = 1000)
 }
