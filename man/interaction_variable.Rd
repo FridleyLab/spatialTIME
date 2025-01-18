@@ -31,9 +31,9 @@ interaction_variable(
 
 \item{overwrite}{boolean for whether to overwrite existing interaction variable results}
 
-\item{xloc}{column name in spatial files containing the x location - if left NULL will average columns XMin and XMax}
+\item{xloc}{column name in spatial files containing the x location - if left NULL will average columns x_min and x_max}
 
-\item{yloc}{column name in spatial files containing the y location - if left NULL will average columns YMin and YMax}
+\item{yloc}{column name in spatial files containing the y location - if left NULL will average columns y_min and y_max}
 }
 \value{
 object of class mif with the interaction variable derive slot filled

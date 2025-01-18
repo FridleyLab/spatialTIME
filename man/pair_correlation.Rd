@@ -43,7 +43,7 @@ pair_correlation(
 
 The Pair Correlation Function uses the derivative of Ripley's K so it does take slightly longer to calculate
 
-`xloc` and `yloc`, if NULL, will be calculated from columns `XMax`, `XMin`, `YMax`, and `YMin`.}
+`xloc` and `yloc`, if NULL, will be calculated from columns `x_max`, `x_min`, `y_max`, and `y_min`.}
 }
 \value{
 mif object with with the univariate_pair_correlation derived slot filled or appended to

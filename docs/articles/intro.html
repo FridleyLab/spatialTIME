@@ -147,12 +147,12 @@ corresponds to a core and each element should be a <span class="math inline">\(n
 merging and potential downstream analysis linking to clinical
 variables),</li>
 <li>
-<code>XMin</code>, <code>XMax</code>, <code>YMin</code>, and
-<code>YMax</code> which defines the area that a cell occupies which is
+<code>x_min</code>, <code>x_max</code>, <code>y_min</code>, and
+<code>y_max</code> which defines the area that a cell occupies which is
 eventually used to assign a location for each cell with the x-position
-being the mean of the <code>XMin</code> and <code>XMax</code> and
-y-position being the mean of the <code>YMin</code> and
-<code>YMax</code>, and</li>
+being the mean of the <code>x_min</code> and <code>x_max</code> and
+y-position being the mean of the <code>y_min</code> and
+<code>y_max</code>, and</li>
 <li>a set of columns that indicate whether a cell is positive to one or
 multiple markers.</li>
 </ol>
@@ -750,8 +750,8 @@ populations.
 <p>If <code>xloc</code> and <code>yloc</code> are set as
 <code>NULL</code>, when computing spatial clustering than the cell
 location is the center of the cell (x-coordinate is the average of
-<code>XMin</code> and <code>XMax</code>, and y-coordinate is the average
-of <code>YMin</code> and <code>YMax</code>). If you desire to use custom
+<code>x_min</code> and <code>x_max</code>, and y-coordinate is the average
+of <code>y_min</code> and <code>y_max</code>). If you desire to use custom
 points, this is possible by identifying which column the new coordinates
 are from. Here were compute Ripley’s <span class="math inline">\(K\)</span> with the minimum coordinate of x and
 y.</p>
@@ -759,7 +759,7 @@ y.</p>
 <code class="sourceCode R"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span>mif <span class="op">=</span> <span class="va">x</span>, mnames <span class="op">=</span> <span class="va">mnames_good</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, num_permutations <span class="op">=</span> <span class="fl">100</span>,</span>
 <span>               edge_correction <span class="op">=</span> <span class="st">'translation'</span>, r <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>,<span class="fl">50</span><span class="op">)</span>,permute <span class="op">=</span> <span class="cn">TRUE</span>, </span>
 <span>               keep_permutation_distribution <span class="op">=</span> <span class="cn">TRUE</span>, workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span>,</span>
-<span>               xloc <span class="op">=</span> <span class="st">'XMin'</span>, yloc <span class="op">=</span> <span class="st">'YMin'</span><span class="op">)</span></span>
+<span>               xloc <span class="op">=</span> <span class="st">'x_min'</span>, yloc <span class="op">=</span> <span class="st">'y_min'</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Warning: data contain duplicated points</span></span></code></pre></div>
 </div>
   </div>

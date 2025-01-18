@@ -41,7 +41,8 @@ creation of the `mif` object.
 x <- create_mif(clinical_data = example_clinical,
                 sample_data = example_summary,
                 spatial_list = example_spatial,
-                patient_id = "deidentified_id", sample_id = "deidentified_sample",
+                patient_id = "deidentified_id",
+                sample_id = "deidentified_sample",
                 clean_columns = TRUE)
 x
 ## 229 patients spanning 229 samples and 5 spatial data frames were found

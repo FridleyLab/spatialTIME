@@ -12,21 +12,21 @@
 #'    
 #' @export
 #' @examples 
-#' #' #Create mif object
+#' #Create mif object
 #' library(dplyr)
-#' x <- create_mif(clinical_data = example_clinical %>% 
-#' mutate(deidentified_id = as.character(deidentified_id)),
-#' sample_data = example_summary %>% 
-#' mutate(deidentified_id = as.character(deidentified_id)),
-#' spatial_list = example_spatial,
-#' patient_id = "deidentified_id", 
-#' sample_id = "deidentified_sample")
+#' mif <- create_mif(
+#'  clinical_data = example_clinical,
+#'   sample_data = example_summary,
+#'   spatial_list = example_spatial,
+#'   patient_id = "deidentified_id",
+#'   sample_id = "deidentified_sample"
+#' )
 #' 
-#' markers = c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-#' "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-#' "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
+#' markers <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+#' "cd8_opal_520_positive", "foxp3_opal_620_positive",
+#' "pdl1_opal_540_positive", "pd1_opal_650_positive")
 #' 
-#' mif_tumor = subset_mif(mif = x, classifier = 'Classifier.Label', 
+#' mif_tumor = subset_mif(mif = mif, classifier = 'classifier_label', 
 #' level = 'Tumor', markers = markers)
 
 subset_mif = function(mif, classifier, level, markers){
@@ -52,6 +52,7 @@ subset_mif = function(mif, classifier, level, markers){
         dplyr::summarize_all(~sum(.)) %>%
         dplyr::mutate(`Total Cells` = nrow(tmp))
       colnames(counts) = paste0(level, ': ', colnames(counts))
+      
       out = c(patient, 
               tmp[[mif$sample_id]][1],
               unlist(counts) , unlist(percent))

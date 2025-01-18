@@ -52,10 +52,10 @@ bi_NN_G2 = function(mif,
   #run bivar nn g
   out = parallel::mclapply(mif$spatial, function(spat){
     if(is.null(xloc)){
-      spat$xloc = (spat$XMax + spat$XMin)/2
+      spat$xloc = (spat$x_max + spat$x_min)/2
     }
     if(is.null(yloc)){
-      spat$yloc = (spat$YMax + spat$YMin)/2
+      spat$yloc = (spat$y_max + spat$y_min)/2
     }
     #get name of sample, make spatial a matrix and build sample window
     core = spat[1, mif$sample_id]

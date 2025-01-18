@@ -13,11 +13,11 @@
 #' @param overwrite Logical value determining if you want the results to replace the 
 #' current output (TRUE) or be to be appended (FALSE).
 #' @param xloc a string corresponding to the x coordinates. If null the average of 
-#' XMin and XMax will be used 
+#' x_min and x_max will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
-#' YMin and YMax will be used 
+#' y_min and y_max will be used 
 #' @importFrom magrittr %>%
-#' 
+#' @import dplyr
 #' @return Returns a data frame for Z-statistic
 #'    \item{From}{}
 #'    \item{To}{}
@@ -41,14 +41,14 @@
 #'    \item{Image.Tag}{}
 #' @examples 
 #' #' #Create mif object
-#' library(dplyr)
-#' x <- create_mif(clinical_data = example_clinical %>% 
-#' mutate(deidentified_id = as.character(deidentified_id)),
-#' sample_data = example_summary %>% 
-#' mutate(deidentified_id = as.character(deidentified_id)),
-#' spatial_list = example_spatial,
-#' patient_id = "deidentified_id", 
-#' sample_id = "deidentified_sample")
+#' mif <- create_mif(
+#'   clinical_data = example_clinical,
+#'  sample_data = example_summary,
+#'   spatial_list = example_spatial,
+#'   patient_id = "deidentified_id",
+#'   sample_id = "deidentified_sample"
+#' )
+#' 
 #' 
 #' @export
 
@@ -73,12 +73,12 @@ dixons_s = function(mif, mnames, num_permutations = 1000, type = c("Z", "C"),
   out = parallel::mclapply(data, function(spat){
     #if locations not provided
     if(is.null(xloc)){
-      spat$xloc = (spat$XMin+spat$XMax)/2
+      spat$xloc = (spat$x_min+spat$x_max)/2
     } else {
       spat$xloc = spat[[xloc]]
     }
     if(is.null(yloc)){
-      spat$yloc = (spat$YMin+spat$YMax)/2
+      spat$yloc = (spat$y_min+spat$y_max)/2
     } else {
       spat$yloc = spat[[yloc]]
     }
