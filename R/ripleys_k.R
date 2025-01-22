@@ -307,13 +307,7 @@ ripleys_k = function(mif,
                             `Permuted CSR` = NA,
                             `Exact CSR` = k, check.names = FALSE)
       }
-<<<<<<< HEAD
-      
       res = suppressMessages(dplyr::full_join(marker_res, k_est2)) %>%
-=======
-
-      res = dplyr::full_join(marker_res, k_est2) %>%
->>>>>>> cansavvy/spatialexperiment
         dplyr::mutate(iter = "Estimater", .before = 1) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = NA,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,

@@ -64,29 +64,17 @@ of RAM over 'none'.
 \examples{
 mif <- create_mif(
   clinical_data = example_clinical,
-<<<<<<< HEAD
-.  sample_data = example_summary,
-=======
- sample_data = example_summary,
->>>>>>> cansavvy/spatialexperiment
+  sample_data = example_summary,
   spatial_list = example_spatial,
   patient_id = "deidentified_id",
   sample_id = "deidentified_sample"
 )
 
-<<<<<<< HEAD
-mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
-"cd8_opal_520_positive", "foxp3_opal_620_positive",
-"pdl1_opal_540_positive", "pd1_opal_650_positive")
-
-mif2 = bi_ripleys_k(mif = mif, mnames = mnames_good[1:2], 
-=======
 mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 "cd8_opal_520_positive", "foxp3_opal_620_positive",
 "pdl1_opal_540_positive", "pd1_opal_650_positive")
 
 mif2 = bi_ripleys_k(mif = mif, mnames = mnames_good[1:2],
->>>>>>> cansavvy/spatialexperiment
                    r_range = 0:100, edge_correction = "none", permute = FALSE,
                    num_permutations = 50, keep_permutation_distribution = FALSE,
                    workers = 1)

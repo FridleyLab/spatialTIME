@@ -47,25 +47,12 @@ Univariate Nearest Neighbor G(r)
 library(dplyr)
 mif <- create_mif(
   clinical_data = example_clinical,
-<<<<<<< HEAD
-.  sample_data = example_summary,
-=======
  sample_data = example_summary,
->>>>>>> cansavvy/spatialexperiment
   spatial_list = example_spatial,
   patient_id = "deidentified_id",
   sample_id = "deidentified_sample"
 )
 
-<<<<<<< HEAD
-mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
-"cd8_opal_520_positive", "foxp3_opal_620_positive",
-"pdl1_opal_540_positive", "pd1_opal_650_positive")
-  
-mif2 = NN_G(mif = mif, mnames = mnames_good[1:2], 
-r_range = 0:100, num_permutations = 10, 
-edge_correction = "rs", keep_perm_dis = FALSE, 
-=======
 mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 "cd8_opal_520_positive", "foxp3_opal_620_positive",
 "pdl1_opal_540_positive", "pd1_opal_650_positive")
@@ -73,6 +60,5 @@ mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 mif2 = NN_G(mif = mif, mnames = mnames_good[1:2],
 r_range = 0:100, num_permutations = 10,
 edge_correction = "rs", keep_perm_dis = FALSE,
->>>>>>> cansavvy/spatialexperiment
 workers = 1, overwrite = TRUE)
 }

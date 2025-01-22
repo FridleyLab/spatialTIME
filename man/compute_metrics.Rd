@@ -81,11 +81,7 @@ This function calculates count based Measures (Ripley's K, Besag
 library(dplyr)
 mif <- create_mif(
   clinical_data = example_clinical,
-<<<<<<< HEAD
-.  sample_data = example_summary,
-=======
  sample_data = example_summary,
->>>>>>> cansavvy/spatialexperiment
   spatial_list = example_spatial,
   patient_id = "deidentified_id",
   sample_id = "deidentified_sample"

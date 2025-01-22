@@ -84,21 +84,12 @@ mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
 
 mnames = mif$spatial[[1]] \%>\%
   colnames() \%>\%
-<<<<<<< HEAD
-  grep("Pos|CD", ., value =TRUE) \%>\%
-  grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
-  
-mif2 = ripleys_k(mif = mif, 
-  mnames = mnames[1], 
-  r_range = seq(0, 100, 1), 
-=======
   grep("pos|cd", ., value =TRUE) \%>\%
   grep("cyto|nucle", ., value =TRUE, invert =TRUE)
 
 mif2 = ripleys_k(mif = mif,
   mnames = mnames[1],
   r_range = seq(0, 100, 1),
->>>>>>> cansavvy/spatialexperiment
   num_permutations = 100,
   edge_correction = "translation",
   method = "K",
