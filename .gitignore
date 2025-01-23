@@ -1,6 +1,7 @@
 .Rproj.user
 .Rhistory
 .RData
+.Rprofile
 .Ruserdata
 inst/doc
 _notes
@@ -14,5 +15,3 @@ R/simulate_mif.R
 manuscript information
 /doc/
 /Meta/
-/renv/
-renv.lock

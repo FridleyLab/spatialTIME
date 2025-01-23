@@ -9,8 +9,8 @@
 #' @param keep_permutation_distribution boolean for whether or not to keep all permutation results or average them
 #' @param workers integer for the number of CPU cores to use for permutations, markers, and spatial samples
 #' @param overwrite boolean for whether to overwrite existing interaction variable results
-#' @param xloc column name in spatial files containing the x location - if left NULL will average columns XMin and XMax
-#' @param yloc column name in spatial files containing the y location - if left NULL will average columns YMin and YMax
+#' @param xloc column name in spatial files containing the x location - if left NULL will average columns x_min and x_max
+#' @param yloc column name in spatial files containing the y location - if left NULL will average columns y_min and y_max
 #'
 #' @return object of class mif with the interaction variable derive slot filled
 #' @export
@@ -45,8 +45,8 @@ interaction_variable = function(mif,
     #get center of the cells
     if(is.null(xloc) | is.null(yloc)){
       spat = spat %>%
-        dplyr::mutate(xloc = (XMax + XMin)/2,
-                      yloc = (YMax + YMin)/2)
+        dplyr::mutate(xloc = (x_max + x_min)/2,
+                      yloc = (y_max + y_min)/2)
     } else {
       #rename columns to follow xloc and yloc names
       spat = spat %>%

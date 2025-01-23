@@ -51,10 +51,10 @@ distribution of permuted K or G values}
 current output (TRUE) or be to be appended (FALSE).}
 
 \item{xloc}{a string corresponding to the x coordinates. If null the average of 
-XMin and XMax will be used}
+x_min and x_max will be used}
 
 \item{yloc}{a string corresponding to the y coordinates. If null the average of 
-YMin and YMax will be used}
+y_min and y_max will be used}
 
 \item{exhaustive}{whether or not to compute all combinations of markers}
 }
@@ -77,19 +77,19 @@ This function calculates count based Measures (Ripley's K, Besag
   observed and permuted point processes.
 }
 \examples{
-#Create mif object
-library(dplyr)
-x <- create_mif(clinical_data = example_clinical \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-sample_data = example_summary \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-spatial_list = example_spatial,
-patient_id = "deidentified_id", 
-sample_id = "deidentified_sample")
 
-# Define the set of markers to study
-mnames <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-"FOXP3..Opal.620..Positive","CD3..CD8.","CD3..FOXP3.")
+library(dplyr)
+mif <- create_mif(
+  clinical_data = example_clinical,
+ sample_data = example_summary,
+  spatial_list = example_spatial,
+  patient_id = "deidentified_id",
+  sample_id = "deidentified_sample"
+)
+
+mnames_bad <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+"cd8_opal_520_positive", "foxp3_opal_620_positive",
+"pdl1_opal_540_positive", "pd1_opal_650_positive")
 
 # Ripley's K and nearest neighbor G for all markers with a neighborhood size 
 # of  10,20,...,100 (zero must be included in the input).

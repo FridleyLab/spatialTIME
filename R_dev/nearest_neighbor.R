@@ -17,9 +17,9 @@
 #' @param overwrite Logical value determining if you want the results to replace the 
 #' current output (TRUE) or be to be appended (FALSE).
 #' @param xloc a string corresponding to the x coordinates. If null the average of 
-#' XMin and XMax will be used 
+#' x_min and x_max will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
-#' YMin and YMax will be used 
+#' y_min and y_max will be used 
 #' @importFrom magrittr %>%
 #' 
 #' @return Returns a data.frame
@@ -113,9 +113,9 @@ NN_G = function(mif, mnames, r_range = seq(0, 100, 50),
 #' @param overwrite Logical value determining if you want the results to replace the 
 #' current output (TRUE) or be to be appended (FALSE).
 #' @param xloc a string corresponding to the x coordinates. If null the average of 
-#' XMin and XMax will be used 
+#' x_min and x_max will be used 
 #' @param yloc a string corresponding to the y coordinates. If null the average of 
-#' YMin and YMax will be used 
+#' y_min and y_max will be used 
 #' @importFrom magrittr %>%
 #' 
 #' @return Returns a data frame 

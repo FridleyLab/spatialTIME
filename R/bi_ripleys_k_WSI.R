@@ -3,7 +3,7 @@
 #' @param mif mIF object with spatial data frames, clinical, and per-sample summary information
 #' @param mnames vector of column names for phenotypes or data frame of marker combinations
 #' @param r_range vector range of radii to calculate co-localization *K*
-#' @param edge_correction character edge_correction method, one of "translation", or none" 
+#' @param edge_correction character edge_correction method, one of "translation", or none"
 #' @param num_permutations integer number of permutations to estimate CSR
 #' @param permute whether or not to use permutations to estimate CSR (TRUE) or to calculate exact CSR (FALSE)
 #' @param keep_permutation_distribution boolean as to whether to summarise permutations to mean
@@ -11,43 +11,43 @@
 #' @param workers integer number of CPU workers to use
 #' @param big integer used as the threshold for subsetting large samples, default is 1000 either *i* or *j*
 #' @param nlarge number of cells in either *i* or *j* to flip to no edge correction - at small (relative to whole spatial region) *r* values differences in results between correction methods is negligible so running a few samples is recommended. Perhaps compute outweighs small differences in correction methods.
-#' @param xloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
-#' @param yloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
+#' @param xloc the x and y positions that correspond to cells. If left as NULL, x_min, x_max, y_min, and y_max must be present in the spatial files
+#' @param yloc the x and y positions that correspond to cells. If left as NULL, x_min, x_max, y_min, and y_max must be present in the spatial files
 #'
 #' @return mif object with bivariate Ripley's K calculated
-#' 
+#'
 #' @description
-#' Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with 
+#' Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with
 #' some parameters like marker names of interest and range of radii in which to assess bivariate clustering or colocalization.
 #' In 1.3.3.3 we have introduced the ability to forsgo the need for permutations with the implementation of the exact CSR estimate.
 #' This is both faster and being the exact CSR, produces an exact degree of clustering in the spatial files.
-#' 
+#'
 #' Due to the availability of whole slide images (WSI), there's a possibility users will be running bivariate Ripley's K on samples
-#' that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and 
+#' that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and
 #' therefore easily consumers high performance compute levels of RAM. To combat this, we have implemented a tiling method that performs
 #' counts for small chunks of the distance matrix at a time before finally calculating the bivariate Ripley's K value on the total counts.
 #' When doing this there are now 2 import parameters to keep in mind. The `big` parameter is the size of the tile to use. We have found
 #' 1000 to be a good number that allows for high number of cores while maintaining low RAM usage. The other important parameter when
-#' working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate 
+#' working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate
 #' Ripley's K uses a default of 3000 but we have defaulted to 1000 to keep compute minimized as edge correction uses large amounts
 #' of RAM over 'none'.
-#' 
+#'
 #' @export
 #'
 #' @examples
-#' x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical %>% 
+#' x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical %>%
 #'                                dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-#'                              sample_data = spatialTIME::example_summary %>% 
+#'                              sample_data = spatialTIME::example_summary %>%
 #'                                dplyr::mutate(deidentified_id = as.character(deidentified_id)),
 #'                              spatial_list = spatialTIME::example_spatial,
-#'                              patient_id = "deidentified_id", 
+#'                              patient_id = "deidentified_id",
 #'                              sample_id = "deidentified_sample")
-#' mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-#'                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-#'                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-#' x2 = bi_ripleys_k_WSI(mif = x, mnames = mnames_good[1:2], 
+#' mnames_good <- c("cd3_cd8", "cd3_foxp3", "cd3_opal_570_positive",
+#' "cd8_opal_520_positive", "foxp3_opal_620_positive",
+#' "pdl1_opal_540_positive", "pd1_opal_650_positive")
+#' x2 = bi_ripleys_k_WSI(mif = x, mnames = mnames_good[1:2],
 #'                    r_range = 0:100, edge_correction = "none", permute = FALSE,
-#'                    num_permutations = 50, keep_permutation_distribution = FALSE, 
+#'                    num_permutations = 50, keep_permutation_distribution = FALSE,
 #'                    workers = 1, big = 1000)
 bi_ripleys_k_WSI = function(mif,
                          mnames,
@@ -82,11 +82,11 @@ bi_ripleys_k_WSI = function(mif,
   out = parallel::mclapply(names(mif$spatial), function(spatial_name){
     #prepare spatial data with x and y location (cell centers)
     spat = mif$spatial[[spatial_name]]
-    
+
     if(is.null(xloc) & is.null(yloc)){
       spat = spat %>%
-        dplyr::mutate(xloc = (XMin + XMax)/2,
-                      yloc = (YMin + YMax)/2)
+        dplyr::mutate(xloc = (x_min + x_max)/2,
+                      yloc = (y_min + y_max)/2)
     } else {
       spat = spat %>%
         dplyr::rename('xloc' := xloc,
@@ -119,7 +119,7 @@ bi_ripleys_k_WSI = function(mif,
         data.frame() %>%
         dplyr::pull(3)
     }
-    
+
     #for the combinations of markers, do bivark and permutations
     res = parallel::mclapply(1:nrow(m_combos), function(combo){
       #pull anchor and counted marker from combos data frame
@@ -128,11 +128,11 @@ bi_ripleys_k_WSI = function(mif,
       cat(spatial_name, "\t", combo, "\t", anchor, "\t", counted, "\n")
       #remove rows that are positive for both counted and anchor
       spat_tmp = spat[!(spat[,anchor] == 1 & spat[,counted] == 1),c("xloc", "yloc", anchor, counted)]
-      
+
       #get data for both anchor and counted
       i_dat = spat_tmp[spat_tmp[,3] == 1,]
       j_dat = spat_tmp[spat_tmp[,4] == 1,]
-      
+
       #if the number of positive cells for either counted or anchor is less than 2, return empty K
       if(sum(spat_tmp[,3]) < 2 | sum(spat_tmp[,4]) < 2){
         final = data.frame(Label = spatial_name,
@@ -143,7 +143,7 @@ bi_ripleys_k_WSI = function(mif,
                            `Observed K` = NA,
                            `Permuted CSR` = NA,
                            `Exact CSR` = NA,
-                           check.names=FALSE) 
+                           check.names=FALSE)
         if(permute){
           final = final %>%
           dplyr::full_join(expand.grid(r = r_range,
@@ -159,24 +159,24 @@ bi_ripleys_k_WSI = function(mif,
                          `Theoretical CSR` = pi * r_range^2,
                          check.names = FALSE)
       #get observed K
-      K_obs$`Observed K` = calculateK(i_dat = i_dat, 
+      K_obs$`Observed K` = calculateK(i_dat = i_dat,
                                       j_dat = j_dat,
                                       anchor = anchor,
-                                      counted = counted, 
-                                      area = area, win = win, big = big, 
+                                      counted = counted,
+                                      area = area, win = win, big = big,
                                       r_range = r_range,
                                       edge_correction = edge_correction,
                                       cores = 1)
       #set the anchor and counted in final table
       K_obs$Anchor = anchor
       K_obs$Counted = counted
-      
+
       if(permute){
         #randomly sample the rows of possible cell locations for permuting
         perm_rows = lapply(seq(num_permutations), function(x){
           sample(1:nrow(spat), sum(nrow(i_dat), nrow(j_dat)), replace = FALSE)
         })
-        
+
         #assign("perm_rows", perm_rows, envir = .GlobalEnv)
         #calculate BiK for each permutation of cells
         kpermed = parallel::mclapply(seq(perm_rows), function(perm_n){
@@ -195,11 +195,11 @@ bi_ripleys_k_WSI = function(mif,
                               `Theoretical CSR` = pi * r_range^2,
                               iter = perm_n,
                               check.names = FALSE)
-          permed$`Permuted CSR` = calculateK(i_dat = i_dat, 
+          permed$`Permuted CSR` = calculateK(i_dat = i_dat,
                                            j_dat = j_dat,
                                            anchor = anchor,
-                                           counted = counted, 
-                                           area = area, win = win, big = big, 
+                                           counted = counted,
+                                           area = area, win = win, big = big,
                                            r_range = r_range,
                                            edge_correction = edge_correction,
                                            cores = 1)
@@ -215,14 +215,14 @@ bi_ripleys_k_WSI = function(mif,
         kpermed$`Permuted CSR` = NA
         kpermed$`Exact CSR` = exact_K
       }
-      
-      
+
+
       #join the emperical K and the permuted CSR estimate
       final = dplyr::full_join(K_obs,
                                kpermed, by = c("r", "Theoretical CSR")) %>%
         #add the image label to the data frame
         dplyr::mutate(Label = spatial_name, .before = 1)
-      
+
       return(final)
     }) %>% #, mc.cores = cores, mc.preschedule = F,mc.allow.recursive = T
       do.call(dplyr::bind_rows, .)

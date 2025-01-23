@@ -29,15 +29,15 @@ column names in the summary file and clinical data file. The MIF objects **DO**
 need to have the same patient_id and sample_id.
 }
 \examples{
-#merge several MIF objects
-library(dplyr)
-x <- create_mif(clinical_data = example_clinical \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-sample_data = example_summary \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-spatial_list = example_spatial,
-patient_id = "deidentified_id", 
-sample_id = "deidentified_sample")
-x <- merge_mifs(mifs = list(x, x), check.names = FALSE)
+#Create mif object
+mif <- create_mif(
+  clinical_data = example_clinical,
+  sample_data = example_summary,
+  spatial_list = example_spatial,
+  patient_id = "deidentified_id",
+  sample_id = "deidentified_sample"
+)
+
+mif <- merge_mifs(mifs = list(mif, mif), check.names = FALSE)
 
 }

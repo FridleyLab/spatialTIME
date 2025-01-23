@@ -32,10 +32,10 @@ be "Z" for z-statistic results or "C" for Chi-squared statistic results}
 current output (TRUE) or be to be appended (FALSE).}
 
 \item{xloc}{a string corresponding to the x coordinates. If null the average of 
-XMin and XMax will be used}
+x_min and x_max will be used}
 
 \item{yloc}{a string corresponding to the y coordinates. If null the average of 
-YMin and YMax will be used}
+y_min and y_max will be used}
 }
 \value{
 Returns a data frame for Z-statistic
@@ -68,13 +68,13 @@ stroma
 }
 \examples{
 #' #Create mif object
-library(dplyr)
-x <- create_mif(clinical_data = example_clinical \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-sample_data = example_summary \%>\% 
-mutate(deidentified_id = as.character(deidentified_id)),
-spatial_list = example_spatial,
-patient_id = "deidentified_id", 
-sample_id = "deidentified_sample")
+mif <- create_mif(
+  clinical_data = example_clinical,
+ sample_data = example_summary,
+  spatial_list = example_spatial,
+  patient_id = "deidentified_id",
+  sample_id = "deidentified_sample"
+)
+
 
 }
