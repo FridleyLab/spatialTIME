@@ -300,7 +300,7 @@ ripleys_k = function(mif,
                             `Exact CSR` = k, check.names = FALSE)
       }
       
-      res = dplyr::full_join(marker_res, k_est2) %>%
+      res = dplyr::full_join(marker_res, k_est2, by = join_by(r)) %>%
         dplyr::mutate(iter = "Estimater", .before = 1) %>%
         dplyr::mutate(`Degree of Clustering Permutation` = NA,
                       `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
