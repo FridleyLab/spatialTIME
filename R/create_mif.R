@@ -37,6 +37,23 @@
 
 create_mif <- function(clinical_data, sample_data, spatial_list = NULL,
                        patient_id = "patient_id", sample_id = "image_tag"){
+  #checks from Candace Savonen
+  stopifnot(
+    "clinical_data must be a data frame"= is.data.frame(clinical_data),
+    "sample_data must be a data frame" = is.data.frame(sample_data),
+    "spatial_list must be a list of data frames" = is.list(spatial_list),
+    "All items in 'spatial_list' must be a data frame" = all(sapply(spatial_list, is.data.frame)),
+    "patient_id must be a character indicating a column name" = is.character(patient_id),
+    "sample_id must be a character indicating a column name" = is.character(sample_id),
+    "The column specified by 'patient_id' could not be found in 'clinical_data'" = 
+      patient_id %in% colnames(clinical_data),
+    "The column specified by 'patient_id' could not be found in 'sample_data'" = 
+      patient_id %in% colnames(sample_data),
+    "The column specified by 'sample_id' could not be found in 'sample_data'" = 
+      sample_id %in% colnames(sample_data), 
+    "Each item in spatial_list must be named" = 
+      all(!sapply(names(spatial_list), is.null))
+  )
   
   sample_data_clean <- sample_data %>% 
     dplyr::full_join(clinical_data %>% 
