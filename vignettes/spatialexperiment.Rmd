@@ -111,7 +111,7 @@ ova_mif <- spatial_exp_to_mif(
 
 Now we can use our `mif` object to make a set of immunofluorescence plots, one for each sample in the set.  
 
-```{r}
+```{r, message=FALSE}
 ova_mif <- plot_immunoflo(ova_mif,
   plot_title = "sample_id",
   mnames = markers,
@@ -175,7 +175,7 @@ names(ova_mif_tumor$sample)
 
 Now we can use the Ripley's K stat to quantify our spatial clustering.
 
-```{r}
+```{r, message=FALSE}
 # takes time to process all samples
 ova_mif_tumor <- ripleys_k(ova_mif_tumor,
   mnames = markers,
