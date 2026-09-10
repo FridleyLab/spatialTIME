@@ -16,3 +16,7 @@ manuscript information
 /Meta/
 /renv/
 renv.lock
+.Rlib/
+.conda*/
+*.Rcheck/
+*.tar.gz

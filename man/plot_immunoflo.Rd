@@ -31,7 +31,7 @@ plot_immunoflo(
 
 \item{path}{Different path than file name or to use in conjunction with filename ???}
 
-\item{xloc, yloc}{columns in the spatial files containing the x and y locations of cells. Default is `NULL` which will result in `xloc` and `yloc` being calculated from `XMin`/`YMin` and `XMax`/`YMax`}
+\item{xloc, yloc}{columns in the spatial files containing the x and y locations of cells. Default is \code{NULL} which will result in \code{xloc} and \code{yloc} being calculated from \code{XMin}/\code{YMin} and \code{XMax}/\code{YMax}}
 }
 \value{
 mif object and the ggplot objects can be viewed form the derived slot of the mif object

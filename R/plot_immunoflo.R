@@ -12,8 +12,6 @@
 #' 
 #' @return mif object and the ggplot objects can be viewed form the derived slot of the mif object
 #' 
-#' @importFrom grDevices dev.off
-#'    
 #' @export
 #'
 #' @examples

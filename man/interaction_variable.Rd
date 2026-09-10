@@ -13,31 +13,73 @@ interaction_variable(
   workers = 1,
   overwrite = FALSE,
   xloc = NULL,
-  yloc = NULL
+  yloc = NULL,
+  ...
 )
 }
 \arguments{
-\item{mif}{object of class `mif`}
+\item{mif}{object of class \code{mif}}
 
-\item{mnames}{a character vector or table with 2 columns indicating the from-to markers to assess}
+\item{mnames}{a character vector, or a two-column data frame of anchor/counted
+markers to assess}
 
-\item{r_range}{numeric vector of radii for which to calculate the interaction variable at}
+\item{r_range}{numeric vector of radii at which to evaluate the interaction
+variable}
 
-\item{num_permutations}{integer for how many permutations to use to derive the interaction estimate under CSR}
+\item{num_permutations}{integer number of permutations used to derive the
+interaction estimate under CSR}
 
-\item{keep_permutation_distribution}{boolean for whether or not to keep all permutation results or average them}
+\item{keep_permutation_distribution}{boolean; keep each permutation's result or
+average them to one row per marker pair and radius}
 
-\item{workers}{integer for the number of CPU cores to use for permutations, markers, and spatial samples}
+\item{workers}{integer number of CPU cores used to process samples in parallel}
 
-\item{overwrite}{boolean for whether to overwrite existing interaction variable results}
+\item{overwrite}{boolean; replace an existing \code{interaction_variable} slot rather
+than appending it as a new \code{Run}}
 
-\item{xloc}{column name in spatial files containing the x location - if left NULL will average columns XMin and XMax}
+\item{xloc, yloc}{the x and y columns giving cell centres. If left \code{NULL},
+\code{XMin}, \code{XMax}, \code{YMin} and \code{YMax} must be present.}
 
-\item{yloc}{column name in spatial files containing the y location - if left NULL will average columns YMin and YMax}
+\item{...}{support for deprecated argument names (see Details).}
 }
 \value{
-object of class mif with the interaction variable derive slot filled
+object of class \code{mif} with the \code{interaction_variable} derived slot filled
 }
 \description{
-Single-cell spatial-protein metric introduce by Steinhart et al in https://doi.org/10.1158/1541-7786.mcr-21-0411
+For each anchor cell, find the distance to its nearest counted cell; then report
+the cumulative percentage of cells whose nearest counted neighbour falls within
+each radius. Cells positive for both markers of a pair are excluded from that
+pair.
 }
+\details{
+Single-cell spatial-protein metric introduced by Steinhart et al.,
+\doi{10.1158/1541-7786.MCR-21-0411}.
+
+\code{keep_perm_dis} is accepted as a deprecated alias for
+\code{keep_permutation_distribution}.
+}
+\section{How the percentage is normalised}{
+
+The numerator counts anchor cells (one nearest-neighbour distance per anchor
+cell), but the denominator is the \strong{total} number of anchor plus counted cells
+in the pair. \verb{Observed Interaction} therefore approaches
+\code{100 * n_anchor / (n_anchor + n_counted)} rather than 100 as r grows, and its
+ceiling depends on the relative abundance of the two markers.
+
+This is preserved exactly as implemented before 2.0.0 so that existing results
+remain comparable -- it is documented here rather than changed, because
+redefining a published metric is not a refactoring decision. If you want a
+quantity that reaches 100\%, divide by the anchor count:
+\verb{Observed Interaction * (n_anchor + n_counted) / n_anchor}.
+}
+
+\section{Output columns}{
+
+As of 2.0.0 this function returns the same columns as \code{\link[=bi_ripleys_k]{bi_ripleys_k()}}, with
+\verb{Observed Interaction} in place of \verb{Observed K}. \code{From}/\code{To} are now
+\code{Anchor}/\code{Counted}, \verb{Permuted Interaction} is now \verb{Permuted CSR}, and
+\verb{Degree of Interaction Permuted} is now \verb{Degree of Clustering Permutation}.
+\verb{Theoretical CSR} and \verb{Exact CSR} are present but always \code{NA}: this metric has
+no closed-form null, which is why it is permutation-only.
+}
+

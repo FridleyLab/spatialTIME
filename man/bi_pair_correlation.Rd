@@ -14,33 +14,54 @@ bi_pair_correlation(
   workers = 1,
   overwrite = FALSE,
   xloc = NULL,
-  yloc = NULL
+  yloc = NULL,
+  ...
 )
 }
 \arguments{
-\item{mif}{object of class `mif`}
+\item{mif}{object of class \code{mif}}
 
-\item{mnames}{character vector or dataframe with 2 columns containing markers/marker combinations to run}
+\item{mnames}{character vector, or a two-column data frame of anchor/counted
+marker combinations to run}
 
-\item{r_range}{numeric vector radii to measure}
+\item{r_range}{numeric vector of radii. If \code{NULL}, \code{spatstat} chooses the range.}
 
-\item{num_permutations}{integer for the number of permutations to run}
+\item{num_permutations}{integer number of permutations used to estimate CSR}
 
-\item{edge_correction}{character string for which edge correction to implement for Ripley's K}
+\item{edge_correction}{edge correction passed to \code{\link[spatstat.explore:pcfcross]{spatstat.explore::pcfcross()}}}
 
-\item{keep_permutation_distribution}{boolean whether to summarise the permutations or keep all}
+\item{keep_permutation_distribution}{boolean; keep each permutation's result or
+average them to one row per marker pair and radius}
 
-\item{workers}{integer for number of cores to use when calculating}
+\item{workers}{integer number of CPU cores used to process samples in parallel}
 
-\item{overwrite}{boolean for whether to overwrite existing bivariate pair correlation results}
+\item{overwrite}{boolean; replace an existing \code{bivariate_pair_correlation} slot
+rather than appending it as a new \code{Run}}
 
-\item{xloc}{x location column in spatial files}
+\item{xloc, yloc}{the x and y columns giving cell centres. If left \code{NULL},
+\code{XMin}, \code{XMax}, \code{YMin} and \code{YMax} must be present.}
 
-\item{yloc}{y location column in spatial files}
+\item{...}{other parameters passed to \code{\link[spatstat.explore:pcfcross]{spatstat.explore::pcfcross()}}, plus
+support for deprecated argument names (see Details).}
 }
 \value{
-`mif` object with the bivariate_pair_correlation slot filled
+\code{mif} object with the \code{bivariate_pair_correlation} slot filled
 }
 \description{
-Bivariate Pair Correlation Function
+The cross-type pair correlation function: clustering of counted cells at
+distance r from anchor cells, as a density rather than a cumulative count.
+Cells positive for both markers of a pair are excluded from that pair.
 }
+\details{
+\code{keep_perm_dis} is accepted as a deprecated alias for
+\code{keep_permutation_distribution}.
+}
+\section{Output columns}{
+
+As of 2.0.0 this function returns the same columns as \code{\link[=bi_ripleys_k]{bi_ripleys_k()}}, with
+\verb{Observed g} in place of \verb{Observed K}. \code{From}/\code{To} are now \code{Anchor}/\code{Counted},
+\verb{Theoretical g}/\verb{Permuted g} are now \verb{Theoretical CSR}/\verb{Permuted CSR},
+\verb{Degree of Correlation *} is now \verb{Degree of Clustering *}, and
+\code{Permuted_larger_than_Observed} is now \verb{Permutations Larger than Observed}.
+}
+

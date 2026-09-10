@@ -13,19 +13,19 @@ merge_mifs(mifs = NULL, check.names = T)
 }
 \value{
 Returns a new MIF object list
-   \item{clinical_data}{clinical information from all}
-   \item{sample}{cell level summary data from all}
-   \item{spatial}{contains all spatial files from all MIFs}
-   \item{derived}{appended derived variables}
-   \item{patient_id}{patient_id from the first MIF - this is
-   why it is important to have the same patient_id for all MIFs}
-   \item{sample_id}{sample_id from the first MIF - also important
-   for all MIFs to have the same sample_id}
+\item{clinical_data}{clinical information from all}
+\item{sample}{cell level summary data from all}
+\item{spatial}{contains all spatial files from all MIFs}
+\item{derived}{appended derived variables}
+\item{patient_id}{patient_id from the first MIF - this is
+why it is important to have the same patient_id for all MIFs}
+\item{sample_id}{sample_id from the first MIF - also important
+for all MIFs to have the same sample_id}
 }
 \description{
 This function merges MIF objects that were run separately so they
-can be used as a single MIF. MIF objects don't *need* but *should* have the same
-column names in the summary file and clinical data file. The MIF objects **DO**
+can be used as a single MIF. MIF objects don't \emph{need} but \emph{should} have the same
+column names in the summary file and clinical data file. The MIF objects \strong{DO}
 need to have the same patient_id and sample_id.
 }
 \examples{

@@ -28,7 +28,6 @@ library(spatialTIME)
 library(dplyr)
 library(ggplot2)
 library(tidyr)
-library(tidyselect)
 library(RColorBrewer)
 library(pheatmap)
 
@@ -179,7 +178,7 @@ Currently, the number of permutations is 10, but this should be increased to at 
 
 ```{r, ripleys, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 x <- ripleys_k(mif = x, mnames = mnames_good, 
-               num_permutations = 10, method = "K",
+               num_permutations = 10,
                edge_correction = 'translation', r_range = 0:100,
                permute = TRUE,
                keep_permutation_distribution = FALSE, overwrite = TRUE, workers = 1)
@@ -201,7 +200,7 @@ We can also run using the exact CSR approach which is faster and produces a more
 
 ```{r, ripleys_exact, warning = FALSE, fig.width=10, fig.height=6, fig.align = 'center'}
 x <- ripleys_k(mif = x, mnames = mnames_good, 
-               num_permutations = 10, method = "K",
+               num_permutations = 10,
                edge_correction = 'translation', r_range = 0:100,
                permute = FALSE,
                keep_permutation_distribution = FALSE, overwrite = TRUE, workers = 1)
@@ -275,7 +274,7 @@ The interpretation of the degree of clustering is the same here. The line for TM
 
 ## Univariate Nearest-Neighbor Methods
 
-The `NN_G` function reports a permuted and theoretical estimate of CSR, the observed value for $G$, and the full permutation distribution of $G$ when `keep_perm_dis = TRUE`. The degree of clustering is computed by taking the ratio of the observed $G$ and either the permutation or theoretical estimate of CSR.
+The `NN_G` function reports a permuted and theoretical estimate of CSR, the observed value for $G$, and the full permutation distribution of $G$ when `keep_permutation_distribution = TRUE`. The degree of clustering is computed by taking the ratio of the observed $G$ and either the permutation or theoretical estimate of CSR.
 
 Currently, the number of permutations is 10, but this should be increased to at least 100 for a more reliable estimate of the mean.
 

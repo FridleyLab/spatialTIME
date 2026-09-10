@@ -19,35 +19,54 @@ pair_correlation(
 )
 }
 \arguments{
-\item{mif}{object of class `mif`}
+\item{mif}{object of class \code{mif}}
 
 \item{mnames}{character vector of marker names}
 
-\item{r_range}{numeric vector including 0. If ignored, `spatstat` will decide range}
+\item{r_range}{numeric vector including 0. If \code{NULL}, \code{spatstat} chooses the range.}
 
-\item{num_permutations}{integer indicating how many permutations to run to determine CSR estimate}
+\item{num_permutations}{integer number of permutations used to estimate CSR}
 
-\item{edge_correction}{character string of edge correction to apply to Ripley's K estimation}
+\item{edge_correction}{edge correction passed to \code{\link[spatstat.explore:pcf]{spatstat.explore::pcf()}}}
 
-\item{keep_permutation_distribution}{boolean for whether to keep the permutations or not}
+\item{keep_permutation_distribution}{boolean; keep each permutation's result or
+average them to one row per marker and radius}
 
-\item{workers}{integer for number of threads to use when calculating metrics}
+\item{workers}{integer number of CPU cores used to process samples in parallel}
 
-\item{overwrite}{boolean whether to overwrite existing results in the univariate_pair_correlation slot}
+\item{overwrite}{boolean; replace an existing \code{univariate_pair_correlation} slot
+rather than appending it as a new \code{Run}}
 
-\item{xloc}{column name of single x value}
+\item{xloc, yloc}{the x and y columns giving cell centres. If left \code{NULL},
+\code{XMin}, \code{XMax}, \code{YMin} and \code{YMax} must be present.}
 
-\item{yloc}{column name of single y value}
-
-\item{...}{other parameters to provide `spatstat::pcf` 
-
-The Pair Correlation Function uses the derivative of Ripley's K so it does take slightly longer to calculate
-
-`xloc` and `yloc`, if NULL, will be calculated from columns `XMax`, `XMin`, `YMax`, and `YMin`.}
+\item{...}{other parameters passed to \code{\link[spatstat.explore:pcf]{spatstat.explore::pcf()}}, plus support
+for deprecated argument names (see Details).}
 }
 \value{
-mif object with with the univariate_pair_correlation derived slot filled or appended to
+\code{mif} object with the \code{univariate_pair_correlation} derived slot filled
+or appended to
 }
 \description{
-Implementation of the univariate pair correlation function from spatstat
+The pair correlation function g(r) is the derivative of Ripley's K, so it
+measures clustering \emph{at} a radius rather than cumulatively up to it. It is
+correspondingly slower to compute and noisier at small r.
+
+\code{xloc} and \code{yloc}, if \code{NULL}, are taken as the midpoints of \code{XMin}/\code{XMax} and
+\code{YMin}/\code{YMax}.
 }
+\details{
+\code{keep_perm_dis} is accepted as a deprecated alias for
+\code{keep_permutation_distribution}.
+}
+\section{Output columns}{
+
+As of 2.0.0 this function returns the same columns as \code{\link[=ripleys_k]{ripleys_k()}}, with
+\verb{Observed g} in place of \verb{Observed K}. \verb{Theoretical g} and \verb{Permuted g} are now
+\verb{Theoretical CSR} and \verb{Permuted CSR}, \verb{Degree of Correlation *} is now
+\verb{Degree of Clustering *}, and \code{Permuted_larger_than_Observed} is now
+\verb{Permutations Larger than Observed}. \verb{Exact CSR} is present but always \code{NA}:
+the closed-form CSR shortcut available to \code{\link[=ripleys_k]{ripleys_k()}} has not been
+implemented for the pair correlation function yet.
+}
+

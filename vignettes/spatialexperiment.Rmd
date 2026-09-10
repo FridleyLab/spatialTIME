@@ -216,7 +216,7 @@ ova_mif_tumor <- NN_G(
   r_range = 0:100,
   num_permutations = 10, # NN G(r) requires permutations to estimate CSR
   edge_correction = "rs", # reduced sampling edge correction
-  keep_perm_dis = FALSE, # whether to keep results from each permutation
+  keep_permutation_distribution = FALSE, # whether to keep results from each permutation
   workers = 1,
   overwrite = TRUE,
   xloc = "x",

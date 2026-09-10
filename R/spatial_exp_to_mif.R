@@ -34,11 +34,11 @@
 #'    
 #' @export
 #' @examples
-#' # Create mif object
-#' 
-#' if (!("VectraPolarisData" %in% installed.packages())) {
-#'  BiocManager::install("VectraPolarisData")
-#' }
+#' # VectraPolarisData is a multi-gigabyte Bioconductor *data* package and is
+#' # deliberately not a dependency of spatialTIME, so this example is not run.
+#' # Install it once with BiocManager::install("VectraPolarisData") if you want to
+#' # follow along; see vignette("spatialexperiment") for a worked version.
+#' \dontrun{
 #' ovarian <- VectraPolarisData::HumanOvarianCancerVP()
 #' 
 #' ova_mif <- spatial_exp_to_mif(spatial_exp = ovarian, 
@@ -58,7 +58,7 @@
 #'                                 "phenotype_cd19", 
 #'                                 "phenotype_ck", 
 #'                                 "phenotype_other"))
-#'   
+#' }
 spatial_exp_to_mif <- function(spatial_exp, 
                                markers, 
                                x_coord = "cell_x_position",

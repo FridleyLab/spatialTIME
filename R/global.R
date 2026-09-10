@@ -29,4 +29,5 @@ utils::globalVariables(c("r", "label", "Marker", "theo", "Positive", "anchor",
                          'Permuted Interaction', 'Permuted g',
                          'Permuted_larger_than_Observed', 'Run',
                          'Theoretical G', 'To', 'W', 'cell',
-                         'marker', 'marks', 'indicator'))
+                         'marker', 'marks', 'indicator',
+                         'val', 'Total Cells'))

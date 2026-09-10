@@ -14,20 +14,20 @@ marker_freq_diff(
 )
 }
 \arguments{
-\item{mif}{object of class `mif` created with [spatialTIME::create_mif()]}
+\item{mif}{object of class \code{mif} created with \code{\link[=create_mif]{create_mif()}}}
 
 \item{classifier}{character that specified which column in the spatial data indicates the different tissue compartments profiled}
 
-\item{ref_level}{character found in the `classifier` column of spatial data indicating the first value when calculating frequency difference}
+\item{ref_level}{character found in the \code{classifier} column of spatial data indicating the first value when calculating frequency difference}
 
-\item{diff_level}{character found in the `classifier` column of spatial data indicating the second value when calculating frequency difference}
+\item{diff_level}{character found in the \code{classifier} column of spatial data indicating the second value when calculating frequency difference}
 
 \item{mnames}{character vector of marker names that are found in the spatial data for which to calculate abundance differences}
 
 \item{overwrite}{boolean/logical for whether to overwrite previously calculated marker frequency differences}
 }
 \value{
-an object of class `mif` with the `derived$frequency_difference` slot filled
+an object of class \code{mif} with the \code{derived$frequency_difference} slot filled
 }
 \description{
 marker_freq_diff allows users to easily calculate the difference in marker abundance (frequency) between different tissue compartments.

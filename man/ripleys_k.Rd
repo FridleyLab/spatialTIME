@@ -10,83 +10,96 @@ ripleys_k(
   r_range = seq(0, 100, 1),
   num_permutations = 50,
   edge_correction = "translation",
-  method = "K",
   permute = FALSE,
   keep_permutation_distribution = FALSE,
   workers = 1,
   overwrite = FALSE,
   xloc = NULL,
   yloc = NULL,
-  big = 10000
+  big = 10000,
+  ...
 )
 }
 \arguments{
-\item{mif}{object of class `mif` created with `create_mif`}
+\item{mif}{object of class \code{mif} created with \code{create_mif}}
 
 \item{mnames}{cell phenotype markers to calculate Ripley's K for}
 
 \item{r_range}{radius range (including 0)}
 
-\item{num_permutations}{number of permutations to use to estimate CSR. If `keep_perm_dis` is set to FALSE, this will be ignored}
+\item{num_permutations}{number of permutations to use to estimate CSR. Ignored
+when \code{permute = FALSE}.}
 
-\item{edge_correction}{edge correction method to pass to `Kest`. can take one of "translation", "isotropic", "none", or 'border'}
+\item{edge_correction}{edge correction method: one of "translation",
+"isotropic", "border" or "none". Unlike previous versions this is never
+silently downgraded for large samples.}
 
-\item{method}{not used currently}
+\item{permute}{whether to estimate CSR by permutation (\code{TRUE}) or to use the
+exact closed-form CSR estimate (\code{FALSE}, the default and much faster)}
 
-\item{permute}{whether to use CSR estimate or use permutations to determine CSR}
-
-\item{keep_permutation_distribution}{whether to find mean of permutation distribution or each
-permutation calculation}
+\item{keep_permutation_distribution}{whether to keep each permutation's result
+or average them into a single row per marker and radius}
 
 \item{workers}{number of cores to use for calculations}
 
-\item{overwrite}{whether to overwrite the `univariate_Count` slot within `mif$derived`}
+\item{overwrite}{whether to overwrite the \code{univariate_Count} slot within \code{mif$derived}}
 
-\item{xloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+\item{xloc, yloc}{columns giving the cell centre. If left \code{NULL}, \code{XMin}, \code{XMax},
+\code{YMin} and \code{YMax} must be present and the centre is their midpoint.}
 
-\item{yloc}{the location of the center of cells. If left `NULL`, `XMin`, `XMax`, `YMin`, and `YMax` must be present.}
+\item{big}{cell count above which the per-pair edge-correction weights are
+computed in chunks to bound peak memory. This affects memory and speed only:
+results are identical either way, and the requested \code{edge_correction} is
+always honoured.}
 
-\item{big}{the number of cells at which to flip from an edge correction method other than 'none' to 'none' due to size}
+\item{...}{support for deprecated argument names. \code{keep_perm_dis} is accepted as
+an alias for \code{keep_permutation_distribution}; \code{method} is accepted and ignored
+(it was never used). Anything else is an error.}
 }
 \value{
-object of class `mif`
+object of class \code{mif}
 }
 \description{
-ripleys_k() calculates the emperical Ripley's K measurement for the cell types specified by mnames in the mIF object. This
-is very useful when exploring the spatial clustering of single cell types on TMA cores or ROI spots following proccessing
-with a program such as HALO for cell phenotyping.
+\code{ripleys_k()} calculates the empirical Ripley's K for the cell types given in
+\code{mnames}. This is useful for exploring the spatial clustering of single cell
+types on TMA cores, ROI spots, or whole slide images following phenotyping with
+a program such as HALO.
 
-In the `ripleys_k` function, there is the ability to perform permutations in order to assess whether the clustering
-of a cell type is significant, or the ability to derive the exact CSR and forgo permutations for much faster sample
-processing. Permutations can be helpful if the significance of clustering wasnts to be identified - run 1000 permutations 
-and if observed is outside 95-percentile then significant clustering. We, however, recommend using the exact CSR estimate
-due to speed.
-
-Some things to be aware of when computing the exact Ripley's K estimate, if your spatial file is greater than 
-the `big` size, the edge correction will be converted to 'none' in order to save on resources and compute time. 
-Due to the introduction of Whole Slide Imaging (WSI), this can easily be well over 1,000,000 cells, and calculating 
-edge correction for these spatial files will not succeed when attempting to force an edge correction on it.
+Either estimate CSR by permutation (\code{permute = TRUE}) or use the exact CSR
+estimate (\code{permute = FALSE}). The exact estimate is the K of \emph{all} cells in the
+sample, which is the closed form for the expected K of a randomly chosen subset
+of them, so it is both faster and free of Monte Carlo error. Permutations are
+still useful if you want the full null distribution rather than its mean --
+run 1000 and treat an observed value outside the 95th percentile as
+significant.
 }
+\section{Accuracy}{
+
+Values agree with \code{\link[spatstat.explore:Kest]{spatstat.explore::Kest()}} to floating-point precision. The
+observation window is the convex hull of \strong{every} cell in the sample, and it
+is held fixed across all markers and permutations, so K values for different
+markers within a sample are directly comparable.
+
+Large samples are handled by only ever materialising the cell pairs closer than
+\code{max(r_range)}, rather than a full n-by-n distance matrix. At 200,000 cells
+that is the difference between roughly 75 MB and 319 GB. Because of this,
+\code{big} no longer changes the statistic -- in versions before 2.0.0 exceeding it
+silently replaced your \code{edge_correction} with \code{"none"}.
+}
+
 \examples{
-x <- spatialTIME::create_mif(clinical_data =spatialTIME::example_clinical \%>\% 
+x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\%
   dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-  sample_data = spatialTIME::example_summary \%>\% 
+  sample_data = spatialTIME::example_summary \%>\%
   dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-  spatial_list = spatialTIME::example_spatial,
-  patient_id = "deidentified_id", 
+  spatial_list = spatialTIME::example_spatial[1],
+  patient_id = "deidentified_id",
   sample_id = "deidentified_sample")
-mnames = x$spatial[[1]] \%>\%
-  colnames() \%>\%
-  grep("Pos|CD", ., value =TRUE) \%>\%
-  grep("Cyto|Nucle", ., value =TRUE, invert =TRUE)
-x2 = ripleys_k(mif = x, 
-  mnames = mnames[1], 
-  r_range = seq(0, 100, 1), 
-  num_permutations = 100,
-  edge_correction = "translation", 
-  method = "K", 
+x2 = ripleys_k(mif = x,
+  mnames = "CD3..Opal.570..Positive",
+  r_range = seq(0, 100, 10),
+  edge_correction = "translation",
   permute = FALSE,
-  keep_permutation_distribution =FALSE, 
-  workers = 1, 
-  overwrite =TRUE)
+  workers = 1,
+  overwrite = TRUE)
 }

@@ -5,20 +5,27 @@
 \alias{example_clinical}
 \title{Clinical variables of 229 patients}
 \format{
-A tibble with 229 rows and 6 variables
+A tibble with 229 rows and 6 variables:
 \describe{
-  \item{age}{age at diagnosis}
-  \item{race}{self-idenitifed race}
-  \item{sex}{patient biological sex}
-  \item{status}{disease status}
-  \item{deidenitifed_sample}{sample identifier}
-  \item{deidentified_id}{patient identifier}
+\item{age}{age at diagnosis}
+\item{race}{self-identified race}
+\item{sex}{patient biological sex}
+\item{status}{disease status}
+\item{deidentified_sample}{sample identifier}
+\item{deidentified_id}{patient identifier}
 }
 }
 \usage{
 example_clinical
 }
 \description{
-A tibble wuith clinical characteristics for 229 patients
+A tibble of clinical characteristics for 229 patients, one row per patient.
+}
+\details{
+\code{deidentified_id} is \strong{integer} here and in \link{example_summary}, while the
+\code{deidentified_sample} column of \link{example_spatial} is character.
+}
+\seealso{
+\link{example_spatial}, \link{example_summary}
 }
 \keyword{datasets}

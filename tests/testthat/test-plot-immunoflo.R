@@ -38,7 +38,8 @@ test_that("cell_type maps the column, giving one shape per level", {
   expect_gt(nrow(marker_layer), 0)          # guard: an empty layer proves nothing
   expect_length(unique(marker_layer$shape), n_levels)
   # And the mapping is to the column, not the constant string "cell_type".
-  expect_false(identical(deparse(rlang::quo_get_expr(p$mapping$shape)), "cell_type"))
+  # deparse() on the quosure avoids depending on rlang, which is not declared.
+  expect_false(identical(trimws(deparse(p$mapping$shape)[[1]]), "~cell_type"))
 })
 
 test_that("a classifier with more than two levels still builds", {

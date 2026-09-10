@@ -20,7 +20,7 @@ dixons_s(
 
 \item{mnames}{vector of markers corresponding to spatial columns to check Dixon's S between}
 
-\item{num_permutations}{Numeric value indicating the number of permutations used. 
+\item{num_permutations}{Numeric value indicating the number of permutations used.
 Default is 1000.}
 
 \item{type}{a character string for the type that is wanted in the output which can
@@ -28,42 +28,47 @@ be "Z" for z-statistic results or "C" for Chi-squared statistic results}
 
 \item{workers}{Integer value for the number of workers to spawn}
 
-\item{overwrite}{Logical value determining if you want the results to replace the 
+\item{overwrite}{Logical value determining if you want the results to replace the
 current output (TRUE) or be to be appended (FALSE).}
 
-\item{xloc}{a string corresponding to the x coordinates. If null the average of 
+\item{xloc}{a string corresponding to the x coordinates. If null the average of
 XMin and XMax will be used}
 
-\item{yloc}{a string corresponding to the y coordinates. If null the average of 
+\item{yloc}{a string corresponding to the y coordinates. If null the average of
 YMin and YMax will be used}
 }
 \value{
-Returns a data frame for Z-statistic
-   \item{From}{}
-   \item{To}{}
-   \item{Obs.Count}{}
-   \item{Exp. Count}{}
-   \item{S}{}
-   \item{Z}{}
-   \item{p-val.Z}{}
-   \item{p-val.Nobs}{}
-   \item{Marker}{}
-   \item{Classifier Labeled Column Counts}{}
-   \item{Image.Tag}{}
+An object of class \code{mif}. Depending on \code{type}, one or both of these
+tables is written to the \code{derived} slot.
 
-Returns a data frame for C-statistic
-   \item{Segregation}{}
-   \item{df}{}
-   \item{Chi-sq}{}
-   \item{P.asymp}{}
-   \item{P.rand}{}
-   \item{Marker}{}
-   \item{Classifier Labeled Column Counts}{}
-   \item{Image.Tag}{}
+\code{Dixon_Z} (\code{type = "Z"}), one row per ordered marker pair per sample:
+\describe{
+\item{<sample_id>}{sample identifier}
+\item{From, To}{the two cell types being compared, as \code{dixon::dixon()} labels them}
+\item{Anchor, Counted}{which requested marker pair the row belongs to. The
+per-marker count columns are pair-specific, because dual positives are
+dropped per pair, so without this the counts cannot be interpreted}
+\item{Obs.Count, Exp.Count, S, Z, p-val.Z, p-val.Nobs}{Dixon's statistics}
+\item{\if{html}{\out{<marker>}} columns}{cells of each marker retained for that pair}
+\item{Simulations, Run}{permutations requested, and which call produced the row}
+}
+
+\code{Dixon_C} (\code{type = "C"}), three rows per marker pair per sample:
+\describe{
+\item{<sample_id>}{sample identifier}
+\item{Direction}{"Overall segregation", or "From \if{html}{\out{<marker>}}"}
+\item{Anchor, Counted}{as above}
+\item{df, Chi-sq, P.asymp, P.rand}{chi-squared segregation test}
+\item{Simulations, Run}{as above}
+}
+
+Marker pairs with fewer than 3 cells of either type are returned with \code{NA}
+statistics rather than dropped, so the table shape does not depend on cell
+counts.
 }
 \description{
 This function processes the spatial files in the mif object,
-requiring a column that distinguishes between different groups i.e. tumor and 
+requiring a column that distinguishes between different groups i.e. tumor and
 stroma
 }
 \examples{

@@ -12,68 +12,96 @@ bi_ripleys_k(
   num_permutations = 50,
   permute = FALSE,
   keep_permutation_distribution = FALSE,
-  overwrite = TRUE,
-  workers = 6,
+  overwrite = FALSE,
+  workers = 1,
   xloc = NULL,
   yloc = NULL,
-  force = FALSE
+  big = 10000,
+  ...
 )
 }
 \arguments{
 \item{mif}{mIF object with spatial data frames, clinical, and per-sample summary information}
 
-\item{mnames}{vector of column names for phenotypes or data frame of marker combinations}
+\item{mnames}{vector of column names for phenotypes, or a two-column data frame
+of specific anchor/counted marker combinations to run}
 
-\item{r_range}{vector range of radii to calculate co-localization *K*}
+\item{r_range}{vector range of radii at which to calculate co-localization \emph{K}}
 
-\item{edge_correction}{character edge_correction method, one of "translation", "border", "or none"}
+\item{edge_correction}{edge correction method: one of "translation",
+"isotropic", "border" or "none"}
 
-\item{num_permutations}{integer number of permutations to estimate CSR}
+\item{num_permutations}{integer number of permutations used to estimate CSR.
+Ignored when \code{permute = FALSE}.}
 
-\item{permute}{whether or not to use permutations to estimate CSR (TRUE) or to calculate exact CSR (FALSE)}
+\item{permute}{whether to estimate CSR by permutation (\code{TRUE}) or to use the
+exact closed-form CSR estimate (\code{FALSE}, the default)}
 
-\item{keep_permutation_distribution}{boolean as to whether to summarise permutations to mean}
+\item{keep_permutation_distribution}{boolean; keep each permutation's result or
+average them to one row per marker pair and radius}
 
-\item{overwrite}{boolean as to whether to replace existing bivariate_Count if exists}
+\item{overwrite}{boolean; replace an existing \code{bivariate_Count} slot rather than
+appending it as a new \code{Run}}
 
 \item{workers}{integer number of CPU workers to use}
 
-\item{xloc, yloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
+\item{xloc, yloc}{the x and y columns giving cell centres. If left \code{NULL},
+\code{XMin}, \code{XMax}, \code{YMin} and \code{YMax} must be present.}
 
-\item{force}{logical whether or not to continue if sample has more than 10,000 cells}
+\item{big}{cell count above which per-pair edge weights are computed in chunks
+to bound peak memory. Memory and speed only -- results are identical either
+way and the requested \code{edge_correction} is always honoured.}
+
+\item{...}{support for deprecated argument names. \code{keep_perm_dis} aliases
+\code{keep_permutation_distribution} and \code{nlarge} aliases \code{big}; \code{force} is accepted
+and ignored (there is no longer a cell-count limit). Anything else is an error.}
 }
 \value{
 mif object with bivariate Ripley's K calculated
 }
 \description{
-Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with 
-some parameters like marker names of interest and range of radii in which to assess bivariate clustering or colocalization.
-In 1.3.3.3 we have introduced the ability to forsgo the need for permutations with the implementation of the exact CSR estimate.
-This is both faster and being the exact CSR, produces an exact degree of clustering in the spatial files.
+\code{bi_ripleys_k()} takes a \code{mIF} object plus marker names and a range of radii,
+and measures bivariate clustering (co-localization) between each ordered pair of
+markers. Cells positive for both markers of a pair are excluded from that pair,
+so the anchor and counted sets are always disjoint.
 
-Due to the availability of whole slide images (WSI), there's a possibility users will be running bivariate Ripley's K on samples
-that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and 
-therefore easily consumers high performance compute levels of RAM. To combat this, we have implemented a tiling method that performs
-counts for small chunks of the distance matrix at a time before finally calculating the bivariate Ripley's K value on the total counts.
-When doing this there are now 2 import parameters to keep in mind. The `big` parameter is the size of the tile to use. We have found
-1000 to be a good number that allows for high number of cores while maintaining low RAM usage. The other important parameter when
-working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate 
-Ripley's K uses a default of 3000 but we have defaulted to 1000 to keep compute minimized as edge correction uses large amounts
-of RAM over 'none'.
+Either estimate CSR by permutation (\code{permute = TRUE}) or use the exact CSR
+estimate (\code{permute = FALSE}). The exact estimate is the univariate K of \emph{all}
+cells in the sample, which is the closed form for the expected cross-K under
+random labelling -- verified against a 500-permutation Monte Carlo to within
+Monte Carlo error.
 }
+\section{Whole slide images}{
+
+As of 2.0.0 this function handles whole-slide-scale data directly and
+\code{bi_ripleys_k_WSI()} is gone. Only the cell pairs closer than \code{max(r_range)}
+are ever materialised, so memory scales with the number of nearby pairs rather
+than with n squared -- at 200,000 cells roughly 75 MB instead of 319 GB. The
+\code{big} argument bounds peak memory further by chunking, and unlike the old
+\code{big}/\code{nlarge} arguments it never changes the statistic. In particular the
+requested edge correction is no longer silently replaced with \code{"none"} above a
+cell-count threshold.
+}
+
+\section{Accuracy}{
+
+Values agree with \code{\link[spatstat.explore:Kcross]{spatstat.explore::Kcross()}} to floating-point precision. The
+observation window is the convex hull of \strong{every} cell in the sample and is
+held fixed across all marker pairs and permutations.
+}
+
 \examples{
-x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\% 
+x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\%
                                dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-                             sample_data = spatialTIME::example_summary \%>\% 
+                             sample_data = spatialTIME::example_summary \%>\%
                                dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-                             spatial_list = spatialTIME::example_spatial,
-                             patient_id = "deidentified_id", 
+                             spatial_list = spatialTIME::example_spatial[1],
+                             patient_id = "deidentified_id",
                              sample_id = "deidentified_sample")
-mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-                 "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-                 "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-x2 = bi_ripleys_k(mif = x, mnames = mnames_good[1:2], 
-                   r_range = 0:100, edge_correction = "none", permute = FALSE,
-                   num_permutations = 50, keep_permutation_distribution = FALSE, 
-                   workers = 1)
+x2 = bi_ripleys_k(mif = x,
+                  mnames = c("CD3..Opal.570..Positive", "CD8..Opal.520..Positive"),
+                  r_range = seq(0, 100, 10),
+                  edge_correction = "translation",
+                  permute = FALSE,
+                  workers = 1)
 }

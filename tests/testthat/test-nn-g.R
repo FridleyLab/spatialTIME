@@ -143,8 +143,11 @@ test_that("G permutations are reproducible and independent of workers", {
     d[[grep("NN", names(d))]]$`Permuted CSR`
   }
   expect_equal(runp(NN_G, 1), runp(NN_G, 1))
-  expect_equal(runp(NN_G, 1), runp(NN_G, 3))
-  expect_equal(runp(bi_NN_G, 1), runp(bi_NN_G, 3))
+  # 2, not more: R CMD check sets _R_CHECK_LIMIT_CORES_ and mclapply refuses to
+  # spawn more than two processes. Two is enough to show the result does not depend
+  # on `workers`, which is the property being tested.
+  expect_equal(runp(NN_G, 1), runp(NN_G, 2))
+  expect_equal(runp(bi_NN_G, 1), runp(bi_NN_G, 2))
 })
 
 test_that("G edge-correction spellings are normalised and bad ones rejected", {

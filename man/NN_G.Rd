@@ -10,54 +10,81 @@ NN_G(
   r_range = 0:100,
   num_permutations = 50,
   edge_correction = "rs",
-  keep_perm_dis = FALSE,
+  keep_permutation_distribution = FALSE,
   workers = 1,
   overwrite = FALSE,
   xloc = NULL,
-  yloc = NULL
+  yloc = NULL,
+  ...
 )
 }
 \arguments{
-\item{mif}{object of class `mif` created by function `create_mif()`}
+\item{mif}{object of class \code{mif} created by function \code{create_mif()}}
 
-\item{mnames}{character vector of column names within the spatial files, indicating whether a cell row is positive for a phenotype}
+\item{mnames}{character vector of column names within the spatial files
+indicating whether a cell is positive for a phenotype}
 
-\item{r_range}{numeric vector of radii around marker positive cells which to use for G(r)}
+\item{r_range}{numeric vector of radii at which to evaluate G(r)}
 
-\item{num_permutations}{integer number of permutations to use for estimating core specific complete spatial randomness (CSR)}
+\item{num_permutations}{integer number of permutations used to estimate
+sample-specific complete spatial randomness (CSR)}
 
-\item{edge_correction}{character vector of edge correction methods to use: "rs", "km" or "han"}
+\item{edge_correction}{edge correction method: one of "rs", "km", "han" or "none"}
 
-\item{keep_perm_dis}{boolean for whether to summarise permutations to a single value or maintain each permutations result}
+\item{keep_permutation_distribution}{boolean; keep each permutation's result or
+average them to one row per marker and radius}
 
-\item{workers}{integer number for the number of CPU cores to use in parallel to calculate all samples/markers}
+\item{workers}{integer number of CPU cores used to process samples in parallel}
 
-\item{overwrite}{boolean whether to overwrite previous run of NN G(r) or increment "RUN" and maintain  previous measurements}
+\item{overwrite}{boolean; replace an existing \code{univariate_NN} slot rather than
+appending it as a new \code{Run}}
 
-\item{xloc, yloc}{the x and y location columns in the spatial files that indicate the center of the respective cells}
+\item{xloc, yloc}{the x and y columns giving cell centres. If left \code{NULL},
+\code{XMin}, \code{XMax}, \code{YMin} and \code{YMax} must be present.}
+
+\item{...}{support for deprecated argument names. \code{keep_perm_dis} is accepted as
+an alias for \code{keep_permutation_distribution}. Anything else is an error.}
 }
 \value{
-object of class `mif` containing a new slot under `derived` got nearest neighbor distances
+object of class \code{mif} with a \code{univariate_NN} table in the \code{derived} slot
 }
 \description{
-Univariate Nearest Neighbor G(r)
+\code{NN_G()} computes the nearest-neighbour distance distribution function G(r) for
+each marker: the proportion of marker-positive cells whose nearest
+marker-positive neighbour lies within r. CSR is estimated by permutation --
+relabelling the same cell locations -- so the null accounts for the sample's own
+geometry rather than assuming a homogeneous Poisson process.
 }
+\section{Accuracy}{
+
+Estimates come from \code{\link[spatstat.explore:Gest]{spatstat.explore::Gest()}}, so they agree with spatstat
+exactly. The observation window is the convex hull of \strong{every} cell in the
+sample and is held fixed across all markers and permutations, which is what
+makes G comparable between markers within a sample.
+}
+
+\section{Why there is no exact CSR for G}{
+
+\code{\link[=ripleys_k]{ripleys_k()}} can skip permutations because the K of all cells is the closed
+form for the expected K of a random subset of them. No such shortcut exists for
+G, because G depends on the \emph{intensity} of the point set, not just its geometry:
+a random subset of the cells has a lower intensity and therefore larger
+nearest-neighbour distances. Concretely, on one of the example samples
+\code{Gest()} over all cells gives 0.52 at a radius where the mean permuted G is
+0.13. The \verb{Exact CSR} column is therefore present for schema consistency with
+the other metrics but is always \code{NA}; use \verb{Permuted CSR} or \verb{Theoretical CSR}.
+}
+
 \examples{
-library(dplyr)
-x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\% 
+x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\%
   dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-  sample_data = spatialTIME::example_summary \%>\% 
+  sample_data = spatialTIME::example_summary \%>\%
   dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-  spatial_list = spatialTIME::example_spatial,
-  patient_id = "deidentified_id", 
+  spatial_list = spatialTIME::example_spatial[1],
+  patient_id = "deidentified_id",
   sample_id = "deidentified_sample")
-    
-mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-  
-x2 = NN_G(mif = x, mnames = mnames_good[1:2], 
-r_range = 0:100, num_permutations = 10, 
-edge_correction = "rs", keep_perm_dis = FALSE, 
-workers = 1, overwrite = TRUE)
+
+x2 = NN_G(mif = x, mnames = "CD3..Opal.570..Positive",
+  r_range = seq(0, 100, 10), num_permutations = 10,
+  edge_correction = "rs", workers = 1, overwrite = TRUE)
 }

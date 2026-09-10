@@ -87,7 +87,7 @@ mif = NN_G(mif = mif,
            r_range = 0:100, 
            num_permutations = 25, 
            edge_correction = "rs", 
-           keep_perm_dis = FALSE, 
+           keep_permutation_distribution = FALSE, 
            workers = 1, 
            overwrite = TRUE, 
            xloc = NULL,
@@ -107,7 +107,7 @@ mif = bi_NN_G(mif = mif,
            r_range = 0:100, 
            num_permutations = 25, 
            edge_correction = "rs", 
-           keep_perm_dis = FALSE, 
+           keep_permutation_distribution = FALSE, 
            workers = 1, 
            overwrite = TRUE, 
            xloc = NULL,
@@ -137,7 +137,7 @@ mif = pair_correlation(mif = mif,
 
 mif$derived$univariate_pair_correlation %>%
   ggplot() +
-  geom_line(aes(x = r, y = `Degree of Correlation Permuted`, color = deidentified_sample)) +
+  geom_line(aes(x = r, y = `Degree of Clustering Permutation`, color = deidentified_sample)) +
   facet_grid(~Marker)
 ```
 
@@ -157,8 +157,8 @@ mif = bi_pair_correlation(mif = mif,
 
 mif$derived$bivariate_pair_correlation %>%
   ggplot() +
-  geom_line(aes(x = r, y = `Degree of Correlation Permuted`, color = deidentified_sample)) +
-  facet_grid(~From)
+  geom_line(aes(x = r, y = `Degree of Clustering Permutation`, color = deidentified_sample)) +
+  facet_grid(~Anchor)
 ```
 
 ## Interaction Variable
@@ -176,8 +176,8 @@ mif = interaction_variable(mif = mif,
 
 mif$derived$interaction_variable %>%
   ggplot() +
-  geom_line(aes(x = r, y = `Degree of Interaction Permuted`, color = deidentified_sample)) +
-  facet_grid(~From)
+  geom_line(aes(x = r, y = `Degree of Clustering Permutation`, color = deidentified_sample)) +
+  facet_grid(~Anchor)
 ```
 
 ## Dixon's Segregation S
@@ -193,10 +193,10 @@ mif = dixons_s(mif = mif,
                yloc = NULL)
 
 mif$derived$Dixon_Z %>%
-    filter(From != To) %>%
+    filter(Anchor != Counted) %>%
     ggplot() +
     geom_point(aes(x = Z, y = S, color = deidentified_sample)) +
-    facet_grid(~From)
+    facet_grid(~Anchor)
 ```
 
 ## Marker Frequency Difference

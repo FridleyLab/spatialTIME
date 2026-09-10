@@ -163,6 +163,7 @@ test_that("permutations are now reproducible, which v1.4.0 could not manage", {
   }
   expect_identical(run(1), run(1))
   # And independent of how many workers were used, which is the part that was
-  # structurally impossible before.
-  expect_identical(run(1), run(3))
+  # structurally impossible before. Capped at 2 because R CMD check enforces
+  # CRAN's two-core limit via _R_CHECK_LIMIT_CORES_.
+  expect_identical(run(1), run(2))
 })

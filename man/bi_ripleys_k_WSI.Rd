@@ -2,7 +2,7 @@
 % Please edit documentation in R/bi_ripleys_k_WSI.R
 \name{bi_ripleys_k_WSI}
 \alias{bi_ripleys_k_WSI}
-\title{Bivariate Ripley's K for Whole Slide Images}
+\title{Bivariate Ripley's K for Whole Slide Images (removed)}
 \usage{
 bi_ripleys_k_WSI(
   mif,
@@ -12,73 +12,56 @@ bi_ripleys_k_WSI(
   num_permutations = 50,
   permute = FALSE,
   keep_permutation_distribution = FALSE,
-  overwrite = TRUE,
-  workers = 6,
+  overwrite = FALSE,
+  workers = 1,
   big = 1000,
   nlarge = 1000,
   xloc = NULL,
-  yloc = NULL
+  yloc = NULL,
+  ...
 )
 }
 \arguments{
-\item{mif}{mIF object with spatial data frames, clinical, and per-sample summary information}
+\item{mif, mnames, r_range, edge_correction, num_permutations, permute}{Ignored.}
 
-\item{mnames}{vector of column names for phenotypes or data frame of marker combinations}
+\item{keep_permutation_distribution, overwrite, workers, big, nlarge, xloc, yloc}{Ignored.}
 
-\item{r_range}{vector range of radii to calculate co-localization *K*}
-
-\item{edge_correction}{character edge_correction method, one of "translation", or none"}
-
-\item{num_permutations}{integer number of permutations to estimate CSR}
-
-\item{permute}{whether or not to use permutations to estimate CSR (TRUE) or to calculate exact CSR (FALSE)}
-
-\item{keep_permutation_distribution}{boolean as to whether to summarise permutations to mean}
-
-\item{overwrite}{boolean as to whether to replace existing bivariate_Count if exists}
-
-\item{workers}{integer number of CPU workers to use}
-
-\item{big}{integer used as the threshold for subsetting large samples, default is 1000 either *i* or *j*}
-
-\item{nlarge}{number of cells in either *i* or *j* to flip to no edge correction - at small (relative to whole spatial region) *r* values differences in results between correction methods is negligible so running a few samples is recommended. Perhaps compute outweighs small differences in correction methods.}
-
-\item{xloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
-
-\item{yloc}{the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files}
+\item{...}{Ignored.}
 }
 \value{
-mif object with bivariate Ripley's K calculated
+Nothing. Always throws an error directing you to \code{\link[=bi_ripleys_k]{bi_ripleys_k()}}.
 }
 \description{
-Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with 
-some parameters like marker names of interest and range of radii in which to assess bivariate clustering or colocalization.
-In 1.3.3.3 we have introduced the ability to forsgo the need for permutations with the implementation of the exact CSR estimate.
-This is both faster and being the exact CSR, produces an exact degree of clustering in the spatial files.
-
-Due to the availability of whole slide images (WSI), there's a possibility users will be running bivariate Ripley's K on samples
-that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and 
-therefore easily consumers high performance compute levels of RAM. To combat this, we have implemented a tiling method that performs
-counts for small chunks of the distance matrix at a time before finally calculating the bivariate Ripley's K value on the total counts.
-When doing this there are now 2 import parameters to keep in mind. The `big` parameter is the size of the tile to use. We have found
-1000 to be a good number that allows for high number of cores while maintaining low RAM usage. The other important parameter when
-working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate 
-Ripley's K uses a default of 3000 but we have defaulted to 1000 to keep compute minimized as edge correction uses large amounts
-of RAM over 'none'.
+\strong{Removed in spatialTIME 2.0.0.} Use \code{\link[=bi_ripleys_k]{bi_ripleys_k()}} instead, which now handles whole slide images directly. Calling this function raises an error.
 }
-\examples{
-x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical \%>\% 
-                               dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-                             sample_data = spatialTIME::example_summary \%>\% 
-                               dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-                             spatial_list = spatialTIME::example_spatial,
-                             patient_id = "deidentified_id", 
-                             sample_id = "deidentified_sample")
-mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-                 "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-                 "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-x2 = bi_ripleys_k_WSI(mif = x, mnames = mnames_good[1:2], 
-                   r_range = 0:100, edge_correction = "none", permute = FALSE,
-                   num_permutations = 50, keep_permutation_distribution = FALSE, 
-                   workers = 1, big = 1000)
+\details{
+\code{bi_ripleys_k_WSI()} existed because \code{\link[=bi_ripleys_k]{bi_ripleys_k()}} used to build an n-by-n
+distance matrix, which is impossible at whole-slide scale, and so a separate
+tiled implementation was maintained alongside it. The two functions were
+otherwise near-duplicates, and the tiled one traded accuracy for memory: above
+a cell-count threshold it replaced the requested edge correction with \code{"none"},
+its tiled branch hard-coded translation regardless of the \code{edge_correction}
+argument, and it silently returned garbage for \code{edge_correction = "isotropic"}
+because that branch of its inner loop returned \code{NULL}.
+
+As of 2.0.0 that trade-off is gone. \code{\link[=bi_ripleys_k]{bi_ripleys_k()}} only ever materialises the
+cell pairs closer than \code{max(r_range)}, so whole-slide images are handled
+directly -- at 200,000 cells roughly 75 MB rather than 319 GB -- with the
+requested edge correction always honoured and results equal to
+\code{\link[spatstat.explore:Kcross]{spatstat.explore::Kcross()}} to floating-point precision.
+
+Migration is a rename. \code{big} and \code{nlarge} have no equivalent because they no
+longer affect the statistic; \code{\link[=bi_ripleys_k]{bi_ripleys_k()}} takes a \code{big} argument that bounds
+peak memory only.
+
+\preformatted{
+# before
+bi_ripleys_k_WSI(mif, mnames, r_range = 0:100, big = 1000, nlarge = 1000)
+
+# after
+bi_ripleys_k(mif, mnames, r_range = 0:100)
+}
+}
+\seealso{
+\code{\link[=bi_ripleys_k]{bi_ripleys_k()}}
 }

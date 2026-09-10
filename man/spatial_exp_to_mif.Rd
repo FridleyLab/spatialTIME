@@ -16,51 +16,51 @@ spatial_exp_to_mif(
 )
 }
 \arguments{
-\item{spatial_exp}{A SpatialExperiment object to create a MIF from a 
-\href{https://www.bioconductor.org/packages/release/bioc/vignettes/SpatialExperiment/inst/doc/SpatialExperiment.html}{SpatialExperiment} 
+\item{spatial_exp}{A SpatialExperiment object to create a MIF from a
+\href{https://www.bioconductor.org/packages/release/bioc/vignettes/SpatialExperiment/inst/doc/SpatialExperiment.html}{SpatialExperiment}
 Bioconductor object.}
 
-\item{markers}{A character vector that contains the name(s) of the columns that contains +/- for markers. This will be used to recode 
-these columns into logical vectors for presence or absence of the marker. By default looks for a + to indicate presence. But this can be 
+\item{markers}{A character vector that contains the name(s) of the columns that contains +/- for markers. This will be used to recode
+these columns into logical vectors for presence or absence of the marker. By default looks for a + to indicate presence. But this can be
 altered using the}
 
-\item{x_coord}{The name of the column in `spatialCoords` that contains the x coordinates for the cell. Default is "cell_x_position".}
+\item{x_coord}{The name of the column in \code{spatialCoords} that contains the x coordinates for the cell. Default is "cell_x_position".}
 
-\item{y_coord}{The name of the column in `spatialCoords` that contains the y coordinates for the cell. Default is "cell_y_position".}
+\item{y_coord}{The name of the column in \code{spatialCoords} that contains the y coordinates for the cell. Default is "cell_y_position".}
 
-\item{patient_id}{The name of the column in `colData` and `metadata` that contains the sample IDs. Default is "patient_id",}
+\item{patient_id}{The name of the column in \code{colData} and \code{metadata} that contains the sample IDs. Default is "patient_id",}
 
-\item{sample_id}{The name of the column in `colData` and `spatialCoords` that contains the sample IDs. Default is "sample_id".}
+\item{sample_id}{The name of the column in \code{colData} and \code{spatialCoords} that contains the sample IDs. Default is "sample_id".}
 
-\item{cols_to_keep}{(Optional) By default only the patient_id, markers, sample_id, and x and y coordinate 
+\item{cols_to_keep}{(Optional) By default only the patient_id, markers, sample_id, and x and y coordinate
 columns will be kept. But if there is additional information that needs to be kept, you can add those column names
 here. Or say "everything" if you want all columns to be kept. This may not be advisable for large datasets.}
 
-\item{marker_pos_regex}{By default will identify all markers columns as having a marker if a `+` is found in the data. But with this variable 
-You can choose a different character to sort in presence/absence. Anything with the regex character given to this parameter will be labeled as 
+\item{marker_pos_regex}{By default will identify all markers columns as having a marker if a \code{+} is found in the data. But with this variable
+You can choose a different character to sort in presence/absence. Anything with the regex character given to this parameter will be labeled as
 positive and all other cells will be labeled as negative.}
 }
 \value{
 Returns a custom MIF
-   \item{clinical}{Data frame of clinical data}
-   \item{sample}{Data frame of sample data}
-   \item{spatial}{Named list of spatial data}
-   \item{derived}{List of data derived using the MIF object}
-   \item{patient_id}{The column name for sample id
- in the sample data frame with the clinical data}
-   \item{sample_id}{The column name for sample id
- in the sample data frame to merge with the spatial data}
+\item{clinical}{Data frame of clinical data}
+\item{sample}{Data frame of sample data}
+\item{spatial}{Named list of spatial data}
+\item{derived}{List of data derived using the MIF object}
+\item{patient_id}{The column name for sample id
+in the sample data frame with the clinical data}
+\item{sample_id}{The column name for sample id
+in the sample data frame to merge with the spatial data}
 }
 \description{
-Creates an MIF object for use in spatialIF functions using a 
+Creates an MIF object for use in spatialIF functions using a
 Bioconductor SpatialExperiment object as input.
 }
 \examples{
-# Create mif object
-
-if (!("VectraPolarisData" \%in\% installed.packages())) {
- BiocManager::install("VectraPolarisData")
-}
+# VectraPolarisData is a multi-gigabyte Bioconductor *data* package and is
+# deliberately not a dependency of spatialTIME, so this example is not run.
+# Install it once with BiocManager::install("VectraPolarisData") if you want to
+# follow along; see vignette("spatialexperiment") for a worked version.
+\dontrun{
 ovarian <- VectraPolarisData::HumanOvarianCancerVP()
 
 ova_mif <- spatial_exp_to_mif(spatial_exp = ovarian, 
@@ -80,7 +80,7 @@ spe_mif <- spatial_exp_to_mif(spatial_exp = spe_lung,
                                 "phenotype_cd19", 
                                 "phenotype_ck", 
                                 "phenotype_other"))
-  
+}
 }
 \author{
 Candace Savonen
