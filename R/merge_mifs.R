@@ -87,7 +87,10 @@ merge_mifs = function(mifs = NULL, check.names = T){
     as.character() %>%
     unique()
   #alert no derived
-  if(is.null(derived_names)){
+  #`is.null()` never fired: as.character(unlist(list(NULL, NULL))) is character(0),
+  #not NULL, so this message was unreachable for mifs with empty derived slots --
+  #exactly the case it was written for.
+  if(!length(derived_names)){
     message("No variables have been derived yet")
   }
   #find mif with the most to use as "base" mif for merging

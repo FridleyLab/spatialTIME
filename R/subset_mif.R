@@ -85,7 +85,19 @@ subset_mif = function(mif, classifier, level, markers){
     )
   }
 
-  summary = if(length(summary_rows)) do.call(dplyr::bind_rows, summary_rows) else data.frame()
+  if(length(summary_rows)){
+    summary = do.call(dplyr::bind_rows, summary_rows)
+  } else {
+    #Nothing survived the filter. A bare data.frame() has no columns, so create_mif
+    #would reject it for a missing patient_id; emit a zero-row frame with the right
+    #shape instead, and say so rather than handing back a silently empty mif.
+    warning("No sample had more than 2 cells at level \"", level, "\" of \"",
+            classifier, "\"; returning a mif with no spatial data.", call. = FALSE)
+    summary = stats::setNames(
+      data.frame(character(0), character(0), stringsAsFactors = FALSE),
+      c(mif$patient_id, mif$sample_id)
+    )
+  }
 
   mif_new = create_mif(clinical_data = mif$clinical, sample_data = summary,
                        spatial_list = split_spatial, patient_id =  mif$patient_id,

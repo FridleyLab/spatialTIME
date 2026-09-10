@@ -140,8 +140,10 @@ spatial_exp_to_mif <- function(spatial_exp,
     )
     ) %>%
     dplyr::filter(sample_id %in% sample_ids) %>% # and samples with metadata
-    dplyr::rename("x" = x_coord,
-                  "y" = y_coord)  %>% 
+    #all_of(): a bare `x_coord` here is an external vector in a tidyselect context,
+    #deprecated since tidyselect 1.1.0 and warned on every call.
+    dplyr::rename("x" = dplyr::all_of(x_coord),
+                  "y" = dplyr::all_of(y_coord))  %>% 
     dplyr::mutate(patient_id = sample_id)
   
   # convert df to list by samples
