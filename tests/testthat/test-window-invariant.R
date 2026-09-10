@@ -95,6 +95,41 @@ test_that("bi_ripleys_k uses the full-sample window for disjoint corner markers"
   expect_equal(mine$`Observed K`, ref_full, tolerance = 1e-12)
 })
 
+test_that("NN_G uses the full-sample window, not the marker subset's", {
+  f <- corner_marker_mif()
+  r <- seq(0, 80, 10)
+  got <- NN_G(f$mif, mnames = "cornerA", r_range = r, num_permutations = 2,
+              workers = 1, edge_correction = "rs",
+              overwrite = TRUE)$derived$univariate_NN
+  x <- f$spat$XMin; y <- f$spat$YMin; pos <- f$spat$cornerA == 1
+  gk <- function(W) as.data.frame(spatstat.explore::Gest(
+    spatstat.geom::ppp(x[pos], y[pos], window = W, check = FALSE),
+    r = r, correction = "rs"))$rs
+  expect_equal(got$`Observed G`, gk(spatstat.geom::convexhull.xy(x, y)), tolerance = 1e-12)
+  # G is bounded in [0,1] so the discrepancy cannot be huge, but the edge
+  # correction differs enough to be well outside tolerance.
+  expect_gt(max(abs(got$`Observed G` -
+                      gk(spatstat.geom::convexhull.xy(x[pos], y[pos]))), na.rm = TRUE), 1e-6)
+})
+
+test_that("bi_NN_G uses the full-sample window for disjoint corner markers", {
+  f <- corner_marker_mif()
+  r <- seq(0, 200, 25)   # corners are ~450 units apart, so use a wider range
+  got <- bi_NN_G(f$mif, mnames = c("cornerA", "cornerB"), r_range = r,
+                 num_permutations = 2, workers = 1, edge_correction = "rs",
+                 overwrite = TRUE)$derived$bivariate_NN
+  x <- f$spat$XMin; y <- f$spat$YMin
+  pa <- f$spat$cornerA == 1; pb <- f$spat$cornerB == 1; keep <- pa | pb
+  Y <- spatstat.geom::ppp(x[keep], y[keep],
+                          window = spatstat.geom::convexhull.xy(x, y), check = FALSE)
+  spatstat.geom::marks(Y) <- factor(ifelse(pa[keep], "i", "j"), levels = c("i", "j"))
+  ref <- as.data.frame(spatstat.explore::Gcross(Y, "i", "j", r = r,
+                                               correction = "rs"))$rs
+  mine <- got[got$Anchor == "cornerA" & got$Counted == "cornerB", ]
+  mine <- mine[order(mine$r), ]
+  expect_equal(mine$`Observed G`, ref, tolerance = 1e-12)
+})
+
 test_that("a marker's result does not depend on which other markers were requested", {
   # If the window or area were derived from the requested markers rather than from
   # all cells, asking for more markers would move every marker's numbers.
