@@ -1,14 +1,3 @@
-
-#helper for below
-get_bi_rows = function(data, markers){
-  data %>%
-    dplyr::mutate(cell = 1:dplyr::n()) %>%
-    dplyr::select(cell, xloc, yloc, !!markers) %>%
-    dplyr::filter(!(get(markers[1]) == 1 & get(markers[2]) == 1)) %>%
-    tidyr::gather("Marker", "Positive", -cell, -xloc, -yloc) %>%
-    dplyr::filter(Positive == 1) %>%
-    dplyr::mutate(Marker = factor(Marker, levels = markers))
-}
 #' Bivariate Pair Correlation Function
 #'
 #' @param mif object of class `mif`
@@ -21,9 +10,7 @@ get_bi_rows = function(data, markers){
 #' @param overwrite boolean for whether to overwrite existing bivariate pair correlation results
 #' @param xloc x location column in spatial files
 #' @param yloc y location column in spatial files
-#' @importFrom spatstat.univar unnormdensity match.kernel dkernel
-#' 
-#' 
+#'
 #' @return `mif` object with the bivariate_pair_correlation slot filled
 #' @export
 #'
@@ -37,7 +24,6 @@ bi_pair_correlation = function(mif,
                                overwrite = FALSE,
                                xloc = NULL,
                                yloc = NULL){
-  #dkernel = spatstat.univar::dkernel
   #make sure that the range satisfies requirements for spatstat
   if(!(0 %in% r_range) & !is.null(r_range))
     r_range = c(0, r_range)
@@ -80,9 +66,6 @@ bi_pair_correlation = function(mif,
     
     #over markers
     res = parallel::mclapply(1:nrow(mnames), function(marker){
-      #because spatstat hops around packages
-      #dkernel = spatstat.univar:::dkernel
-      #match.kernel = spatstat.univar::match.kernel
       
       #bivariate is pcfcross
       markers = unname(unlist(mnames[marker,])) %>% as.character()
@@ -103,11 +86,8 @@ bi_pair_correlation = function(mif,
         return(df)
       }
       
-      #ps = subset(sample_ppp, cells$cell)
-      #spatstat.geom::marks(ps) = cells %>% arrange(cellid) %>% pull(Marker)
       ps = spatstat.geom::ppp(cells$xloc, cells$yloc, window = win, marks = cells$Marker)
       
-      #not calling spatstat.univar::unnormdensity but rather spatstat.geom::unnormdensity
       obs = spatstat.explore::pcfcross(ps, markers[1], markers[2],
                                   r = r_range, correction = edge_correction) %>%
         data.frame() %>%
