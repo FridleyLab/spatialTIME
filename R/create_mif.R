@@ -51,24 +51,23 @@ create_mif <- function(clinical_data, sample_data, spatial_list = NULL,
       patient_id %in% colnames(sample_data),
     "The column specified by 'sample_id' could not be found in 'sample_data'" = 
       sample_id %in% colnames(sample_data), 
-    "Each item in spatial_list must be named" = 
-      all(!sapply(names(spatial_list), is.null))
+    #`names()` returns a character vector, so is.null() on each element was always
+    #FALSE and this check could never fail; when names() was NULL, sapply() over it
+    #gave list() and all(logical(0)) is TRUE. Auto-naming below handles the
+    #genuinely unnamed case, so only reject partial/blank names here.
+    "Each item in spatial_list must be named" =
+      is.null(names(spatial_list)) ||
+        !any(is.na(names(spatial_list)) | !nzchar(names(spatial_list)))
   )
   
-  sample_data_clean <- sample_data %>% 
-    dplyr::full_join(clinical_data %>% 
-                dplyr::select(!!patient_id), by = patient_id) %>% 
-    dplyr::select(dplyr::all_of(c(!!patient_id, !!sample_id)), dplyr::everything()) %>% 
-    dplyr::group_by_at(patient_id) %>% 
-    dplyr::mutate(sample_string = paste0(!!(as.name(sample_id)), collapse = "|")) %>% 
-    dplyr::select(dplyr::all_of(c(!!patient_id, 'sample_string'))) %>% 
-    dplyr::slice(1)
-  
-  clinical_data_clean <- clinical_data %>% 
-    dplyr::full_join(sample_data_clean, by = patient_id) %>%
-    dplyr::select(dplyr::all_of(c(!!patient_id, 'sample_string')), dplyr::all_of(dplyr::everything()))
-  
-  
+  #Removed in 2.0.0: a `sample_data_clean`/`clinical_data_clean` pair was computed
+  #here and then never used -- the returned mif below carries the RAW inputs. So the
+  #documented `sample_string` column never existed in the product, the work was
+  #wasted on every call, and worst of all the discarded full_join() could FAIL on
+  #incompatible id types, making create_mif() refuse to build a mif because of a
+  #join whose result it threw away. That is why every example in this package used
+  #to carry `mutate(deidentified_id = as.character(deidentified_id))`.
+
   if(!is.null(spatial_list) & is.null(names(spatial_list))){
     
     spatial_names <- lapply(spatial_list, function(x) {x[[sample_id]][[1]]})

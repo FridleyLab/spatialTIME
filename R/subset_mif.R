@@ -30,39 +30,66 @@
 #' level = 'Tumor', markers = markers)
 
 subset_mif = function(mif, classifier, level, markers){
-  split_spatial = list()
-  summary = data.frame()
-  for(a in 1:length(mif$spatial)){
-    tmp = mif$spatial[[a]] %>% dplyr::filter(get(classifier) == level)
-    patient = mif$sample[[mif$patient_id]][mif$sample[[mif$sample_id]] == 
-                                      tmp[[mif$sample_id]][1]]
-    if(length(patient) < 1){
-      patient = NA
-    }
-    if(nrow(tmp)>2){
-      split_spatial = list.append(split_spatial, tmp)
-      names(split_spatial)[length(split_spatial)] = tmp[[mif$sample_id]][1]
-      percent = tmp %>% 
-        dplyr::select(!!markers) %>% 
-        dplyr::summarize_all(~sum(.)) %>%
-        dplyr::mutate_all(.funs = ~./nrow(tmp))
-      colnames(percent) = paste0(level, ': % ', colnames(percent))
-      counts = tmp %>% 
-        dplyr::select(!!markers) %>% 
-        dplyr::summarize_all(~sum(.)) %>%
-        dplyr::mutate(`Total Cells` = nrow(tmp))
-      colnames(counts) = paste0(level, ': ', colnames(counts))
-      out = c(patient, 
-              tmp[[mif$sample_id]][1],
-              unlist(counts) , unlist(percent))
-      names(out)[1:2] = c(mif$patient_id,mif$sample_id)
-    }
-    summary = rbind.data.frame(summary, t(out))
+  if(!inherits(mif, "mif")){
+    stop("mIF should be of class `mif` created with function `create_mif()`")
   }
-  
+  split_spatial = list()
+  #Collect one row per RETAINED sample and bind at the end.
+  #
+  #Before 2.0.0 this loop assigned `out` only inside `if(nrow(tmp) > 2)` but ran
+  #`summary = rbind.data.frame(summary, t(out))` unconditionally, which failed two
+  #different ways: if the first sample had <=2 cells at the requested level the
+  #function died with "object 'out' not found", and if a LATER sample did, the
+  #previous sample's row was silently appended a second time -- leaving a summary
+  #row that corresponded to no retained spatial frame. The silent case was the
+  #dangerous one.
+  summary_rows = list()
+
+  for(a in seq_along(mif$spatial)){
+    tmp = mif$spatial[[a]] %>% dplyr::filter(.data[[classifier]] == level)
+    if(nrow(tmp) <= 2) next
+
+    sample_name = tmp[[mif$sample_id]][1]
+    patient = mif$sample[[mif$patient_id]][mif$sample[[mif$sample_id]] == sample_name]
+    #Guard both directions: no match, and more than one row for this sample id.
+    #Length > 1 used to shift every subsequent value in the row by one, silently.
+    patient = if(length(patient) < 1) NA else patient[1]
+
+    split_spatial = list.append(split_spatial, tmp)
+    names(split_spatial)[length(split_spatial)] = sample_name
+
+    pos = tmp %>%
+      dplyr::select(dplyr::all_of(markers)) %>%
+      dplyr::summarize(dplyr::across(dplyr::everything(), ~ sum(.x)))
+
+    counts = pos
+    counts$`Total Cells` = nrow(tmp)
+    colnames(counts) = paste0(level, ': ', colnames(counts))
+
+    #x100. These columns are labelled "%", and marker_freq_diff() puts true
+    #percentages in its "%" columns; before 2.0.0 this one stored a proportion, so
+    #the two exported functions disagreed on what "%" meant.
+    percent = pos %>%
+      dplyr::mutate(dplyr::across(dplyr::everything(), ~ .x / nrow(tmp) * 100))
+    colnames(percent) = paste0(level, ': % ', colnames(percent))
+
+    #A typed one-row data frame. The old `c(patient, id, unlist(counts),
+    #unlist(percent))` coerced everything to character at the c(), so the whole
+    #summary table came back as strings like "3611" and "0.00249238438105788".
+    summary_rows[[length(summary_rows) + 1]] = dplyr::bind_cols(
+      stats::setNames(
+        data.frame(patient, sample_name, stringsAsFactors = FALSE),
+        c(mif$patient_id, mif$sample_id)
+      ),
+      counts, percent
+    )
+  }
+
+  summary = if(length(summary_rows)) do.call(dplyr::bind_rows, summary_rows) else data.frame()
+
   mif_new = create_mif(clinical_data = mif$clinical, sample_data = summary,
-                       spatial_list = split_spatial, patient_id =  mif$patient_id, 
+                       spatial_list = split_spatial, patient_id =  mif$patient_id,
                        sample_id =  mif$sample_id)
-  
+
   return(mif_new)
 }

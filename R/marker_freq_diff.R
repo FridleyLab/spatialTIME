@@ -33,7 +33,7 @@
 #'                        overwrite = TRUE)
 marker_freq_diff = function(mif, classifier, ref_level, diff_level, mnames, overwrite = FALSE){
   #make sure that the names marker names is a character vector
-  if(!is(mnames, "character")){
+  if(!inherits(mnames, "character")){
     stop("Provide a vector of marker names in the spatial files")
   }
   #check classifier/level values
@@ -67,9 +67,9 @@ marker_freq_diff = function(mif, classifier, ref_level, diff_level, mnames, over
   if(all(tmp$diff_exists == FALSE)){
     stop("diff_level value not found in any spatial data")
   }
-  #clean temp file
+  #No gc(full=TRUE) here: it forced a full garbage collection on every call, which
+  #costs seconds on a large workspace, to reclaim one small audit frame.
   rm(tmp)
-  gc(full=TRUE)
   
   #for each of the spatial samples
   out = lapply(data, function(spat){
@@ -145,21 +145,10 @@ marker_freq_diff = function(mif, classifier, ref_level, diff_level, mnames, over
     #bind all sample results to single table from list
     do.call(dplyr::bind_rows, .)
   
-  #if wanting to overwrite, overwrite, else append
-  if(overwrite){
-    mif$derived$frequency_difference = out %>%
-      dplyr::mutate(Run = 1, .after = 1)
-  } else {
-    if(exists("frequency_difference", mif$derived)){
-      mif$derived$frequency_difference = out %>%
-        dplyr::mutate(Run = 1, .after = 1)
-    } else {
-      mif$derived$frequency_difference = dplyr::bind_rows(
-        mif$derived$frequency_difference,
-        out %>%
-          dplyr::mutate(Run = max(mif$derived$frequency_difference) + 1, .after = 1)
-      )
-    }
-  }
-  return(mif)
+  #Before 2.0.0 the two inner branches of this were swapped, so overwrite = FALSE
+  #(the default) DESTROYED the previous run on a populated mif, and on a fresh mif
+  #took the append branch and shipped Run = -Inf -- max() of an empty slot, and of
+  #the whole data frame rather than of $Run. write_derived() is the same helper the
+  #seven metric functions use, so all of them now share one implementation.
+  write_derived(mif, "frequency_difference", out, overwrite)
 }

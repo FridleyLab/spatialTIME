@@ -68,17 +68,31 @@ spatial_exp_to_mif <- function(spatial_exp,
                                cols_to_keep = NULL, 
                                marker_pos_regex = "\\+"){
   
+  #SpatialExperiment/SummarizedExperiment are Suggests, not Imports: this is the
+  #only function that needs them, and making them hard dependencies would pull the
+  #whole Bioconductor stack in for every user.
+  for (pkg in c("SpatialExperiment", "SummarizedExperiment", "S4Vectors")) {
+    if (!requireNamespace(pkg, quietly = TRUE)) {
+      stop("`spatial_exp_to_mif()` needs the ", pkg, " package.\n",
+           "  install with: BiocManager::install(\"", pkg, "\")", call. = FALSE)
+    }
+  }
   stopifnot(
-    "spatial_exp needs to be of class 'SpatialExperiment'" = 
-      class(spatial_exp) == "SpatialExperiment"
+    #inherits(), not class() == : SpatialExperiment objects can carry subclasses,
+    #and class() == on a multi-element class vector warns or errors.
+    "spatial_exp needs to be of class 'SpatialExperiment'" =
+      inherits(spatial_exp, "SpatialExperiment")
   )
   
   # extract information from spatial experiment object
-  colData_df <- colData(spatial_exp)
-  
-  spatialcoords_df <- spatialCoords(spatial_exp)
-  
-  clinical <- metadata(spatial_exp)$clinical_data %>%
+  #Namespace-qualified: these were bare before 2.0.0, so the function only worked
+  #if the user happened to have attached the packages themselves -- none of the
+  #three was declared in DESCRIPTION or imported in NAMESPACE.
+  colData_df <- SummarizedExperiment::colData(spatial_exp)
+
+  spatialcoords_df <- SpatialExperiment::spatialCoords(spatial_exp)
+
+  clinical <- S4Vectors::metadata(spatial_exp)$clinical_data %>%
     dplyr::rename(patient_id = dplyr::all_of(patient_id))
   
   stopifnot(

@@ -33,8 +33,14 @@
 
 merge_mifs = function(mifs = NULL, check.names = T){
   #check for proper number of MIF objects
-  if(is.null(mifs) | length(mifs) == 1){
+  #`length(mifs) == 1` missed the empty case, which then reached
+  #`names(sizes) = seq(length(sizes))` -> seq(0) is c(1, 0), length 2, giving
+  #"'names' attribute [2] must be the same length as the vector [0]".
+  if(is.null(mifs) || length(mifs) < 2){
     stop("Please enter at least 2 MIF objects to merge")
+  }
+  if(!all(vapply(mifs, inherits, logical(1), what = "mif"))){
+    stop("Every element of `mifs` must be a mif object created with `create_mif()`")
   }
   #find patient_id values
   patient_id = sapply(mifs, function(mif){
@@ -88,7 +94,7 @@ merge_mifs = function(mifs = NULL, check.names = T){
   sizes = sapply(mifs, function(mif){
     length(mif$derived)
   })
-  names(sizes) = seq(length(sizes))
+  names(sizes) = seq_along(sizes)
   derived = lapply(mifs, function(mif){
     mif$derived
   })
@@ -105,7 +111,7 @@ merge_mifs = function(mifs = NULL, check.names = T){
         return(metric)
       }
     }) %>%
-      do.call(bind_rows, .)
+      do.call(dplyr::bind_rows, .)
   })
   rm(derived)
   names(derived2) = derived_names

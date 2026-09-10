@@ -55,7 +55,7 @@ plot_immunoflo <- function(
   
   # convert to list of dataframes - throw error message if missing
   if (missing(mif)) stop("MIF is missing; please provide the appropriate data")
-  if (!is(mif, "mif")) stop("Please use a mif object")
+  if (!inherits(mif, "mif")) stop("Please use a mif object")
   # if (is.data.frame()) dlist = list(dlist) - need to change to MIF object
   
   # if (missing(filename)) stop("filename is missing; filename must be a string")
@@ -157,14 +157,24 @@ plot_immunoflo <- function(
   
   # output to pdf if filename is specified 
   if(!is.null(filename)){
-    grDevices::pdf(sprintf("%s.pdf",filename), height = 10, width = 10)
-    on.exit(dev.off())
+    #ONE dev.off, via on.exit so it still fires if printing errors. Before 2.0.0
+    #both an on.exit(dev.off()) and an explicit grDevices::dev.off() were present,
+    #so a second dev.off() ran on exit: with no other device open the function
+    #errored after correctly writing the pdf, and with a user device open it
+    #silently closed the caller's device.
+    #`path` was documented but never referenced, so output always landed in
+    #getwd(). Also strip a trailing .pdf so filename = "plots.pdf" does not
+    #produce "plots.pdf.pdf".
+    out_dir  <- if (is.null(path)) "." else path
+    out_stem <- sub("\\.pdf$", "", filename, ignore.case = TRUE)
+    grDevices::pdf(file.path(out_dir, paste0(out_stem, ".pdf")),
+                   height = 10, width = 10)
+    on.exit(grDevices::dev.off(), add = TRUE)
     invisible(
       lapply(seq_along(plot), function(x) {
         print(plot[[x]])
       })
     )
-    grDevices::dev.off()
   }
   
   mif$derived$spatial_plots = plot
