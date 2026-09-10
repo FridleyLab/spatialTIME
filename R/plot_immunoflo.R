@@ -114,37 +114,43 @@ plot_immunoflo <- function(
                             color = "gray70") +
         ggplot2::geom_point(size = 3) +
         ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(5)) +
-        ggplot2::scale_y_continuous(breaks = scales::pretty_breaks(5)) +
         ggplot2::ggtitle(plot_title) +
         ggplot2::scale_color_manual(NULL, values = mcolors, drop = FALSE) +
         ggplot2::theme_bw(base_size = 18) +
         ggplot2::theme(axis.title = ggplot2::element_blank(),
-                       panel.grid = ggplot2::element_blank()) 
+                       panel.grid = ggplot2::element_blank())
     }else{
-    basic_plot <- plot_data %>% 
-      dplyr::filter(indicator == 1) %>% 
-      ggplot2::ggplot(ggplot2::aes(x = xloc, 
-                                   y = yloc, 
-                                   color = marker, 
-                                   shape = cell_type)) +
-      # ggplot2::geom_point(data = filter(plot_data, indicator == 0),
-      #                     # aes(fill = "grey70"),
-      #                     color = "gray70") +
+    #`shape = cell_type` would map the *string* "Classifier.Label" rather than the
+    #column, which is what happened before 2.0.0: one shape was drawn for every
+    #cell and the legend had a single entry labelled with the column name, so the
+    #documented example rendered Tumor and Stroma indistinguishably. `.data[[ ]]`
+    #maps the column.
+    n_types <- length(unique(stats::na.omit(plot_data[[cell_type]])))
+    basic_plot <- plot_data %>%
+      dplyr::filter(indicator == 1) %>%
+      ggplot2::ggplot(ggplot2::aes(x = xloc,
+                                   y = yloc,
+                                   color = marker,
+                                   shape = .data[[cell_type]])) +
       ggplot2::geom_point(data = plot_data[plot_data$indicator == 0,],
-                          # aes(fill = "grey70"),
                           color = "gray70") +
       ggplot2::geom_point(size = 3) +
       ggplot2::scale_x_continuous(breaks = scales::pretty_breaks(5)) +
-      ggplot2::scale_y_continuous(breaks = scales::pretty_breaks(5)) +
       ggplot2::ggtitle(plot_title) +
       ggplot2::scale_color_manual(NULL, values = mcolors, drop = FALSE) +
-      ggplot2::scale_shape_manual(NULL, values = c(3, 16), drop = FALSE) +
+      #Shapes were hard-coded as c(3, 16), so any classifier with more than two
+      #levels errored at draw time. Take as many as there are levels.
+      ggplot2::scale_shape_manual(NULL, values = shape_palette(n_types), drop = FALSE) +
       ggplot2::theme_bw(base_size = 18) +
       ggplot2::theme(axis.title = ggplot2::element_blank(),
                     panel.grid = ggplot2::element_blank())
     }
-    basic_plot = basic_plot + 
-      ggplot2::scale_y_reverse()
+    #Image y axes run top-down. `breaks` goes here rather than in an earlier
+    #scale_y_continuous(): that one was silently replaced by this call, which both
+    #lost the pretty-breaks intent and emitted "Scale for y is already present" on
+    #every sample.
+    basic_plot = basic_plot +
+      ggplot2::scale_y_reverse(breaks = scales::pretty_breaks(5))
     return(basic_plot)
     
   }, mc.cores = 1)
@@ -165,4 +171,21 @@ plot_immunoflo <- function(
   
   return(mif)
   
+}
+
+
+#' Distinct point shapes for a classifier with an arbitrary number of levels
+#'
+#' `plot_immunoflo()` hard-coded `c(3, 16)`, so any classifier with more than two
+#' levels errored when the plot was drawn -- and because the error surfaced at
+#' print time rather than at build time, the function appeared to succeed. Cycles
+#' through the solid/open shapes that stay legible at `size = 3`.
+#'
+#' @param n number of levels needing a shape.
+#' @keywords internal
+#' @noRd
+shape_palette <- function(n) {
+  base <- c(3, 16, 17, 15, 4, 8, 1, 2, 0, 5, 6, 7, 9, 10, 11, 12, 13, 14)
+  if (n <= 0) return(base[1])
+  rep_len(base, n)
 }

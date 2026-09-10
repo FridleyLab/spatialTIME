@@ -76,7 +76,10 @@ marker_freq_diff = function(mif, classifier, ref_level, diff_level, mnames, over
     #sort marker names to make output later look nicer
     mnames = sort(mnames)
     
-    tmp = spat %>%
+    #Per-classifier-level positive counts and totals. Kept as its own object rather
+    #than being pivoted straight to one row, because the Fisher tests below need
+    #the counts addressable by name -- see the note on that loop.
+    agg = spat %>%
       #with the spatial data, select out the markers and the classifier label column
       dplyr::select(dplyr::any_of(c(mnames, classifier))) %>%
       #convert the classifier column to be a factor - possible not needed
@@ -84,28 +87,48 @@ marker_freq_diff = function(mif, classifier, ref_level, diff_level, mnames, over
       #group by the classifier levels and find total number of cells and number of positive cells
       dplyr::group_by(dplyr::across(dplyr::all_of(classifier))) %>%
       dplyr::summarise(Total_Cells = dplyr::n(),
-                       dplyr::across(dplyr::any_of(mnames), ~ sum(.x))) %>%
+                       dplyr::across(dplyr::any_of(mnames), ~ sum(.x)),
+                       .groups = "drop")
+
+    tmp = agg %>%
       #calculate percent of compartment that is positive
-      dplyr::mutate(dplyr::across(any_of(mnames), ~ .x / Total_Cells * 100, .names = "{col}%")) %>%
+      dplyr::mutate(dplyr::across(dplyr::any_of(mnames), ~ .x / Total_Cells * 100, .names = "{col}%")) %>%
       #make data long and sort by column names, currently is 2 rows - want to make 1
       tidyr::pivot_longer(-dplyr::any_of(classifier), names_to = "col", values_to = "val") %>%
       dplyr::arrange(col) %>%
       #make wide to 1 row
       tidyr::pivot_wider(names_from = c(!!classifier, col), values_from = val, names_sep = " ")
-    #calculate the fisher exact test results for the frequency of positive marker between classifier groups
+
+    #Fisher's exact test for whether marker positivity differs between the two
+    #classifier levels.
+    #
+    #Two bugs lived here before 2.0.0, both fixed by reading counts out of `agg` by
+    #name instead of string-matching the pivoted wide frame:
+    #
+    #  1. The second row of the table was the compartment TOTAL rather than the
+    #     count of marker-NEGATIVE cells, so the margin double-counted the
+    #     positives. Every p-value the function produced was wrong -- on
+    #     example_spatial[[1]] / CD3..Opal.570..Positive it returned 7.949897e-07
+    #     where the correct answer is 6.001431e-07.
+    #  2. Selection used dplyr::contains(marker), a substring match. Given two
+    #     markers where one name is a prefix of the other -- e.g. "CD3..CD8." and
+    #     "CD3..CD8..FOXP3.", both real columns of the shipped data -- the shorter
+    #     marker's table absorbed the longer marker's counts and fisher.test() was
+    #     handed a 3x2 table, whose r x c p-value was then stored as if it were the
+    #     2x2 result for that marker.
+    level_row = function(lv) which(as.character(agg[[classifier]]) == lv)
     ft_res = lapply(mnames, function(marker){
-      ft = tmp %>%
-        dplyr::select(dplyr::contains(c(marker, "Total"))) %>%
-        dplyr::select(-dplyr::contains("%")) %>%
-        tidyr::pivot_longer(dplyr::everything(), names_to = c("classifier", "marker"), names_sep = " ") %>%
-        tidyr::pivot_wider(names_from = c("classifier"), values_from = "value") %>%
-        tibble::column_to_rownames("marker") %>%
-        fisher.test()
-      res = ft$p.value
+      #rows = positive / negative, cols = ref level / diff level
+      counts = vapply(c(ref_level, diff_level), function(lv){
+        i   = level_row(lv)
+        pos = as.numeric(agg[[marker]][i])
+        c(positive = pos, negative = as.numeric(agg$Total_Cells[i]) - pos)
+      }, numeric(2))
+      res = stats::fisher.test(counts)$p.value
       names(res) = paste0(marker, "_p.value")
       return(res)
     }) %>%
-      unlist() %>% 
+      unlist() %>%
       t() %>%
       data.frame()
     
