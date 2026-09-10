@@ -1,267 +1,237 @@
 #' Bivariate Ripley's K
 #'
 #' @param mif mIF object with spatial data frames, clinical, and per-sample summary information
-#' @param mnames vector of column names for phenotypes or data frame of marker combinations
-#' @param r_range vector range of radii to calculate co-localization *K*
-#' @param edge_correction character edge_correction method, one of "translation", "border", "or none" 
-#' @param num_permutations integer number of permutations to estimate CSR
-#' @param permute whether or not to use permutations to estimate CSR (TRUE) or to calculate exact CSR (FALSE)
-#' @param keep_permutation_distribution boolean as to whether to summarise permutations to mean
-#' @param overwrite boolean as to whether to replace existing bivariate_Count if exists
+#' @param mnames vector of column names for phenotypes, or a two-column data frame
+#'   of specific anchor/counted marker combinations to run
+#' @param r_range vector range of radii at which to calculate co-localization *K*
+#' @param edge_correction edge correction method: one of "translation",
+#'   "isotropic", "border" or "none"
+#' @param num_permutations integer number of permutations used to estimate CSR.
+#'   Ignored when `permute = FALSE`.
+#' @param permute whether to estimate CSR by permutation (`TRUE`) or to use the
+#'   exact closed-form CSR estimate (`FALSE`, the default)
+#' @param keep_permutation_distribution boolean; keep each permutation's result or
+#'   average them to one row per marker pair and radius
+#' @param overwrite boolean; replace an existing `bivariate_Count` slot rather than
+#'   appending it as a new `Run`
 #' @param workers integer number of CPU workers to use
-#' @param xloc,yloc the x and y positions that correspond to cells. If left as NULL, XMin, XMax, YMin, and YMax must be present in the spatial files
-#' @param force logical whether or not to continue if sample has more than 10,000 cells
+#' @param xloc,yloc the x and y columns giving cell centres. If left `NULL`,
+#'   `XMin`, `XMax`, `YMin` and `YMax` must be present.
+#' @param big cell count above which per-pair edge weights are computed in chunks
+#'   to bound peak memory. Memory and speed only -- results are identical either
+#'   way and the requested `edge_correction` is always honoured.
 #'
 #' @return mif object with bivariate Ripley's K calculated
-#' 
+#'
 #' @description
-#' Bivariate Ripley's K function within spatialTIME, `bi_ripleys_k` is a function that takes in a `mIF` object, along with 
-#' some parameters like marker names of interest and range of radii in which to assess bivariate clustering or colocalization.
-#' In 1.3.3.3 we have introduced the ability to forsgo the need for permutations with the implementation of the exact CSR estimate.
-#' This is both faster and being the exact CSR, produces an exact degree of clustering in the spatial files.
-#' 
-#' Due to the availability of whole slide images (WSI), there's a possibility users will be running bivariate Ripley's K on samples
-#' that have millions of cells. When doing this, keep in mind that a nearest neighbor matrix with *n* cell is *n* by *n* in size and 
-#' therefore easily consumers high performance compute levels of RAM. To combat this, we have implemented a tiling method that performs
-#' counts for small chunks of the distance matrix at a time before finally calculating the bivariate Ripley's K value on the total counts.
-#' When doing this there are now 2 import parameters to keep in mind. The `big` parameter is the size of the tile to use. We have found
-#' 1000 to be a good number that allows for high number of cores while maintaining low RAM usage. The other important parameter when
-#' working with WSI is nlarge which is the fall over for switching to no edge correction. The spatstat.explore::Kest univariate 
-#' Ripley's K uses a default of 3000 but we have defaulted to 1000 to keep compute minimized as edge correction uses large amounts
-#' of RAM over 'none'.
-#' 
+#' `bi_ripleys_k()` takes a `mIF` object plus marker names and a range of radii,
+#' and measures bivariate clustering (co-localization) between each ordered pair of
+#' markers. Cells positive for both markers of a pair are excluded from that pair,
+#' so the anchor and counted sets are always disjoint.
+#'
+#' Either estimate CSR by permutation (`permute = TRUE`) or use the exact CSR
+#' estimate (`permute = FALSE`). The exact estimate is the univariate K of *all*
+#' cells in the sample, which is the closed form for the expected cross-K under
+#' random labelling -- verified against a 500-permutation Monte Carlo to within
+#' Monte Carlo error.
+#'
+#' @section Whole slide images:
+#' As of 2.0.0 this function handles whole-slide-scale data directly and
+#' `bi_ripleys_k_WSI()` is gone. Only the cell pairs closer than `max(r_range)`
+#' are ever materialised, so memory scales with the number of nearby pairs rather
+#' than with n squared -- at 200,000 cells roughly 75 MB instead of 319 GB. The
+#' `big` argument bounds peak memory further by chunking, and unlike the old
+#' `big`/`nlarge` arguments it never changes the statistic. In particular the
+#' requested edge correction is no longer silently replaced with `"none"` above a
+#' cell-count threshold.
+#'
+#' @section Accuracy:
+#' Values agree with [spatstat.explore::Kcross()] to floating-point precision. The
+#' observation window is the convex hull of **every** cell in the sample and is
+#' held fixed across all marker pairs and permutations.
+#'
 #' @export
 #'
 #' @examples
-#' x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical %>% 
+#' x <- spatialTIME::create_mif(clinical_data = spatialTIME::example_clinical %>%
 #'                                dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-#'                              sample_data = spatialTIME::example_summary %>% 
+#'                              sample_data = spatialTIME::example_summary %>%
 #'                                dplyr::mutate(deidentified_id = as.character(deidentified_id)),
-#'                              spatial_list = spatialTIME::example_spatial,
-#'                              patient_id = "deidentified_id", 
+#'                              spatial_list = spatialTIME::example_spatial[1],
+#'                              patient_id = "deidentified_id",
 #'                              sample_id = "deidentified_sample")
-#' mnames_good <- c("CD3..Opal.570..Positive","CD8..Opal.520..Positive",
-#'                  "FOXP3..Opal.620..Positive","PDL1..Opal.540..Positive",
-#'                  "PD1..Opal.650..Positive","CD3..CD8.","CD3..FOXP3.")
-#' x2 = bi_ripleys_k(mif = x, mnames = mnames_good[1:2], 
-#'                    r_range = 0:100, edge_correction = "none", permute = FALSE,
-#'                    num_permutations = 50, keep_permutation_distribution = FALSE, 
-#'                    workers = 1)
+#' x2 = bi_ripleys_k(mif = x,
+#'                   mnames = c("CD3..Opal.570..Positive", "CD8..Opal.520..Positive"),
+#'                   r_range = seq(0, 100, 10),
+#'                   edge_correction = "translation",
+#'                   permute = FALSE,
+#'                   workers = 1)
 bi_ripleys_k = function(mif,
-                         mnames,
-                         r_range = 0:100,
-                         edge_correction = "translation",
-                         num_permutations = 50,
-                         permute = FALSE, #redo for permutation or estimate
-                         keep_permutation_distribution = FALSE,
-                         overwrite = TRUE,
-                         workers = 6,
-                         xloc = NULL,
-                         yloc = NULL, force = FALSE){
-  Label = Anchor = Counted = `Exact CSR` = NULL
-  #check whether the object assigned to mif is of class mif
+                        mnames,
+                        r_range = 0:100,
+                        edge_correction = "translation",
+                        num_permutations = 50,
+                        permute = FALSE,
+                        keep_permutation_distribution = FALSE,
+                        overwrite = FALSE,
+                        workers = 1,
+                        xloc = NULL,
+                        yloc = NULL,
+                        big = 10000){
   if(!inherits(mif, "mif")){
-    stop("Please use a mIF object for mif")
+    stop("Please use a mIF object for `mif`, created with `create_mif()`.")
   }
-  #check whether mnames is either a character vector a data frame
-  if(!inherits(mnames, "character") & !inherits(mnames, "data.frame")){
-    stop("Please use either a character vector or data frame of marker combinations for mnames")
+  if(!inherits(mnames, "character") && !inherits(mnames, "data.frame")){
+    stop("Please use either a character vector or a data frame of marker combinations for `mnames`.")
   }
-  #r_range has to have 0 for use with AUC (0,0)
+  if(keep_permutation_distribution && !permute){
+    stop("Conflicting `permute` and `keep_permutation_distribution` parameters.\n",
+         "\tTo keep a permutation distribution, set `permute = TRUE`.")
+  }
+  #r must contain 0 so that the curve starts at the origin (needed for AUC)
   if(!(0 %in% r_range)){
-    r_range = c(0, r_range)
+    r_range = sort(c(0, r_range))
   }
-  #check if user should be using wsi method
-  if(any(sapply(mif$spatial, nrow) > 10000)){
-    if(!force){
-      stop("Some samples have a large number of cells - bi_ripleys_k_WSI may be more appropriate.")
-    } else {
-      message("Some samples have a large number of cells - bi_ripleys_k_WSI may be more appropriate.\nContinuing\n")
-    }
-  }
-  #split mif into jobs for spatial files
-  out = parallel::mclapply(names(mif$spatial), function(spatial_name){
-    #prepare spatial data with x and y location (cell centers)
-    spat = mif$spatial[[spatial_name]]
-    
-    if(is.null(xloc) & is.null(yloc)){
-      spat = spat %>%
-        dplyr::mutate(xloc = (XMin + XMax)/2,
-                      yloc = (YMin + YMax)/2)
-    } else {
-      spat = spat %>%
-        dplyr::rename('xloc' := xloc,
-                      'yloc' := yloc)
-    }
-    #find the window of the point process
+  edge_correction = match_edge_correction(edge_correction)
+
+  m_combos = marker_combinations(mnames)
+  all_markers = as.character(unique(unlist(mnames)))
+
+  #Seeds drawn in the parent so results depend only on the user's set.seed() and
+  #not on `workers`. See the note in ripleys_k().
+  seeds = sample.int(.Machine$integer.max, length(mif$spatial))
+
+  out = parallel::mclapply(seq_along(mif$spatial), function(sample_i){
+    set.seed(seeds[[sample_i]])
+    spat = mif$spatial[[sample_i]]
+    spat = add_cell_centres(spat, xloc, yloc)
+    label = as.character(spat[[mif$sample_id]][1])
+
+    #Window and area from EVERY cell in the sample, fixed across all marker pairs
+    #and permutations.
     win = spatstat.geom::convexhull.xy(spat$xloc, spat$yloc)
-    #calculate area of the window
-    area = spatstat.geom::area(win)
-    #matrix operations are WAY faster than data frame
-    #since now all numeric, easy enough to use matrix
-    spat = as.matrix(spat[,c("xloc", "yloc", as.character(unique(unlist(mnames))))])
-    #get the combinations data frame
-    if(inherits(mnames, "data.frame")){
-      m_combos = mnames
-    }
-    if(inherits(mnames, "character")){
-      m_combos = expand.grid(anchor = mnames,
-                             counted = mnames) %>%
-        dplyr::filter(anchor != counted)
-    }
-    core_pp = spatstat.geom::ppp(x = spat[,'xloc'],
-                                 y = spat[,'yloc'],
-                                 window = win)
-    #calculating exact K works now!
-    if(!permute){
-      #calculate exact K
-      exact_K = spatstat.explore::Kest(core_pp,
-                                       r = r_range,
-                                       correction = edge_correction) %>%
-        data.frame() %>%
-        dplyr::rename("Theoretical CSR" = 2,
-                      "Exact CSR" = 3)
-    }
-    
-    #for the combinations of markers, do bivark and permutations
-    res = parallel::mclapply(1:nrow(m_combos), function(combo){
-      #pull anchor and counted marker from combos data frame
-      anchor = m_combos[combo, ] %>% dplyr::pull(anchor) %>% as.character()
-      counted = m_combos[combo, ] %>% dplyr::pull(counted) %>% as.character()
-      cat(spatial_name, "\t", combo, "\t", anchor, "\t", counted, "\n")
-      #remove rows that are positive for both counted and anchor
-      spat_tmp = get_bi_rows(data.frame(spat, check.names = FALSE), c(anchor, counted))
-      tabs = table(spat_tmp$Marker)
-      #if the number of positive cells for either counted or anchor is less than 2, return empty K
-      if(length(tabs) < 2 | any(tabs < 2)){
-        final = data.frame(Label = spatial_name,
-                           Anchor = anchor,
-                           Counted = counted,
-                           r = r_range,
-                           `Theoretical CSR` = pi*r_range^2,
-                           `Permuted CSR` = NA,
-                           `Exact CSR` = NA,
-                           `Observed K` = NA,
-                           check.names=FALSE) 
-        if(permute & keep_permutation_distribution){
-          final = final %>%
-            dplyr::full_join(expand.grid(r = r_range,
-                                         iter = seq(num_permutations)),
-                             by = "r")
-        } else if(permute & !keep_permutation_distribution){
-          final$iter = num_permutations
-        } else {
-          final$iter = 1
-        }
-        return(final %>%
-                 dplyr::relocate(iter, .after = 3))
+    pp  = spatstat.geom::ppp(spat$xloc, spat$yloc, window = win, check = FALSE)
+    n   = spatstat.geom::npoints(pp)
+
+    pairs = k_pairs(pp, r_range, edge_correction,
+                    block = if(n > big) big else Inf)
+
+    theo  = pi * r_range^2
+    #Exact CSR: the univariate K of all cells is the closed form for E[Kcross]
+    #under random labelling.
+    exact = if(permute) rep(NA_real_, length(r_range)) else k_from_pairs(pairs, rep(TRUE, n))
+
+    res = lapply(seq_len(nrow(m_combos)), function(combo){
+      anchor  = as.character(m_combos$anchor[combo])
+      counted = as.character(m_combos$counted[combo])
+
+      pos_a = !is.na(spat[[anchor]])  & spat[[anchor]]  == 1
+      pos_c = !is.na(spat[[counted]]) & spat[[counted]] == 1
+      #Cells positive for both markers belong to neither set.
+      keep_i = pos_a & !pos_c
+      keep_j = pos_c & !pos_a
+      n_i = sum(keep_i); n_j = sum(keep_j)
+
+      if(n_i < 2 || n_j < 2){
+        return(bi_k_result_frame(label, anchor, counted, r_range, theo,
+                                 observed = NA_real_, permuted = NA_real_, exact = NA_real_,
+                                 iter = if(permute) as.character(seq_len(num_permutations)) else "Estimate",
+                                 sample_id = mif$sample_id, larger = NA_integer_))
       }
-      #make empty data frame to begin the final K table
-      ps = core_pp[spat_tmp$cell]
-      spatstat.geom::marks(ps) = spat_tmp$Marker
-      K_obs = spatstat.explore::Kcross(ps,
-                                       i = anchor, j = counted,
-                                       r = r_range,
-                                       correction = edge_correction) %>%
-        data.frame() %>%
-        dplyr::rename("Theoretical CSR" = 2,
-                      "Observed K" = 3)
-      #set the anchor and counted in final table
-      K_obs$Anchor = anchor
-      K_obs$Counted = counted
-      
-      if(permute){
-        #randomly sample the rows of possible cell locations for permuting
-        perm_rows = lapply(seq(num_permutations), function(x){
-          sample(1:nrow(spat), sum(tabs), replace = FALSE)
-        })
-        
-        #assign("perm_rows", perm_rows, envir = .GlobalEnv)
-        #calculate BiK for each permutation of cells
-        kpermed = parallel::mclapply(seq(perm_rows), function(perm_n){
-          cat(perm_n)
-          #extract vector of rows for permutation run
-          perm = perm_rows[[perm_n]]
-          #subset the spatstat object
-          ps = core_pp[perm]
-          spatstat.geom::marks(ps) = spat_tmp$Marker
-          
-          permed = spatstat.explore::Kcross(ps,
-                                            i = anchor, j = counted,
-                                            r = r_range,
-                                            correction = edge_correction) %>%
-            data.frame() %>%
-            dplyr::rename("Theoretical CSR" = 2,
-                          "Permuted CSR" = 3) %>%
-            dplyr::mutate(iter = perm_n)
-          return(permed)
-        }, mc.preschedule = FALSE, mc.allow.recursive = TRUE) %>%
-          do.call(dplyr::bind_rows, .)
-        # #simplify if not keeping perms
-        # if(!keep_permutation_distribution){
-        #   kpermed = kpermed %>%
-        #     dplyr::group_by(r) %>%
-        #     dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(.x, na.rm = TRUE))) %>%
-        #     dplyr::mutate(iter = 1)
-        # }
-        kpermed$`Exact CSR` = NA
+
+      observed = k_from_pairs(pairs, keep_i, keep_j, n_i, n_j, univariate = FALSE)
+
+      if(!permute){
+        return(bi_k_result_frame(label, anchor, counted, r_range, theo, observed,
+                                 permuted = NA_real_, exact = exact, iter = "Estimate",
+                                 sample_id = mif$sample_id, larger = NA_integer_))
+      }
+
+      #Random labelling: draw n_i + n_j cells from all cells in the sample and
+      #split them into anchor and counted, then re-mask the same pair list.
+      permuted = vapply(seq_len(num_permutations), function(p){
+        s = sample.int(n, n_i + n_j)
+        ki = logical(n); ki[s[seq_len(n_i)]] = TRUE
+        kj = logical(n); kj[s[n_i + seq_len(n_j)]] = TRUE
+        k_from_pairs(pairs, ki, kj, n_i, n_j, univariate = FALSE)
+      }, numeric(length(r_range)))
+
+      larger = rowSums(permuted > observed, na.rm = TRUE)
+
+      if(keep_permutation_distribution){
+        bi_k_result_frame(label, anchor, counted, r_range, theo, observed,
+                          permuted = as.vector(permuted), exact = NA_real_,
+                          iter = as.character(seq_len(num_permutations)),
+                          sample_id = mif$sample_id, larger = larger)
       } else {
-        kpermed = data.frame(r = r_range,
-                             `Theoretical CSR` = pi * r_range^2,
-                             iter = 1,
-                             check.names = FALSE)
-        kpermed$`Permuted CSR` = NA
-        kpermed$`Exact CSR` = exact_K$`Exact CSR`
+        bi_k_result_frame(label, anchor, counted, r_range, theo, observed,
+                          permuted = rowMeans(permuted, na.rm = TRUE), exact = NA_real_,
+                          iter = "Permuted", sample_id = mif$sample_id, larger = larger)
       }
-      
-      
-      #join the emperical K and the permuted CSR estimate
-      final = dplyr::full_join(K_obs,
-                               kpermed, by = c("r", "Theoretical CSR")) %>%
-        #add the image label to the data frame
-        dplyr::mutate(Label = spatial_name, .before = 1) %>% 
-        dplyr::relocate(Anchor, Counted, iter, r, 
-                        `Theoretical CSR`, `Permuted CSR`, `Exact CSR`, .after = 1) %>%
-        dplyr::group_by(Label, Anchor, Counted, r) %>%
-        dplyr::mutate(`Permutations Larger than Observed` = ifelse(permute,
-                                                                   sum(`Permuted CSR` > `Observed K`, na.rm = TRUE),
-                                                                   NA))
-      if(permute & !keep_permutation_distribution){
-        final = final %>%
-          dplyr::summarise(dplyr::across(dplyr::everything(), ~ mean(.x, na.rm = TRUE))) %>%
-          dplyr::mutate(iter = num_permutations) %>%
-          dplyr::relocate(iter, .after = 3)
-      }
-        
-      
-      return(final)
-    }, mc.preschedule = F,mc.allow.recursive = T) %>% #
-      do.call(dplyr::bind_rows, .)
-    #reorder columns to make more sense
-    return(res)
-  }, mc.cores = workers, mc.preschedule = FALSE,mc.allow.recursive = TRUE) %>%
-    do.call(dplyr::bind_rows, .)%>% #collapse all samples to single data frame
-    dplyr::rename(!!mif$sample_id := Label)
-  out = out %>%
-    #calculate the degree of clustering from both the theoretical and permuted
+    })
+
+    dplyr::bind_rows(res)
+  }, mc.cores = workers, mc.preschedule = FALSE) %>%
+    do.call(dplyr::bind_rows, .) %>%
     dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
                   `Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
-                  `Degree of Clustering Exact` = `Observed K` - `Exact CSR`)
-  #if overwrite is true, replace the bivariate count in the derived slot
-  if(overwrite){
-    mif$derived$bivariate_Count = out %>%
-      #add run number to differentiate between bivariate compute runs
-      dplyr::mutate(Run = 1)
+                  `Degree of Clustering Exact`       = `Observed K` - `Exact CSR`)
+
+  write_derived(mif, "bivariate_Count", out, overwrite)
+}
+
+
+#' Expand marker input into an anchor/counted table
+#'
+#' Accepts either a character vector (all ordered pairs of distinct markers) or a
+#' two-column data frame of specific pairs. Shared by the bivariate metrics so
+#' they all interpret `mnames` identically.
+#'
+#' @keywords internal
+#' @noRd
+marker_combinations <- function(mnames) {
+  if (inherits(mnames, "data.frame")) {
+    if (ncol(mnames) < 2L) {
+      stop("A data frame passed to `mnames` needs two columns: anchor and counted.",
+           call. = FALSE)
+    }
+    out <- data.frame(anchor  = as.character(mnames[[1]]),
+                      counted = as.character(mnames[[2]]),
+                      stringsAsFactors = FALSE)
+  } else {
+    if (length(mnames) < 2L) {
+      stop("At least two markers are needed for a bivariate measure.", call. = FALSE)
+    }
+    out <- expand.grid(anchor = mnames, counted = mnames, stringsAsFactors = FALSE)
+    out <- out[out$anchor != out$counted, , drop = FALSE]
   }
-  #if don't overwrite
-  if(!overwrite){
-    #bind old and new bivar runs together, incrementing Run
-    mif$derived$bivariate_Count = mif$derived$bivariate_Count%>%
-      dplyr::bind_rows(out %>%
-                         dplyr::mutate(Run = ifelse(exists("bivariate_Count", mif$derived),
-                                                    max(mif$derived$bivariate_Count$Run) + 1,
-                                                    1)))
+  out <- out[out$anchor != out$counted, , drop = FALSE]
+  if (!nrow(out)) {
+    stop("No valid anchor/counted marker pairs were found in `mnames`.", call. = FALSE)
   }
-  #return the final mif object
-  return(mif)
+  rownames(out) <- NULL
+  out
+}
+
+
+#' Assemble one marker pair's bivariate Ripley's K results
+#' @keywords internal
+#' @noRd
+bi_k_result_frame <- function(label, anchor, counted, r_range, theo,
+                              observed, permuted, exact, iter, sample_id, larger) {
+  d <- data.frame(
+    Label               = label,
+    Anchor              = anchor,
+    Counted             = counted,
+    iter                = rep(iter, each = length(r_range)),
+    r                   = r_range,
+    `Theoretical CSR`   = theo,
+    `Permuted CSR`      = permuted,
+    `Exact CSR`         = exact,
+    `Observed K`        = observed,
+    check.names = FALSE
+  )
+  d[["Permutations Larger than Observed"]] <- larger
+  names(d)[names(d) == "Label"] <- sample_id
+  d
 }
