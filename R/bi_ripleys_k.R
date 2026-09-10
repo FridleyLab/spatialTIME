@@ -20,6 +20,9 @@
 #' @param big cell count above which per-pair edge weights are computed in chunks
 #'   to bound peak memory. Memory and speed only -- results are identical either
 #'   way and the requested `edge_correction` is always honoured.
+#' @param ... support for deprecated argument names. `keep_perm_dis` aliases
+#'   `keep_permutation_distribution` and `nlarge` aliases `big`; `force` is accepted
+#'   and ignored (there is no longer a cell-count limit). Anything else is an error.
 #'
 #' @return mif object with bivariate Ripley's K calculated
 #'
@@ -77,7 +80,9 @@ bi_ripleys_k = function(mif,
                         workers = 1,
                         xloc = NULL,
                         yloc = NULL,
-                        big = 10000){
+                        big = 10000,
+                        ...){
+  apply_deprecated_args(list(...), "bi_ripleys_k")
   if(!inherits(mif, "mif")){
     stop("Please use a mIF object for `mif`, created with `create_mif()`.")
   }
@@ -95,7 +100,6 @@ bi_ripleys_k = function(mif,
   edge_correction = match_edge_correction(edge_correction)
 
   m_combos = marker_combinations(mnames)
-  all_markers = as.character(unique(unlist(mnames)))
 
   #Seeds drawn in the parent so results depend only on the user's set.seed() and
   #not on `workers`. See the note in ripleys_k().
@@ -173,9 +177,8 @@ bi_ripleys_k = function(mif,
     dplyr::bind_rows(res)
   }, mc.cores = workers, mc.preschedule = FALSE) %>%
     do.call(dplyr::bind_rows, .) %>%
-    dplyr::mutate(`Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
-                  `Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
-                  `Degree of Clustering Exact`       = `Observed K` - `Exact CSR`)
+    add_degrees_of_clustering("Observed K") %>%
+    as_standard_metric(mif$sample_id, "Observed K", bivariate = TRUE)
 
   write_derived(mif, "bivariate_Count", out, overwrite)
 }

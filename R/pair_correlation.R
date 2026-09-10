@@ -1,30 +1,48 @@
 #' Univariate Pair Correlation Function
-#' 
-#' Implementation of the univariate pair correlation function from spatstat
 #'
 #' @param mif object of class `mif`
 #' @param mnames character vector of marker names
-#' @param r_range numeric vector including 0. If ignored, `spatstat` will decide range
-#' @param num_permutations integer indicating how many permutations to run to determine CSR estimate
-#' @param edge_correction character string of edge correction to apply to Ripley's K estimation
-#' @param keep_permutation_distribution boolean for whether to keep the permutations or not
-#' @param workers integer for number of threads to use when calculating metrics
-#' @param overwrite boolean whether to overwrite existing results in the univariate_pair_correlation slot
-#' @param xloc column name of single x value
-#' @param yloc column name of single y value
-#' @param ... other parameters to provide `spatstat::pcf` 
-#' 
-#' The Pair Correlation Function uses the derivative of Ripley's K so it does take slightly longer to calculate
-#' 
-#' `xloc` and `yloc`, if NULL, will be calculated from columns `XMax`, `XMin`, `YMax`, and `YMin`.
+#' @param r_range numeric vector including 0. If `NULL`, `spatstat` chooses the range.
+#' @param num_permutations integer number of permutations used to estimate CSR
+#' @param edge_correction edge correction passed to [spatstat.explore::pcf()]
+#' @param keep_permutation_distribution boolean; keep each permutation's result or
+#'   average them to one row per marker and radius
+#' @param workers integer number of CPU cores used to process samples in parallel
+#' @param overwrite boolean; replace an existing `univariate_pair_correlation` slot
+#'   rather than appending it as a new `Run`
+#' @param xloc,yloc the x and y columns giving cell centres. If left `NULL`,
+#'   `XMin`, `XMax`, `YMin` and `YMax` must be present.
+#' @param ... other parameters passed to [spatstat.explore::pcf()], plus support
+#'   for deprecated argument names (see Details).
 #'
-#' @return mif object with with the univariate_pair_correlation derived slot filled or appended to
+#' @description
+#' The pair correlation function g(r) is the derivative of Ripley's K, so it
+#' measures clustering *at* a radius rather than cumulatively up to it. It is
+#' correspondingly slower to compute and noisier at small r.
+#'
+#' `xloc` and `yloc`, if `NULL`, are taken as the midpoints of `XMin`/`XMax` and
+#' `YMin`/`YMax`.
+#'
+#' @details
+#' `keep_perm_dis` is accepted as a deprecated alias for
+#' `keep_permutation_distribution`.
+#'
+#' @section Output columns:
+#' As of 2.0.0 this function returns the same columns as [ripleys_k()], with
+#' `Observed g` in place of `Observed K`. `Theoretical g` and `Permuted g` are now
+#' `Theoretical CSR` and `Permuted CSR`, `Degree of Correlation *` is now
+#' `Degree of Clustering *`, and `Permuted_larger_than_Observed` is now
+#' `Permutations Larger than Observed`. `Exact CSR` is present but always `NA`:
+#' the closed-form CSR shortcut available to [ripleys_k()] has not been
+#' implemented for the pair correlation function yet.
+#'
+#' @return `mif` object with the `univariate_pair_correlation` derived slot filled
+#'   or appended to
 #' @export
-#'
 pair_correlation = function(mif,
                             mnames,
                             r_range = NULL,
-                            num_permutations= 100,
+                            num_permutations = 100,
                             edge_correction = "translation",
                             keep_permutation_distribution = FALSE,
                             workers = 1,
@@ -32,100 +50,87 @@ pair_correlation = function(mif,
                             xloc = NULL,
                             yloc = NULL,
                             ...){
-  #make sure that the range satisfies requirements for spatstat
-  if(!(0 %in% r_range) & !is.null(r_range)){
-    r_range = c(0, r_range)
-  }
-  
-  #check edge correction
-  if(length(edge_correction)!=1){
-    stop("edge_correction must be of length 1")
-  }
-  #make sure that the mif object is, a mif object
+  dots = list(...)
+  dep  = intersect(names(dots), names(deprecated_arg_map("pair_correlation")))
+  apply_deprecated_args(dots[dep], "pair_correlation")
+  pcf_args = dots[setdiff(names(dots), dep)]
+
   if(!inherits(mif, "mif")){
-    stop("mIF should be of class `mif` created with function `createMIF()`\n\tTo check use `inherits(mif, 'mif')`")
+    stop("mIF should be of class `mif` created with function `create_mif()`\n",
+         "\tTo check use `inherits(mif, 'mif')`")
   }
-  #over spatial failes
-  out = parallel::mclapply(mif$spatial, function(spat){
-    #get center of the cells
-    if(is.null(xloc) | is.null(yloc)){
-      spat = spat %>%
-        dplyr::mutate(xloc = (XMax + XMin)/2,
-                      yloc = (YMax + YMin)/2)
-    } else {
-      #rename columns to follow xloc and yloc names
-      spat = spat %>%
-        dplyr::rename("xloc" = !!xloc, 
-                      "yloc" = !!yloc)
-    }
-    #select only needed columns
-    spat = spat %>%
-      dplyr::select(!!mif$sample_id, xloc, yloc, !!mnames)
-    #window
+  if(length(edge_correction) != 1){
+    stop("`edge_correction` must be of length 1.")
+  }
+  if(!is.null(r_range) && !(0 %in% r_range)){
+    r_range = sort(c(0, r_range))
+  }
+
+  seeds = sample.int(.Machine$integer.max, length(mif$spatial))
+
+  out = parallel::mclapply(seq_along(mif$spatial), function(sample_i){
+    set.seed(seeds[[sample_i]])
+    spat = mif$spatial[[sample_i]]
+    spat = add_cell_centres(spat, xloc, yloc)
+    label = as.character(spat[[mif$sample_id]][1])
+
+    #Window from EVERY cell in the sample, fixed across markers and permutations.
     win = spatstat.geom::convexhull.xy(spat$xloc, spat$yloc)
-    #over markers
-    res = parallel::mclapply(mnames, function(marker){
-      #bivariate is pcfcross
-      sample_ppp = spatstat.geom::ppp(spat$xloc, spat$yloc,
-                                      window = win)
-      ps = subset(sample_ppp, spat[[marker]] == 1)
-      obs = spatstat.explore::pcf(subset(sample_ppp, spat[[marker]] == 1),
-                r = r_range, correction = edge_correction, ...) %>%
-        data.frame() %>%
-        rename("Observed g" = 3)
-      
-      #run permutations
-      perms = parallel::mclapply(seq(num_permutations), function(p){
-        spatstat.explore::pcf(subset(sample_ppp, as.logical(sample(spat[[marker]]))),
-                              r = r_range, correction = edge_correction, ...) %>%
-          data.frame() %>%
-          dplyr::rename("Permuted g" = 3) %>%
-          dplyr::mutate(iter = p)
-      }, mc.preschedule = FALSE,
-      mc.allow.recursive = TRUE) %>%
-        do.call(dplyr::bind_rows, .)
-      
-      dat = dplyr::full_join(obs,
-                       perms) %>%
-        dplyr::rename("Theoretical g" = 2) %>%
-        dplyr::mutate(Marker = marker, .before = 1) %>%
-        dplyr::group_by(Marker, r) %>%
-        dplyr::mutate(`Permuted_larger_than_Observed` = sum(`Permuted g` > unique(`Observed g`), na.rm = TRUE))
-      
-      #collapse if not needing permutations
-      if(!keep_permutation_distribution){
-        dat %>%
-          select(-iter) %>%
-          dplyr::group_by(Permuted_larger_than_Observed, .add = TRUE) %>%
-          dplyr::summarise_all(mean, na.rm = TRUE)
-      } else {
-        dat
-      }
-      
-    }, mc.preschedule = FALSE,
-    mc.allow.recursive = TRUE) %>%
-      do.call(dplyr::bind_rows, .)
-    
-    res %>%
-      dplyr::mutate(!!mif$sample_id := unique(spat[[mif$sample_id]]),
-                    .before = 1)
-  }, mc.preschedule = FALSE,
-  mc.cores = workers,
-  mc.allow.recursive = TRUE)
-  
-  out = out %>%
+    pp  = spatstat.geom::ppp(spat$xloc, spat$yloc, window = win, check = FALSE)
+    n   = spatstat.geom::npoints(pp)
+
+    pcf_of = function(keep){
+      as.data.frame(do.call(spatstat.explore::pcf,
+                            c(list(pp[keep], r = r_range, correction = edge_correction),
+                              pcf_args)))
+    }
+
+    res = lapply(mnames, function(marker){
+      keep  = !is.na(spat[[marker]]) & spat[[marker]] == 1
+      n_pos = sum(keep)
+      if(n_pos < 3) return(NULL)
+
+      obs = pcf_of(keep)
+      est = obs[[ncol(obs)]]
+
+      permuted = vapply(seq_len(num_permutations), function(p){
+        keep_p = logical(n)
+        keep_p[sample.int(n, n_pos)] = TRUE
+        pcf_of(keep_p)[[ncol(obs)]]
+      }, numeric(nrow(obs)))
+
+      larger = rowSums(permuted > est, na.rm = TRUE)
+      keep_all = keep_permutation_distribution
+
+      d = data.frame(
+        Label               = label,
+        Marker              = marker,
+        iter                = rep(if(keep_all) as.character(seq_len(num_permutations)) else "Permuted",
+                                 each = nrow(obs)),
+        r                   = obs$r,
+        `Theoretical CSR`   = obs$theo,
+        `Permuted CSR`      = if(keep_all) as.vector(permuted) else rowMeans(permuted, na.rm = TRUE),
+        `Exact CSR`         = NA_real_,
+        `Observed g`        = est,
+        check.names = FALSE
+      )
+      d[["Permutations Larger than Observed"]] = larger
+      names(d)[names(d) == "Label"] = mif$sample_id
+      d
+    })
+
+    dplyr::bind_rows(res)
+  }, mc.cores = workers, mc.preschedule = FALSE) %>%
     do.call(dplyr::bind_rows, .)
-  out$`Degree of Correlation Theoretical` = out$`Observed g` - out$`Theoretical g`
-  out$`Degree of Correlation Permuted` = out$`Observed g` - out$`Permuted g`
-  
-  if(overwrite | !exists("univariate_pair_correlation", where = mif$derived)){
-    mif$derived$univariate_pair_correlation = out %>%
-      dplyr::mutate(Run = 1)
-  } else {
-    n_run = max(mif$derived$univaraite_pair_correlation$Run)+1
-    mif$derived$univaraite_pair_correlation = dplyr::bind_rows(mif$derived$univaraite_pair_correlation,
-                                                               out %>% mutate(Run = n_run))
+
+  if(!nrow(out)){
+    stop("No marker had at least 3 positive cells in any sample, so no pair ",
+         "correlation could be estimated.")
   }
-  
-  return(mif)
+
+  out = out %>%
+    add_degrees_of_clustering("Observed g") %>%
+    as_standard_metric(mif$sample_id, "Observed g", bivariate = FALSE)
+
+  write_derived(mif, "univariate_pair_correlation", out, overwrite)
 }

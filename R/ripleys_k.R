@@ -20,6 +20,9 @@
 #'   computed in chunks to bound peak memory. This affects memory and speed only:
 #'   results are identical either way, and the requested `edge_correction` is
 #'   always honoured.
+#' @param ... support for deprecated argument names. `keep_perm_dis` is accepted as
+#'   an alias for `keep_permutation_distribution`; `method` is accepted and ignored
+#'   (it was never used). Anything else is an error.
 #'
 #' @description
 #' `ripleys_k()` calculates the empirical Ripley's K for the cell types given in
@@ -76,7 +79,9 @@ ripleys_k = function(mif,
                      overwrite = FALSE,
                      xloc = NULL,
                      yloc = NULL,
-                     big = 10000){
+                     big = 10000,
+                     ...){
+  apply_deprecated_args(list(...), "ripleys_k")
 
   if(keep_permutation_distribution && !permute){
     stop("Conflicting `permute` and `keep_permutation_distribution` parameters.\n",
@@ -166,9 +171,8 @@ ripleys_k = function(mif,
     dplyr::bind_rows(res)
   }, mc.cores = workers, mc.preschedule = FALSE) %>%
     do.call(dplyr::bind_rows, .) %>%
-    dplyr::mutate(`Degree of Clustering Permutation` = `Observed K` - `Permuted CSR`,
-                  `Degree of Clustering Theoretical` = `Observed K` - `Theoretical CSR`,
-                  `Degree of Clustering Exact`       = `Observed K` - `Exact CSR`)
+    add_degrees_of_clustering("Observed K") %>%
+    as_standard_metric(mif$sample_id, "Observed K", bivariate = FALSE)
 
   write_derived(mif, "univariate_Count", out, overwrite)
 }

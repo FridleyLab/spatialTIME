@@ -14,6 +14,8 @@
 #'   appending it as a new `Run`
 #' @param xloc,yloc the x and y columns giving cell centres. If left `NULL`,
 #'   `XMin`, `XMax`, `YMin` and `YMax` must be present.
+#' @param ... support for deprecated argument names. `keep_perm_dis` is accepted as
+#'   an alias for `keep_permutation_distribution`. Anything else is an error.
 #'
 #' @description
 #' `NN_G()` computes the nearest-neighbour distance distribution function G(r) for
@@ -62,7 +64,9 @@ NN_G = function(mif,
                 workers = 1,
                 overwrite = FALSE,
                 xloc = NULL,
-                yloc = NULL){
+                yloc = NULL,
+                ...){
+  apply_deprecated_args(list(...), "NN_G")
   if(!inherits(mif, "mif")){
     stop("Please submit a mif created with `create_mif()`.")
   }
@@ -123,9 +127,8 @@ NN_G = function(mif,
     dplyr::bind_rows(res)
   }, mc.cores = workers, mc.preschedule = FALSE) %>%
     do.call(dplyr::bind_rows, .) %>%
-    dplyr::mutate(`Degree of Clustering Permutation` = `Observed G` - `Permuted CSR`,
-                  `Degree of Clustering Theoretical` = `Observed G` - `Theoretical CSR`,
-                  `Degree of Clustering Exact`       = `Observed G` - `Exact CSR`)
+    add_degrees_of_clustering("Observed G") %>%
+    as_standard_metric(mif$sample_id, "Observed G", bivariate = FALSE)
 
   write_derived(mif, "univariate_NN", out, overwrite)
 }
