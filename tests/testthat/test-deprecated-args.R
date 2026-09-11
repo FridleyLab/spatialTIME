@@ -122,6 +122,27 @@ test_that("pcf functions still forward genuine extra arguments to spatstat", {
                                 b$derived$univariate_pair_correlation$`Observed g`)))
 })
 
+test_that("split_tissue/plot_tissue_split map to no deprecated args, so keep_perm_dis errors", {
+  # Both map to character(0) in deprecated_arg_map(), by explicit branches that
+  # must come BEFORE the fall-through `common` default -- otherwise
+  # keep_perm_dis would be silently accepted here too.
+  expect_identical(deprecated_arg_map("split_tissue"), character(0))
+  expect_identical(deprecated_arg_map("plot_tissue_split"), character(0))
+
+  mif <- toy_mif(list(S1 = toy_spatial("S1", n = 100, markers = c(A = 20, B = 20))))
+  expect_error(
+    split_tissue(mif, classifier = "Classifier.Label", class1 = "Tumor",
+                class2 = "Stroma", sigma = 40, interface_width = 50,
+                keep_perm_dis = TRUE),
+    "Unknown argument.*keep_perm_dis"
+  )
+
+  split <- split_tissue(mif, classifier = "Classifier.Label", class1 = "Tumor",
+                        class2 = "Stroma", sigma = 40, interface_width = 50)
+  expect_error(plot_tissue_split(split, keep_perm_dis = TRUE),
+              "Unknown argument.*keep_perm_dis")
+})
+
 test_that("the deprecation map covers every function that takes dots", {
   for (fn in c("ripleys_k", "bi_ripleys_k", "NN_G", "bi_NN_G",
                "pair_correlation", "bi_pair_correlation", "interaction_variable")) {

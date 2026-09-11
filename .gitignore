@@ -20,3 +20,4 @@ renv.lock
 .conda*/
 *.Rcheck/
 *.tar.gz
+SplittingTissue/

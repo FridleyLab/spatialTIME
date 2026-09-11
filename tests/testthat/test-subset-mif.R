@@ -94,6 +94,29 @@ test_that("a duplicated sample id does not shift the row", {
   expect_true(is.numeric(out$sample[["Tumor: Total Cells"]]))
 })
 
+test_that("subset_mif keeps split_tissue's spatial columns but drops the boundary slot", {
+  # subset_mif() rebuilds via create_mif() on the filtered spatial frames, which
+  # keeps whatever columns ride along in each row (density_compartment,
+  # refined_density_compartment) but has no path to carry forward a
+  # sample-keyed derived slot or mif$sample's Boundary Length. Pinning current
+  # behaviour, not asserting it is desirable -- split first, then subset.
+  sp <- list(S1 = toy_spatial("S1", n = 100, markers = c(A = 20, B = 20)),
+             S2 = toy_spatial("S2", n = 100, markers = c(A = 20, B = 20), seed = 12))
+  mif <- split_tissue(toy_mif(sp), classifier = "Classifier.Label", class1 = "Tumor",
+                      class2 = "Stroma", sigma = 40, interface_width = 50)
+  expect_true("Boundary Length" %in% names(mif$sample))
+  expect_true(!is.null(mif$derived$density_boundary))
+
+  out <- subset_mif(mif, classifier = "Classifier.Label", level = "Tumor",
+                    markers = c("A", "B"))
+  for (nm in names(out$spatial)) {
+    expect_true(all(c("density_compartment", "refined_density_compartment") %in%
+                     names(out$spatial[[nm]])), info = nm)
+  }
+  expect_null(out$derived$density_boundary)
+  expect_false("Boundary Length" %in% names(out$sample))
+})
+
 test_that("subset_mif rejects a non-mif", {
   expect_error(subset_mif(list(), classifier = "x", level = "y", markers = "z"),
                "class `mif`")

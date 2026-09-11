@@ -106,6 +106,17 @@ test_that("Exact CSR is populated only for Ripley's K", {
   }
 })
 
+test_that("split_tissue's derived slot is deliberately excluded from this schema", {
+  # density_boundary has no r, no iter, no Observed/CSR columns and no Run -- it
+  # is a list keyed by sample, not a metric table -- so it does not belong in
+  # metric_table() and must not silently gain the shared schema.
+  mif <- toy_mif(list(S1 = toy_spatial("S1", n = 100, markers = c(A = 20, B = 20))))
+  out <- split_tissue(mif, classifier = "Classifier.Label", class1 = "Tumor",
+                      class2 = "Stroma", sigma = 40, interface_width = 50)
+  expect_type(out$derived$density_boundary, "list")
+  expect_false(is.data.frame(out$derived$density_boundary))
+})
+
 test_that("derived slot names are spelled correctly on the append path", {
   # Three functions used to write to a misspelled slot when overwrite = FALSE:
   # univaraite_pair_correlation, bivaraite_pair_correlation, and

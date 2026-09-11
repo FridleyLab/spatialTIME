@@ -1,0 +1,59 @@
+url: https://fridleylab.github.io/spatialTIME/
+
+template:
+  bootstrap: 5
+
+reference:
+- title: Nearest Neighbor G
+  desc: Univariate and Bivariate Nearest Neighbor G(r) functions
+  contents:
+  - NN_G
+  - bi_NN_G
+
+- title: Ripley's K
+  desc: Univariate and Bivariate Ripley's K functions
+  contents:
+  - ripleys_k
+  - bi_ripleys_k
+  - bi_ripleys_k_WSI
+
+- title: Pair Correlation
+  desc: Univariate and Bivariate Pair Correlation functions
+  contents:
+  - pair_correlation
+  - bi_pair_correlation
+
+- title: MIF Object Management
+  desc: Functions for creating, merging, and subsetting Multiplex Immunoflourescent objects
+  contents:
+  - create_mif
+  - spatial_exp_to_mif
+  - merge_mifs
+  - subset_mif
+
+- title: Other Spatial Statistics
+  contents:
+  - dixons_s
+  - interaction_variable
+  - marker_freq_diff
+
+- title: Tissue Architecture
+  desc: Density-based segmentation of a sample into tissue compartments
+  contents:
+  - split_tissue
+
+- title: Visualization
+  contents:
+  - plot_immunoflo
+  - plot_tissue_split
+
+- title: Data
+  desc: Example datasets included with the package
+  contents:
+  - example_clinical
+  - example_spatial
+  - example_summary
+
+- title: Internal
+  contents:
+  - "`%>%`"

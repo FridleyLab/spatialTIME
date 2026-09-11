@@ -1,0 +1,134 @@
+# Create Multiplex Immunoflourescent object from a SpatialExperiment object
+
+Creates an MIF object for use in spatialIF functions using a
+Bioconductor SpatialExperiment object as input.
+
+## Usage
+
+``` r
+spatial_exp_to_mif(
+  spatial_exp,
+  markers,
+  x_coord = "cell_x_position",
+  y_coord = "cell_y_position",
+  patient_id = "patient_id",
+  sample_id = "sample_id",
+  cols_to_keep = NULL,
+  marker_pos_regex = "\\+"
+)
+```
+
+## Arguments
+
+- spatial_exp:
+
+  A SpatialExperiment object to create a MIF from a
+  [SpatialExperiment](https://www.bioconductor.org/packages/release/bioc/vignettes/SpatialExperiment/inst/doc/SpatialExperiment.html)
+  Bioconductor object.
+
+- markers:
+
+  A character vector that contains the name(s) of the columns that
+  contains +/- for markers. This will be used to recode these columns
+  into logical vectors for presence or absence of the marker. By default
+  looks for a + to indicate presence. But this can be altered using the
+
+- x_coord:
+
+  The name of the column in `spatialCoords` that contains the x
+  coordinates for the cell. Default is "cell_x_position".
+
+- y_coord:
+
+  The name of the column in `spatialCoords` that contains the y
+  coordinates for the cell. Default is "cell_y_position".
+
+- patient_id:
+
+  The name of the column in `colData` and `metadata` that contains the
+  sample IDs. Default is "patient_id",
+
+- sample_id:
+
+  The name of the column in `colData` and `spatialCoords` that contains
+  the sample IDs. Default is "sample_id".
+
+- cols_to_keep:
+
+  (Optional) By default only the patient_id, markers, sample_id, and x
+  and y coordinate columns will be kept. But if there is additional
+  information that needs to be kept, you can add those column names
+  here. Or say "everything" if you want all columns to be kept. This may
+  not be advisable for large datasets.
+
+- marker_pos_regex:
+
+  By default will identify all markers columns as having a marker if a
+  `+` is found in the data. But with this variable You can choose a
+  different character to sort in presence/absence. Anything with the
+  regex character given to this parameter will be labeled as positive
+  and all other cells will be labeled as negative.
+
+## Value
+
+Returns a custom MIF
+
+- clinical:
+
+  Data frame of clinical data
+
+- sample:
+
+  Data frame of sample data
+
+- spatial:
+
+  Named list of spatial data
+
+- derived:
+
+  List of data derived using the MIF object
+
+- patient_id:
+
+  The column name for sample id in the sample data frame with the
+  clinical data
+
+- sample_id:
+
+  The column name for sample id in the sample data frame to merge with
+  the spatial data
+
+## Author
+
+Candace Savonen
+
+## Examples
+
+``` r
+# VectraPolarisData is a multi-gigabyte Bioconductor *data* package and is
+# deliberately not a dependency of spatialTIME, so this example is not run.
+# Install it once with BiocManager::install("VectraPolarisData") if you want to
+# follow along; see vignette("spatialexperiment") for a worked version.
+if (FALSE) { # \dontrun{
+ovarian <- VectraPolarisData::HumanOvarianCancerVP()
+
+ova_mif <- spatial_exp_to_mif(spatial_exp = ovarian, 
+                              patient_id = "sample_id", 
+                              markers = c("phenotype_cd68", "phenotype_cd3", "phenotype_cd8"))
+
+spe_lung <- VectraPolarisData::HumanLungCancerV3()
+
+
+spe_mif <- spatial_exp_to_mif(spatial_exp = spe_lung, 
+                              patient_id = "slide_id", 
+                              sample_id = "slide_id",
+                              markers = c(
+                                "phenotype_cd4", 
+                                "phenotype_cd8", 
+                                "phenotype_cd14", 
+                                "phenotype_cd19", 
+                                "phenotype_ck", 
+                                "phenotype_other"))
+} # }
+```

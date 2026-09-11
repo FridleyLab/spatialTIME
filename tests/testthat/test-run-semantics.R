@@ -91,6 +91,25 @@ test_that("overwrite = FALSE appends and increments Run", {
   }
 })
 
+test_that("split_tissue writes no Run column and refuses to append", {
+  # split_tissue() is deliberately NOT in run_writers(): a cell has one
+  # compartment label and mif$sample has one Boundary Length column, so there is
+  # nowhere for a second run to append to. overwrite = FALSE must error rather
+  # than silently doing nothing or bind_rows-ing into a shape that has no Run.
+  mif <- run_mif()
+  once <- split_tissue(mif, classifier = "Classifier.Label", class1 = "Tumor",
+                       class2 = "Stroma", sigma = 40, interface_width = 50,
+                       overwrite = TRUE)
+  expect_false("Run" %in% names(once$sample))
+  for (s in once$spatial) expect_false("Run" %in% names(s))
+
+  expect_error(
+    split_tissue(once, classifier = "Classifier.Label", class1 = "Tumor",
+                class2 = "Stroma", sigma = 40, interface_width = 50,
+                overwrite = FALSE),
+    "density_compartment|density_boundary|Boundary Length")
+})
+
 test_that("appending emits no warning about Run bookkeeping", {
   # `Run = -Inf` arrived with a max()/min() warning that was easy to miss. Scoped to
   # that class of warning rather than expect_no_warning(), because spatstat.explore

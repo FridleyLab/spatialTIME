@@ -146,6 +146,43 @@ test_that("a marker's result does not depend on which other markers were request
   expect_equal(one$`Exact CSR`, many_a$`Exact CSR`)
 })
 
+test_that("split_tissue uses the full-sample window, not the class1/class2 subset's", {
+  # Tumor and Stroma are both confined to cornerA here; "Other" fills the rest.
+  # The density difference, and therefore the boundary, must still be computed
+  # over the convex hull of EVERY cell in the sample.
+  f <- corner_marker_mif()
+  spat <- f$spat
+  spat$Classifier.Label <- ifelse(spat$cornerA == 1 & spat$XMin < 175, "Tumor",
+                                  ifelse(spat$cornerA == 1, "Stroma", "Other"))
+  sel <- spat$Classifier.Label %in% c("Tumor", "Stroma")
+  W_all <- spatstat.geom::convexhull.xy(spat$XMin, spat$YMin)
+  W_sub <- spatstat.geom::convexhull.xy(spat$XMin[sel], spat$YMin[sel])
+  expect_gt(spatstat.geom::area(W_all) / spatstat.geom::area(W_sub), 4)
+
+  mif <- toy_mif(list(S1 = spat))
+  out <- split_tissue(mif, classifier = "Classifier.Label", class1 = "Tumor",
+                      class2 = "Stroma", sigma = 40, interface_width = 50,
+                      overwrite = TRUE)
+
+  eps <- density_pixel_size(40)
+  pp_full <- spatstat.geom::ppp(spat$XMin, spat$YMin, window = W_all, check = FALSE)
+  keep1 <- class_mask(spat$Classifier.Label, "Tumor")
+  keep2 <- class_mask(spat$Classifier.Label, "Stroma")
+  d_full <- compartment_diff(pp_full, keep1, keep2, 40, eps, NULL)
+  bd_full <- zero_contour(d_full$filtered, "deidentified_sample", "S1")
+  len_full <- boundary_length(boundary_psp(bd_full, W_all))
+
+  pp_sub <- spatstat.geom::ppp(spat$XMin[sel], spat$YMin[sel], window = W_sub, check = FALSE)
+  keep1_sub <- class_mask(spat$Classifier.Label[sel], "Tumor")
+  keep2_sub <- class_mask(spat$Classifier.Label[sel], "Stroma")
+  d_sub <- compartment_diff(pp_sub, keep1_sub, keep2_sub, 40, eps, NULL)
+  bd_sub <- zero_contour(d_sub$filtered, "deidentified_sample", "S1")
+  len_sub <- boundary_length(boundary_psp(bd_sub, W_sub))
+
+  expect_equal(out$sample$`Boundary Length`[1], len_full, tolerance = 1e-6)
+  expect_gt(abs(out$sample$`Boundary Length`[1] - len_sub), 1)
+})
+
 test_that("Observed, Exact and Permuted CSR all share one window within a sample", {
   # Exact CSR is the K of all cells; the mean of the permuted distribution
   # estimates the same quantity. They can only agree if both use the same window.

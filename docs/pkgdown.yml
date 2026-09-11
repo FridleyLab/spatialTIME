@@ -1,9 +1,11 @@
-pandoc: 3.1.1
-pkgdown: 2.0.7
+pandoc: 3.9.0.2
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles:
+  deriving_functions: deriving_functions.html
   intro: intro.html
   spatialexperiment: spatialexperiment.html
-  deriving_functions: deriving_functions.html
-last_built: 2023-11-22T16:35Z
-
+last_built: 2026-09-11T02:32Z
+urls:
+  reference: https://fridleylab.github.io/spatialTIME/reference
+  article: https://fridleylab.github.io/spatialTIME/articles

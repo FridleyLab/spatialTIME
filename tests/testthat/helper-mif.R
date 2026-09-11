@@ -121,6 +121,39 @@ toy_mif <- function(spatial_list,
   )
 }
 
+#' A lattice split cleanly in half, for testing `split_tissue()`'s boundary geometry
+#'
+#' A 50x50 lattice on `seq(10, 990, by = 20)`, classified `Tumor` for `x < 500` and
+#' `Stroma` otherwise, so the density difference is exactly antisymmetric about
+#' `x = 500`. At `sigma = 40` (`eps = 5`) this gives exactly **one** contour piece
+#' sitting at `x = 502.5` (`500 + eps/2`, the half-pixel discretisation offset) with
+#' length exactly `975 = 980 - eps`, where 980 is the hull's height -- 0 lookup-NAs,
+#' 0 exact zeros, ground truth recovered for all 2500 cells. Use `sigma = 40`, not
+#' 60: at 60 numerical noise splits it into 2 pieces (length 970.86).
+halfplane_mif <- function() {
+  coords <- seq(10, 990, by = 20)
+  g <- expand.grid(x = coords, y = coords)
+  spat <- data.frame(deidentified_sample = "S1",
+                     XMin = g$x, YMin = g$y, XMax = g$x, YMax = g$y,
+                     stringsAsFactors = FALSE)
+  spat$Classifier.Label <- ifelse(spat$XMin < 500, "Tumor", "Stroma")
+  toy_mif(spatial_list = list(S1 = spat))
+}
+
+#' A sample with only one classifier level, for the no-boundary path
+#'
+#' `nncross(pp, <0-segment psp>)` returns `Inf` (verified), so no cell ever becomes
+#' `"Interface"` and nothing needs to special-case an empty boundary.
+one_class_mif <- function() {
+  coords <- seq(10, 990, by = 20)
+  g <- expand.grid(x = coords, y = coords)
+  spat <- data.frame(deidentified_sample = "S1",
+                     XMin = g$x, YMin = g$y, XMax = g$x, YMax = g$y,
+                     stringsAsFactors = FALSE)
+  spat$Classifier.Label <- "Tumor"
+  toy_mif(spatial_list = list(S1 = spat))
+}
+
 #' A minimal spatial frame with exactly the requested marker counts
 #'
 #' @param n total cells.

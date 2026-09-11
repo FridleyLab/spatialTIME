@@ -1,6 +1,6 @@
 Package: spatialTIME
 Title: Spatial Analysis of Vectra Immunoflourescent Data
-Version: 2.0.0
+Version: 2.1.0
 Authors@R: 
      c(person(given = "Jordan", family = "Creed", role = "aut",
              email = "jordan.h.creed@moffitt.org"),
@@ -20,13 +20,14 @@ Authors@R:
              email = "fridley.lab@moffitt.org"))
 Description: Visualization and analysis of multiplex immunofluorescence data.
     Provides univariate and bivariate Ripley's K, nearest-neighbour G, the pair
-    correlation function, Dixon's segregation statistic, and a cell-cell
-    interaction variable, together with a container ('mif') that keeps clinical,
-    per-sample and single-cell spatial data alongside the measures derived from
-    them. Complete spatial randomness can be estimated either by permutation,
-    following Wilson et al. <doi:10.1101/2021.04.27.21256104>, or from a
-    closed-form expression that avoids permutations entirely. Count-based measures
-    agree with the 'spatstat' family to floating-point precision.
+    correlation function, Dixon's segregation statistic, a cell-cell interaction
+    variable, and density-based tissue compartment segmentation, together with a
+    container ('mif') that keeps clinical, per-sample and single-cell spatial data
+    alongside the measures derived from them. Complete spatial randomness can be
+    estimated either by permutation, following Wilson et al.
+    <doi:10.1101/2021.04.27.21256104>, or from a closed-form expression that
+    avoids permutations entirely. Count-based measures agree with the 'spatstat'
+    family to floating-point precision.
 License: MIT + file LICENSE
 Imports: 
     magrittr,

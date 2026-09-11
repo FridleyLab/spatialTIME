@@ -37,6 +37,11 @@ deprecated_arg_map <- function(fn) {
     pair_correlation = common,
     bi_pair_correlation = common,
     interaction_variable = common,
+    # split_tissue()/plot_tissue_split() are new in 2.1.0 and never had a
+    # `keep_perm_dis` argument to be deprecated -- falling through to `common`
+    # would silently accept it instead of erroring on the typo/unknown argument.
+    split_tissue = character(0),
+    plot_tissue_split = character(0),
     common
   )
 }

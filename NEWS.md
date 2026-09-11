@@ -1,3 +1,67 @@
+# spatialTIME 2.1.0
+
+## New features
+
+* **`split_tissue()`** segments a sample into tissue compartments from the
+  difference of two classes' kernel density estimates (e.g. Tumor vs Stroma).
+  Every cell gains `density_compartment` (2 levels: `class1`/`class2`, by the
+  sign of `class1 - class2` density) and `refined_density_compartment` (3
+  levels: those two plus `"Interface"` for cells within `interface_width / 2`
+  of the boundary). `mif$sample` gains a `Boundary Length` column.
+  * `sigma` (the KDE bandwidth) has **no default** — units differ by imaging
+    platform, so a silent default would make cores processed with different
+    undocumented defaults incomparable.
+  * The boundary is the *exact* zero level set of the density difference,
+    extracted with `grDevices::contourLines()`, not a thresholded band around
+    zero — so there is no `boundary_threshold` to tune.
+  * Pixel resolution (`dimyx`) is not exposed either. It is derived as
+    `sigma / 8`: contour *topology* is set by `sigma` at every resolution
+    tested (9 pieces from `eps = sigma` down to `eps = sigma/32` on a real
+    core), and resolution only adds a bias in boundary length that converges
+    by `sigma/8` (−0.6%, vs −11.5% at `eps = sigma`). There is nothing left
+    for the user to tune, and hiding it avoids non-square pixels on
+    non-square windows (`dimyx` gave 4x anisotropic pixels in testing).
+  * `overwrite = FALSE` (the default) errors, naming every existing clash,
+    rather than appending a new `Run` — a cell can carry only one compartment
+    label, so there is nowhere for a second run to go. Run `split_tissue()`
+    into two separate mifs to compare two settings.
+  * The density images and point patterns used to find the boundary are
+    discarded once the boundary and per-cell labels are derived, to avoid
+    inflating the mif. Only the boundary polyline
+    (`mif$derived$density_boundary`, a named list, one data frame per sample)
+    survives.
+  * `filter_density`, passed through `...`, is an optional
+    `function(im) im` applied to each class's density image before
+    differencing, to keep near-zero-density tissue holes from inflating or
+    bouncing the boundary. It affects only the boundary geometry — the sign
+    that drives the two spatial columns always comes from the *unfiltered*
+    difference, so a filtered-out hole never leaves a cell `NA`.
+* **`plot_tissue_split()`** recomputes the density difference on demand, at
+  plot time, from the settings `split_tissue()` recorded, and draws the
+  *stored* boundary polyline (never a recontoured one) over a raster of the
+  density difference and a scatter of the compartment label. Unlike
+  `plot_immunoflo()`, it returns a **named list of `ggplot` objects**, not the
+  `mif` — each plot's raster can carry as much data as the sample itself, and
+  attaching several to `mif$derived` would multiply the mif's size for no
+  benefit once list-valued derived slots are already fragile (see Bug fixes).
+
+## Bug fixes
+
+* `merge_mifs()` called `dplyr::bind_rows()` on every `derived` slot
+  regardless of type, so a list-valued slot (`spatial_plots`, and now
+  `density_boundary`) was silently collapsed into a nameless data frame
+  instead of being merged or erroring. List-valued slots are now
+  concatenated instead, with a warning if the inputs' recorded settings
+  (`call_info`) disagree.
+
+## Notes
+
+* `subset_mif()` rebuilds the mif from scratch and drops `derived` entirely
+  (`R/subset_mif.R`), so `split_tissue()`'s boundary slot and `Boundary
+  Length` column do not survive a later `subset_mif()` call, even though the
+  two spatial columns ride along with the row filter. Run `split_tissue()`
+  after subsetting, not before.
+
 # spatialTIME 2.0.0
 
 A cleanup and correctness release. Roughly 1,100 lines of unreachable code are

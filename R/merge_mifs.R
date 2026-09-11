@@ -105,16 +105,41 @@ merge_mifs = function(mifs = NULL, check.names = T){
   #sort derived to have order with most derived first
   derived = derived[names(sort(sizes, decreasing = T))]
   #begin merging
+  #`bind_rows()` on every derived slot "succeeds" even on list-valued slots
+  #(spatial_plots, and split_tissue()'s density_boundary) by silently
+  #collapsing a list keyed by sample name into a nameless table -- the worst
+  #possible outcome. Type-check first: bind_rows() only when every part is a
+  #data frame, otherwise concatenate the lists and carry provenance forward.
   derived2 = lapply(derived_names, function(name){
-    lapply(derived, function(mif){
-      metric = mif[[name]]
-      if(is.null(metric)){
-        return()
-      } else {
-        return(metric)
-      }
-    }) %>%
-      do.call(dplyr::bind_rows, .)
+    parts = lapply(derived, function(mif){
+      mif[[name]]
+    })
+    parts = parts[!vapply(parts, is.null, logical(1))]
+    if(!length(parts)){
+      return(NULL)
+    }
+    if(all(vapply(parts, is.data.frame, logical(1)))){
+      return(do.call(dplyr::bind_rows, parts))
+    }
+    #`parts` is named by mif index ("1", "2", ...); do.call(c, parts) treats
+    #those as argument names, so c() prefixes each inner sample name with the
+    #mif index ("1.S1") instead of concatenating the lists' own names.
+    merged = do.call(c, unname(parts))
+    if(check.names && anyDuplicated(names(merged))){
+      stop("Multiple mifs' `derived$", name, "` share a sample name; merging would ",
+           "silently overwrite one with another.")
+    }
+    call_infos = lapply(parts, attr, "call_info")
+    call_infos = call_infos[!vapply(call_infos, is.null, logical(1))]
+    if(length(call_infos) > 1 &&
+      !all(vapply(call_infos[-1], identical, logical(1), call_infos[[1]]))){
+      warning("Merged mifs' `derived$", name, "` were computed with different settings ",
+             "(differing `call_info`); keeping the first mif's settings on the merged result.")
+    }
+    if(length(call_infos)){
+      attr(merged, "call_info") = call_infos[[1]]
+    }
+    merged
   })
   rm(derived)
   names(derived2) = derived_names
