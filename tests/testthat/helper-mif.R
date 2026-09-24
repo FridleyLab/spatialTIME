@@ -124,12 +124,24 @@ toy_mif <- function(spatial_list,
 #' A lattice split cleanly in half, for testing `split_tissue()`'s boundary geometry
 #'
 #' A 50x50 lattice on `seq(10, 990, by = 20)`, classified `Tumor` for `x < 500` and
-#' `Stroma` otherwise, so the density difference is exactly antisymmetric about
-#' `x = 500`. At `sigma = 40` (`eps = 5`) this gives exactly **one** contour piece
-#' sitting at `x = 502.5` (`500 + eps/2`, the half-pixel discretisation offset) with
-#' length exactly `975 = 980 - eps`, where 980 is the hull's height -- 0 lookup-NAs,
-#' 0 exact zeros, ground truth recovered for all 2500 cells. Use `sigma = 40`, not
-#' 60: at 60 numerical noise splits it into 2 pieces (length 970.86).
+#' `Stroma` otherwise. At `sigma = 40` (`eps = 5`) the boundary is a vertical line at
+#' `x = 502.5` (`500 + eps/2`, the half-pixel discretisation offset) of length
+#' `975 = 980 - eps`, where 980 is the hull's height, with 0 lookup-NAs, 0 exact
+#' zeros and ground truth recovered for all 2500 cells.
+#'
+#' **Do not assert the contour's piece count on this fixture.** The two halves are
+#' exact mirror images, so along `x = 502.5` the two class densities are equal to
+#' ~16 significant figures (`1.2500000e-03` each, difference `6.5e-19`, ratio
+#' `2.6e-16`). `contourLines()` therefore decides whether each cell in that column
+#' contains a crossing from the sign of floating-point noise, and the same geometric
+#' line is returned as 1 piece under some R/spatstat builds and 47 under others
+#' (length 964.78 rather than 975, a 1.05% shortfall from gaps between fragments).
+#' The line's *position* is stable to 0.15 units -- 3% of one pixel -- so assert
+#' position and length with tolerance, never the representation. Moving the split
+#' does not help: any half-plane split of a regular lattice keeps the symmetry, and a
+#' 26-vs-24 split merely relocates the machine-epsilon column to `x = 522.5`.
+#' Use `sigma = 40`, not 60: at 60 the fragmentation is coarse enough to move the
+#' length materially (970.86).
 halfplane_mif <- function() {
   coords <- seq(10, 990, by = 20)
   g <- expand.grid(x = coords, y = coords)
