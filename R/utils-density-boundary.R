@@ -9,7 +9,7 @@
 #      density_pixel_size() derives a square eps from sigma instead.
 #
 # Per-image [0, 1] rescaling is NOT a bug -- it is `rescale`, on by default since
-# 2.2.0 -- but it is a real tradeoff and the measurement behind it belongs here.
+# 2.1.1 -- but it is a real tradeoff and the measurement behind it belongs here.
 # It is not a shared monotone transform: each image gets its own affine map, so
 # the zero set moves rather than being reparameterised. Measured on
 # example_spatial[["TMA3_[9,K].tif"]] at sigma 40, the raw difference gives 9
@@ -326,7 +326,7 @@ split_tissue_settings <- function(mif, settings = NULL) {
                 "rescale", "min_density", "hard_threshold",
                 "sample_id", "spatialTIME_version")
 
-  # Fields added in 2.2.0. A mif written by 2.1.0 has none of them, and both
+  # Fields added in 2.1.1. A mif written by 2.1.0 has none of them, and both
   # returns below subset to `required`, so without this backfill every such mif
   # would fail the missing-field check. The values are not arbitrary defaults:
   # they are what 2.1.0 actually computed, so an old mif replots correctly rather

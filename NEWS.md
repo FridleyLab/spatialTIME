@@ -1,4 +1,4 @@
-# spatialTIME 2.2.0
+# spatialTIME 2.1.1
 
 ## Read this first: `Boundary Length` changes for everyone
 
@@ -7,7 +7,7 @@ differencing (`rescale = TRUE`, the new default). This moves the boundary, so
 every `Boundary Length` and every contour piece count differs from 2.1.0. On the
 shipped example data at `sigma = 40`:
 
-| core | 2.1.0 (`rescale = FALSE`) | 2.2.0 (`rescale = TRUE`) |
+| core | 2.1.0 (`rescale = FALSE`) | 2.1.1 (`rescale = TRUE`) |
 |---|---|---|
 | `TMA1_[3,B].tif` | 10 pieces / 3238.2 | 16 pieces / 7128.0 |
 | `TMA2_[3,B].tif` | 4 pieces / 5189.2 | 9 pieces / 6941.3 |
@@ -81,7 +81,7 @@ genuinely moves rather than being reparameterised.
   none of them and still replots correctly: the missing fields are backfilled to
   what 2.1.0 actually computed (`FALSE`, off, `FALSE`), not to the new defaults.
 * Because `merge_mifs()` compares the whole `call_info` with `identical()`,
-  merging a 2.1.0 mif with a 2.2.0 one now warns that the settings differ. That is
+  merging a 2.1.0 mif with a 2.1.1 one now warns that the settings differ. That is
   correct — they were computed differently.
 * The `sigma/8` resolution figures in `?split_tissue` were measured on the
   unrescaled field and are now labelled as such. The argument they support is

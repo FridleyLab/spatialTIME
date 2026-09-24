@@ -7,7 +7,7 @@
 
     <a class="navbar-brand me-2" href="../index.html">spatialTIME</a>
 
-    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.2.0</small>
+    <small class="nav-text text-muted me-auto" data-bs-toggle="tooltip" data-bs-placement="bottom" title="">2.1.1</small>
 
 
     <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbar" aria-controls="navbar" aria-expanded="false" aria-label="Toggle navigation">
@@ -38,13 +38,13 @@
     </div>
 
     <div class="section level2">
-<h2 class="pkg-version" data-toc-text="2.2.0" id="spatialtime-220">spatialTIME 2.2.0<a class="anchor" aria-label="anchor" href="#spatialtime-220"></a></h2>
+<h2 class="pkg-version" data-toc-text="2.1.1" id="spatialtime-211">spatialTIME 2.1.1<a class="anchor" aria-label="anchor" href="#spatialtime-211"></a></h2>
 <div class="section level3">
-<h3 id="read-this-first-boundary-length-changes-for-everyone-2-2-0">Read this first: <code>Boundary Length</code> changes for everyone<a class="anchor" aria-label="anchor" href="#read-this-first-boundary-length-changes-for-everyone-2-2-0"></a></h3>
+<h3 id="read-this-first-boundary-length-changes-for-everyone-2-1-1">Read this first: <code>Boundary Length</code> changes for everyone<a class="anchor" aria-label="anchor" href="#read-this-first-boundary-length-changes-for-everyone-2-1-1"></a></h3>
 <p><code><a href="../reference/split_tissue.html">split_tissue()</a></code> now rescales each class’s density image to <code>[0, 1]</code> before differencing (<code>rescale = TRUE</code>, the new default). This moves the boundary, so every <code>Boundary Length</code> and every contour piece count differs from 2.1.0. On the shipped example data at <code>sigma = 40</code>:</p>
 <table class="table"><thead><tr><th>core</th>
 <th>2.1.0 (<code>rescale = FALSE</code>)</th>
-<th>2.2.0 (<code>rescale = TRUE</code>)</th>
+<th>2.1.1 (<code>rescale = TRUE</code>)</th>
 </tr></thead><tbody><tr><td><code>TMA1_[3,B].tif</code></td>
 <td>10 pieces / 3238.2</td>
 <td>16 pieces / 7128.0</td>
@@ -64,7 +64,7 @@
 <p>Why rescale by default: a sparse class is otherwise swamped by an abundant one, which matters when compartment proportions vary a lot across a cohort. What it costs: the boundary sits where the two <em>rescaled</em> densities are equal, so it depends on each sample’s own density range and <code>Boundary Length</code> is no longer an absolute criterion comparable across samples on its own terms. Each image gets its own affine map, so this is not a shared monotone transform and the zero set genuinely moves rather than being reparameterised.</p>
 </div>
 <div class="section level3">
-<h3 id="new-features-2-2-0">New features<a class="anchor" aria-label="anchor" href="#new-features-2-2-0"></a></h3>
+<h3 id="new-features-2-1-1">New features<a class="anchor" aria-label="anchor" href="#new-features-2-1-1"></a></h3>
 <ul><li>
 <strong><code>split_tissue(min_density =)</code></strong> drops pixels where there is essentially no tissue, as a fraction of the sample’s own mean <code>class1 + class2</code> intensity. <code>NULL</code> (default) disables it. Where both classes are near zero the difference sits at the floating-point noise floor and its sign is meaningless, so the zero contour fragments into noise there. On a whole-slide sample with a large tissue hole, unmasked: 227 contour pieces, with 74% of the boundary length lying in space containing essentially no cells (median total density 1.46e-12 there against 1.24e-3 elsewhere). At <code>min_density = 0.05</code>: 23 pieces, and <strong>5 of 1,000,977 cells changed compartment</strong>.
 <ul><li>The threshold is not a smoothing knob. Anything from 0.01 to 0.10 gave the same answer on that sample, because the gap it straddles is several orders of magnitude. Above roughly 0.2 it starts clipping real boundary (101 cells changed at 0.2, 8,250 at 1.0), so counting label changes is a cheap check that you are in the safe range.</li>
@@ -77,17 +77,17 @@
 <strong><code>split_tissue(hard_threshold =)</code></strong> collapses the difference to its sign before contouring (default <code>FALSE</code>), for comparison with implementations that threshold first. Since the zero level set is already invariant to any monotone transform this cannot change the contour’s topology, and measurably does not — piece counts are unchanged on all five example cores, and the line moves by at most 0.7 of a pixel. What it does do is force <code><a href="https://rdrr.io/r/grDevices/contourLines.html" class="external-link">contourLines()</a></code> to place every crossing at a pixel midpoint, quantising the boundary to the grid and inflating <code>Boundary Length</code> by 5–6%. Leave it off unless you need to reproduce something.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="bug-fixes-2-2-0">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-2-2-0"></a></h3>
+<h3 id="bug-fixes-2-1-1">Bug fixes<a class="anchor" aria-label="anchor" href="#bug-fixes-2-1-1"></a></h3>
 <ul><li>
 <code><a href="../reference/plot_tissue_split.html">plot_tissue_split()</a></code> errored with “replacement has 1 row, data has 0” when the density field was entirely <code>NA</code>. Reachable in 2.1.0 via a <code>filter_density</code> that masked everything, and easy to hit now via <code>min_density</code>.</li>
 <li>
 <code><a href="../reference/split_tissue.html">split_tissue()</a></code>’s one-class path is preserved under the new default. Rescaling an absent class is undefined, and rescaling the <em>present</em> class to <code>[0, 1]</code> puts its minimum at exactly 0 — the contour level — which would have manufactured a boundary around the edge of its support where 2.1.0 correctly reported none. Rescaling is now skipped unless both classes have cells.</li>
 </ul></div>
 <div class="section level3">
-<h3 id="notes-2-2-0">Notes<a class="anchor" aria-label="anchor" href="#notes-2-2-0"></a></h3>
+<h3 id="notes-2-1-1">Notes<a class="anchor" aria-label="anchor" href="#notes-2-1-1"></a></h3>
 <ul><li>
 <code><a href="../reference/split_tissue.html">split_tissue()</a></code>’s provenance (<code>attr(mif$derived$density_boundary, "call_info")</code>) gains <code>rescale</code>, <code>min_density</code> and <code>hard_threshold</code>. A mif written by 2.1.0 has none of them and still replots correctly: the missing fields are backfilled to what 2.1.0 actually computed (<code>FALSE</code>, off, <code>FALSE</code>), not to the new defaults.</li>
-<li>Because <code><a href="../reference/merge_mifs.html">merge_mifs()</a></code> compares the whole <code>call_info</code> with <code><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical()</a></code>, merging a 2.1.0 mif with a 2.2.0 one now warns that the settings differ. That is correct — they were computed differently.</li>
+<li>Because <code><a href="../reference/merge_mifs.html">merge_mifs()</a></code> compares the whole <code>call_info</code> with <code><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical()</a></code>, merging a 2.1.0 mif with a 2.1.1 one now warns that the settings differ. That is correct — they were computed differently.</li>
 <li>The <code>sigma/8</code> resolution figures in <code><a href="../reference/split_tissue.html">?split_tissue</a></code> were measured on the unrescaled field and are now labelled as such. The argument they support is about the <code>eps/sigma</code> ratio, which <code>rescale</code> does not affect.</li>
 <li>
 <code>tests/testthat/test-split-tissue.R</code> no longer asserts the contour piece count on <code>halfplane_mif()</code>. That fixture’s two halves are exact mirror images, so the two densities along the boundary are equal to ~16 significant figures and <code><a href="https://rdrr.io/r/grDevices/contourLines.html" class="external-link">contourLines()</a></code> decides each crossing from the sign of floating-point noise — the same geometric line came back as 1 piece under one R/spatstat build and 47 under another. Position and length are stable to a fraction of a pixel and are still asserted, with tolerance.</li>

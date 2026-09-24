@@ -30,7 +30,7 @@
 #'   `classifier`, `class1`, `class2`, `sigma`, `eps`, `interface_width`,
 #'   `xloc`, `yloc`, `filter_density`, `rescale`, `min_density`,
 #'   `hard_threshold`, `sample_id` and `spatialTIME_version`. The three added in
-#'   2.2.0 (`rescale`, `min_density`, `hard_threshold`) may be omitted: they are
+#'   2.1.1 (`rescale`, `min_density`, `hard_threshold`) may be omitted: they are
 #'   backfilled to what 2.1.0 computed (`FALSE`, off, `FALSE`), so provenance
 #'   recorded by 2.1.0 still replots correctly.
 #' @param ... accepts no arguments; present only so that a mistyped named

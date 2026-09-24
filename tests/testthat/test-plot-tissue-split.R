@@ -172,7 +172,7 @@ test_that("an unrecognised argument in ... is an error naming it", {
   expect_error(plot_tissue_split(mif, bogus = TRUE), "Unknown argument.*bogus")
 })
 
-# ---- 2.2.0 settings -----------------------------------------------------------
+# ---- 2.1.1 settings -----------------------------------------------------------
 
 test_that("the raster honours the rescale the boundary was computed with", {
   # The whole point of recording provenance: the recomputed raster has to be the

@@ -521,7 +521,7 @@ test_that("split_tissue rejects a non-mif", {
   )
 })
 
-# ---- 2.2.0: rescale / min_density / hard_threshold / density_score -----------
+# ---- 2.1.1: rescale / min_density / hard_threshold / density_score -----------
 
 test_that("rescale = FALSE reproduces the 2.1.0 target table exactly", {
   # The point of keeping both tables: `rescale = FALSE` must be the OLD
