@@ -1,16 +1,25 @@
 # Internals for split_tissue() / plot_tissue_split().
 #
-# The prototype in SplittingTissue/functions.R has three bugs this file exists to
-# fix once, in one place, instead of at every call site:
+# Two bugs in the SplittingTissue/ prototype this file fixes once, in one place,
+# instead of at every call site:
 #   1. contourLines(im$xcol, im$yrow, im$v) silently transposes the field -- an
 #      `im` stores v with dim = c(length(yrow), length(xcol)) and contourLines()
 #      has no dimension check. zero_contour() passes t(im$v).
-#   2. Rescaling each class image to [0, 1] before differencing is not a shared
-#      monotone transform (each image gets a different affine map), so it moves
-#      and destroys contour components. compartment_diff() differences the raw
-#      KDE intensities instead.
-#   3. `dimyx` is exposed and can give non-square pixels on a non-square window.
+#   2. `dimyx` is exposed and can give non-square pixels on a non-square window.
 #      density_pixel_size() derives a square eps from sigma instead.
+#
+# Per-image [0, 1] rescaling is NOT a bug -- it is `rescale`, on by default since
+# 2.2.0 -- but it is a real tradeoff and the measurement behind it belongs here.
+# It is not a shared monotone transform: each image gets its own affine map, so
+# the zero set moves rather than being reparameterised. Measured on
+# example_spatial[["TMA3_[9,K].tif"]] at sigma 40, the raw difference gives 9
+# contour pieces / length 6756.5 and the rescaled difference 7 / 6723.8 -- two
+# components gone. Transforms that genuinely are shared and monotone leave the
+# zero set alone (edge=FALSE -> 6756.6, log(l1)-log(l2) -> 6756.4, relative risk
+# -> 6756.4). The consequence to keep in mind: under `rescale` the boundary sits
+# where each sample's *rescaled* densities are equal, so it depends on that
+# sample's own density range and `Boundary Length` stops being an absolute
+# cross-sample criterion. `rescale = FALSE` restores the absolute one.
 
 #' @keywords internal
 #' @noRd
@@ -73,34 +82,117 @@ class_mask <- function(values, level) {
 }
 
 
-#' Raw and (optionally) filtered class1-minus-class2 density difference
+#' Rescale an image's values to [0, 1], leaving a zero-range image untouched
 #'
-#' The **filtered** difference drives the boundary (contour / length /
-#' interface distances); the **unfiltered** difference drives each cell's sign.
-#' That split means a `filter_density` that masks a tissue hole can stop it
-#' inflating the boundary without ever orphaning a cell to `NA`.
+#' The guard is required, not defensive. `scales::rescale()` maps a zero-range
+#' input to `mean(to)`, i.e. **0.5** -- so an absent class, whose density image
+#' is all zero, would come back as a constant 0.5 and `r1 - r2` would cross zero
+#' wherever `r1 = 0.5`, manufacturing a boundary where there is none. Returning
+#' such an image unchanged keeps it at 0, so the difference stays one-signed and
+#' the contour stays empty.
+#'
+#' @keywords internal
+#' @noRd
+rescale01 <- function(v) {
+  r <- range(v, na.rm = TRUE)
+  if (!all(is.finite(r)) || diff(r) == 0) return(v)
+  (v - r[1]) / diff(r)
+}
+
+
+#' Unfiltered and filtered class1-minus-class2 density difference
+#'
+#' The **filtered** difference drives the boundary (contour / length / interface
+#' distances); the **unfiltered** difference drives each cell's sign and
+#' `density_score`. That split means masking a tissue hole can stop it inflating
+#' the boundary without ever orphaning a cell to `NA`.
+#'
+#' Order of operations is load-bearing:
+#' \enumerate{
+#'   \item kernel densities per class;
+#'   \item `min_density` mask, on **raw** intensities -- "is there tissue here?"
+#'     is a question about absolute cell density, so it must be asked before any
+#'     rescaling destroys the scale;
+#'   \item `rescale` each image to [0, 1];
+#'   \item difference -> the unfiltered field;
+#'   \item `filter_density` per image, **after** rescale, so a filter written
+#'     against [0, 1] values behaves as written;
+#'   \item `hard_threshold` on the filtered image **only** -- applying it to the
+#'     unfiltered field would flatten `density_score` to +/-1 and the plot raster
+#'     with it.
+#' }
 #'
 #' @param pp full-sample `ppp`, window = convex hull of every cell
 #' @param keep1,keep2 logical masks (see [class_mask()]) selecting class1/class2
 #' @param filter_density `NULL`, or a `function(im) im` applied to each class
 #'   image before differencing
+#' @param rescale rescale each class image to [0, 1] before differencing
+#' @param min_density `NULL`/`NA` for off, else a fraction of this sample's mean
+#'   `lambda_class1 + lambda_class2`. Pixels below it become `NA` in the contour
+#'   field only -- never in `raw`, so no cell is orphaned by masking
+#' @param hard_threshold collapse the filtered field to `sign()` before contouring
 #' @return `list(raw = im, filtered = im)`
 #' @keywords internal
 #' @noRd
-compartment_diff <- function(pp, keep1, keep2, sigma, eps, filter_density) {
+compartment_diff <- function(pp, keep1, keep2, sigma, eps, filter_density,
+                             rescale = TRUE, min_density = NULL,
+                             hard_threshold = FALSE) {
   d1 <- spatstat.explore::density.ppp(pp[keep1], sigma = sigma, eps = eps)
   d2 <- spatstat.explore::density.ppp(pp[keep2], sigma = sigma, eps = eps)
-  raw <- d1 - d2
 
-  if (is.null(filter_density)) {
-    return(list(raw = raw, filtered = raw))
+  # "Is there tissue here?" is a question about ABSOLUTE density, so compute the
+  # mask from the raw intensities -- before any rescaling destroys the scale --
+  # relative to this sample's own mean, so the same fraction means the same thing
+  # across samples and coordinate units. It is only *applied* further down, to the
+  # contour field, never to the field that drives each cell's sign.
+  drop <- NULL
+  if (!is.null(min_density) && !is.na(min_density) && min_density > 0) {
+    tot  <- d1$v + d2$v
+    lbar <- (sum(keep1) + sum(keep2)) /
+      spatstat.geom::area(spatstat.geom::Window(pp))
+    drop <- is.na(tot) | tot < min_density * lbar
   }
 
-  f1 <- filter_density(d1)
-  f2 <- filter_density(d2)
-  validate_filtered_im(d1, f1)
-  validate_filtered_im(d2, f2)
-  list(raw = raw, filtered = f1 - f2)
+  # Rescaling is a *relative* comparison, so it needs two populated classes. With
+  # one absent, skipping it is not a nicety: rescaling the present class to [0, 1]
+  # puts its minimum at exactly 0, which IS the contour level, so a boundary would
+  # appear around the edge of its support where the unrescaled field (strictly
+  # positive, a sum of Gaussian kernels) correctly has none.
+  if (isTRUE(rescale) && any(keep1) && any(keep2)) {
+    d1$v <- rescale01(d1$v)
+    d2$v <- rescale01(d2$v)
+  }
+
+  # Unmasked and unfiltered: drives each cell's sign and `density_score`. Masking
+  # must never orphan a cell to NA, which is the same reason `filter_density` is
+  # kept off this branch.
+  raw <- d1 - d2
+
+  c1 <- d1
+  c2 <- d2
+  if (!is.null(drop)) {
+    c1$v[drop] <- NA
+    c2$v[drop] <- NA
+  }
+
+  if (is.null(filter_density)) {
+    filtered <- c1 - c2
+  } else {
+    f1 <- filter_density(c1)
+    f2 <- filter_density(c2)
+    validate_filtered_im(c1, f1)
+    validate_filtered_im(c2, f2)
+    filtered <- f1 - f2
+  }
+
+  if (isTRUE(hard_threshold)) {
+    v <- filtered$v
+    v[!is.na(v) & v > 0] <-  1
+    v[!is.na(v) & v < 0] <- -1
+    filtered$v <- v
+  }
+
+  list(raw = raw, filtered = filtered)
 }
 
 
@@ -231,9 +323,23 @@ im_value_at <- function(im, x, y) {
 split_tissue_settings <- function(mif, settings = NULL) {
   required <- c("classifier", "class1", "class2", "sigma", "eps",
                 "interface_width", "xloc", "yloc", "filter_density",
+                "rescale", "min_density", "hard_threshold",
                 "sample_id", "spatialTIME_version")
 
+  # Fields added in 2.2.0. A mif written by 2.1.0 has none of them, and both
+  # returns below subset to `required`, so without this backfill every such mif
+  # would fail the missing-field check. The values are not arbitrary defaults:
+  # they are what 2.1.0 actually computed, so an old mif replots correctly rather
+  # than merely not erroring.
+  backfill <- function(x) {
+    if (is.null(x$rescale))        x$rescale        <- FALSE
+    if (is.null(x$hard_threshold)) x$hard_threshold <- FALSE
+    if (is.null(x$min_density))    x$min_density    <- NA_real_
+    x
+  }
+
   if (!is.null(settings)) {
+    settings <- backfill(settings)
     missing <- setdiff(required, names(settings))
     if (length(missing)) {
       stop("`settings` is missing required field", if (length(missing) > 1) "s" else "",
@@ -254,6 +360,7 @@ split_tissue_settings <- function(mif, settings = NULL) {
          "`merge_mifs()`). Re-run `split_tissue()`, or pass `settings` explicitly ",
          "-- see `?split_tissue_settings`.", call. = FALSE)
   }
+  call_info <- backfill(call_info)
   missing <- setdiff(required, names(call_info))
   if (length(missing)) {
     stop("`mif$derived$density_boundary`'s provenance is missing field",

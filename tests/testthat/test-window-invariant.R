@@ -168,14 +168,21 @@ test_that("split_tissue uses the full-sample window, not the class1/class2 subse
   pp_full <- spatstat.geom::ppp(spat$XMin, spat$YMin, window = W_all, check = FALSE)
   keep1 <- class_mask(spat$Classifier.Label, "Tumor")
   keep2 <- class_mask(spat$Classifier.Label, "Stroma")
-  d_full <- compartment_diff(pp_full, keep1, keep2, 40, eps, NULL)
+  # Options named explicitly: this hand-rolled reference has to track
+  # split_tissue()'s own call, and relying on shared defaults would let the two
+  # drift apart without anything failing.
+  d_full <- compartment_diff(pp_full, keep1, keep2, 40, eps, NULL,
+                             rescale = TRUE, min_density = NULL,
+                             hard_threshold = FALSE)
   bd_full <- zero_contour(d_full$filtered, "deidentified_sample", "S1")
   len_full <- boundary_length(boundary_psp(bd_full, W_all))
 
   pp_sub <- spatstat.geom::ppp(spat$XMin[sel], spat$YMin[sel], window = W_sub, check = FALSE)
   keep1_sub <- class_mask(spat$Classifier.Label[sel], "Tumor")
   keep2_sub <- class_mask(spat$Classifier.Label[sel], "Stroma")
-  d_sub <- compartment_diff(pp_sub, keep1_sub, keep2_sub, 40, eps, NULL)
+  d_sub <- compartment_diff(pp_sub, keep1_sub, keep2_sub, 40, eps, NULL,
+                            rescale = TRUE, min_density = NULL,
+                            hard_threshold = FALSE)
   bd_sub <- zero_contour(d_sub$filtered, "deidentified_sample", "S1")
   len_sub <- boundary_length(boundary_psp(bd_sub, W_sub))
 

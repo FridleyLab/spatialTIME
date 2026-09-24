@@ -57,7 +57,11 @@ attaches. That attribute does not survive \code{[} subsetting or
 \code{dplyr::bind_rows()} (e.g. after \code{\link[=merge_mifs]{merge_mifs()}} disagrees across mifs), so
 pass the settings list explicitly to recover from that: a list with
 \code{classifier}, \code{class1}, \code{class2}, \code{sigma}, \code{eps}, \code{interface_width},
-\code{xloc}, \code{yloc}, \code{filter_density} and \code{sample_id}.}
+\code{xloc}, \code{yloc}, \code{filter_density}, \code{rescale}, \code{min_density},
+\code{hard_threshold}, \code{sample_id} and \code{spatialTIME_version}. The three added in
+2.2.0 (\code{rescale}, \code{min_density}, \code{hard_threshold}) may be omitted: they are
+backfilled to what 2.1.0 computed (\code{FALSE}, off, \code{FALSE}), so provenance
+recorded by 2.1.0 still replots correctly.}
 
 \item{...}{accepts no arguments; present only so that a mistyped named
 argument above produces an informative "Unknown argument" error instead

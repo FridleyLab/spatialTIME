@@ -171,3 +171,55 @@ test_that("an unrecognised argument in ... is an error naming it", {
   mif <- split_fixture()
   expect_error(plot_tissue_split(mif, bogus = TRUE), "Unknown argument.*bogus")
 })
+
+# ---- 2.2.0 settings -----------------------------------------------------------
+
+test_that("the raster honours the rescale the boundary was computed with", {
+  # The whole point of recording provenance: the recomputed raster has to be the
+  # same field the stored polyline came from, or the neutral band and the drawn
+  # line disagree -- which is exactly what this figure exists to check.
+  rs  <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma",
+                      sigma = 40, interface_width = 100)
+  raw <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma",
+                      sigma = 40, interface_width = 100, rescale = FALSE)
+  v_rs  <- ggplot2::ggplot_build(plot_tissue_split(rs)[[1]])$data[[1]]$fill
+  lim_rs  <- fill_scale(plot_tissue_split(rs)[[1]])$get_limits()
+  lim_raw <- fill_scale(plot_tissue_split(raw)[[1]])$get_limits()
+  # rescaled field spans ~[-1, 1]; the raw intensity difference is orders smaller
+  expect_gt(max(abs(lim_rs)), 0.1)
+  expect_lt(max(abs(lim_raw)), 0.1)
+  expect_gt(length(v_rs), 0)
+})
+
+test_that("min_density and hard_threshold reach the plot through call_info", {
+  mif <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, min_density = 1e6)
+  ci <- attr(mif$derived$density_boundary, "call_info")
+  expect_identical(ci$min_density, 1e6)
+  # masked to nothing, so the raster has no finite pixels left to draw
+  p <- plot_tissue_split(mif)[[1]]
+  built <- expect_no_warning(ggplot2::ggplot_build(p))
+  expect_equal(nrow(built$data[[1]]), 0)
+
+  hard <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                       class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                       interface_width = 100, hard_threshold = TRUE)
+  expect_identical(attr(hard$derived$density_boundary, "call_info")$hard_threshold, TRUE)
+  # a +/-1 field has exactly two values, so the raster is two-toned
+  vals <- ggplot2::ggplot_build(plot_tissue_split(hard)[[1]])$data[[1]]$fill
+  expect_lte(length(unique(vals)), 3)
+})
+
+test_that("a 2.1.0-era settings list still plots", {
+  mif <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma",
+                      sigma = 40, interface_width = 100, rescale = FALSE)
+  ci <- attr(mif$derived$density_boundary, "call_info")
+  old <- ci[setdiff(names(ci), c("rescale", "min_density", "hard_threshold"))]
+  p <- plot_tissue_split(mif, settings = old)
+  expect_s3_class(p[[1]], "ggplot")
+  expect_no_warning(ggplot2::ggplot_build(p[[1]]))
+})

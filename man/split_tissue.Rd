@@ -11,6 +11,9 @@ split_tissue(
   class2,
   sigma,
   interface_width,
+  rescale = TRUE,
+  min_density = NULL,
+  hard_threshold = FALSE,
   workers = 1,
   overwrite = FALSE,
   xloc = NULL,
@@ -42,10 +45,49 @@ in \code{R/utils-density-boundary.R} and the pixel-budget error below.}
 band, in the same units as \code{sigma}. Cells within \code{interface_width / 2} of
 the boundary are labelled \code{"Interface"} in \code{refined_density_compartment}.}
 
+\item{rescale}{rescale each class's density image to \verb{[0, 1]} before
+differencing (default \code{TRUE}). The boundary then sits where the two
+\emph{rescaled} densities are equal, which is not the same curve as where the
+absolute intensities are equal: each image gets its own affine map, so the
+zero set moves rather than being reparameterised. On
+\code{example_spatial[["TMA3_[9,K].tif"]]} at \code{sigma = 40} the unrescaled field
+gives 9 contour pieces / length 6756.5 and the rescaled one 7 / 6723.8. The
+practical consequence is that under \code{rescale = TRUE} the boundary -- and so
+\verb{Boundary Length} -- depends on each sample's own density range, so it is
+not an absolute criterion you can compare across a cohort on its own terms.
+Use \code{rescale = FALSE} for that. The upside is that a sparse class is not
+swamped by an abundant one, which matters when compartment proportions vary
+a lot between samples.}
+
+\item{min_density}{drop pixels where there is essentially no tissue, given as
+a fraction of the sample's own mean \code{class1 + class2} intensity; \code{NULL}
+(default) disables it. Where both classes are near zero the difference is at
+the floating-point noise floor and its sign is meaningless, so the zero
+contour fragments into noise there. Measured on a whole-slide sample with a
+large tissue hole: unmasked, the boundary had 227 pieces and 74\% of its
+length lay in space with essentially no cells; at \code{min_density = 0.05} it had
+23 pieces, and only 5 of 1,000,977 cells changed compartment. The threshold
+is insensitive -- anything from 0.01 to 0.10 gave the same answer on that
+sample, because the gap it straddles is several orders of magnitude -- but
+above roughly 0.2 it starts clipping real boundary, so check how many cells
+change label if you raise it. Applied to the raw intensities, before
+\code{rescale}.}
+
+\item{hard_threshold}{collapse the density difference to its sign before
+contouring (default \code{FALSE}). Since the zero level set is already invariant
+to any monotone transform, this cannot change the contour's topology -- and
+measurably does not: piece counts are unchanged. What it does change is that
+\code{contourLines()} can then only place a crossing at the midpoint between two
+pixel centres, quantising the boundary to the grid and adding a staircase
+that inflates \verb{Boundary Length} by 5-7\%. Provided for comparison with
+implementations that threshold first; leave it off unless you need to
+reproduce one.}
+
 \item{workers}{number of cores to use for calculations}
 
 \item{overwrite}{whether to replace \code{density_compartment},
-\code{refined_density_compartment}, \code{mif$derived$density_boundary} and
+\code{refined_density_compartment}, \code{density_score},
+\code{mif$derived$density_boundary} and
 \code{mif$sample}'s \verb{Boundary Length} column if any already exist. There is no
 \code{Run}-based append here (unlike the metric functions): a cell can carry
 only one compartment label, so run \code{split_tissue()} twice under different
@@ -67,8 +109,14 @@ Anything else in \code{...} is an error naming the offender.}
 \value{
 object of class \code{mif}, with:
 \item{spatial}{each sample gains \code{density_compartment} (factor, levels
-\code{c(class1, class2)}) and \code{refined_density_compartment} (factor, levels
-\code{c(class1, "Interface", class2)})}
+\code{c(class1, class2)}), \code{refined_density_compartment} (factor, levels
+\code{c(class1, "Interface", class2)}) and \code{density_score}, the signed
+\code{class1 - class2} difference at the cell's own location. \code{density_score} is
+the field the two factors are derived from, so its sign always agrees with
+\code{density_compartment}; keeping the magnitude gives you "how far into this
+compartment" as a covariate rather than only "which side". Its units follow
+\code{rescale} -- roughly \verb{[-1, 1]} when \code{TRUE}, intensity difference when
+\code{FALSE} -- so it is comparable across samples only when \code{rescale = FALSE}.}
 \item{derived$density_boundary}{a named list (by \code{names(mif$spatial)}), one
 data frame per sample with columns \verb{<sample_id>}, \code{piece}, \code{x}, \code{y} (0 rows
 if no boundary exists), carrying a \code{"call_info"} attribute recording the
@@ -108,13 +156,21 @@ rather than exhausting memory.
 
 Pixel resolution (\code{dimyx} in the underlying \code{\link[spatstat.explore:density.ppp]{spatstat.explore::density.ppp()}}
 call) is not exposed. Measured on a real core (Tumor vs Stroma, sigma 40,
-1803 cells): the number of contour pieces is 9 at every resolution from
-\code{eps = sigma} down to \code{eps = sigma/32} -- topology is set by \code{sigma}, not
-resolution -- while boundary length converges from 6016.8 (\code{eps = sigma},
--11.5\%) to 6799.1 (\code{eps = sigma/32}, reference). \code{eps = sigma/8} (6756.5,
--0.6\% bias) is used internally as a resolution/cost tradeoff; there is
-nothing left for the user to tune. \verb{Boundary Length} is not scale-free --
-compare \verb{Boundary Length / sqrt(area)} across cores of different size.
+1803 cells, \code{rescale = FALSE}): the number of contour pieces is 9 at every
+resolution from \code{eps = sigma} down to \code{eps = sigma/32} -- topology is set by
+\code{sigma}, not resolution -- while boundary length converges from 6016.8
+(\code{eps = sigma}, -11.5\%) to 6799.1 (\code{eps = sigma/32}, reference).
+\code{eps = sigma/8} (6756.5, -0.6\% bias) is used internally as a resolution/cost
+tradeoff; there is nothing left for the user to tune. Those figures are from
+the unrescaled field, but the argument they support is about the \code{eps/sigma}
+ratio, which \code{rescale} does not affect.
+
+\verb{Boundary Length} is not scale-free -- compare \verb{Boundary Length / sqrt(area)}
+across cores of different size -- and under the default \code{rescale = TRUE} it is
+additionally relative to each sample's own density range. Two things worth
+checking before using it as a covariate: that it is not dominated by contour in
+near-empty tissue (see \code{min_density}), and that it is not inflated by grid
+quantisation (see \code{hard_threshold}).
 }
 
 \examples{

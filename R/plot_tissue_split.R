@@ -28,7 +28,11 @@
 #'   `dplyr::bind_rows()` (e.g. after [merge_mifs()] disagrees across mifs), so
 #'   pass the settings list explicitly to recover from that: a list with
 #'   `classifier`, `class1`, `class2`, `sigma`, `eps`, `interface_width`,
-#'   `xloc`, `yloc`, `filter_density` and `sample_id`.
+#'   `xloc`, `yloc`, `filter_density`, `rescale`, `min_density`,
+#'   `hard_threshold`, `sample_id` and `spatialTIME_version`. The three added in
+#'   2.2.0 (`rescale`, `min_density`, `hard_threshold`) may be omitted: they are
+#'   backfilled to what 2.1.0 computed (`FALSE`, off, `FALSE`), so provenance
+#'   recorded by 2.1.0 still replots correctly.
 #' @param ... accepts no arguments; present only so that a mistyped named
 #'   argument above produces an informative "Unknown argument" error instead
 #'   of being silently absorbed.
@@ -132,13 +136,18 @@ plot_tissue_split <- function(mif, which = NULL,
 
     a <- spatstat.geom::area(spatstat.geom::Frame(win))
     eps_plot <- max(cfg$eps, sqrt(a / raster_max_pixels))
-    d <- compartment_diff(pp, keep1, keep2, cfg$sigma, eps_plot, cfg$filter_density)
+    d <- compartment_diff(pp, keep1, keep2, cfg$sigma, eps_plot, cfg$filter_density,
+                          rescale = cfg$rescale, min_density = cfg$min_density,
+                          hard_threshold = cfg$hard_threshold)
     diff_im <- d$filtered
 
     ras <- as.data.frame(diff_im)
     names(ras) <- c("x", "y", "value")
     ras <- ras[!is.na(ras$value), ]
-    ras$panel <- "Density difference"
+    # rep(), not a scalar: the field can be entirely NA (an aggressive
+    # `filter_density`, or a `min_density` that masks the whole sample), and
+    # assigning a length-1 value to a 0-row data frame is an error.
+    ras$panel <- rep("Density difference", nrow(ras))
     m <- if (nrow(ras)) max(abs(ras$value)) else 1
 
     pts <- data.frame(x = spat$xloc, y = spat$yloc,

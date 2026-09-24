@@ -14,8 +14,24 @@ full_mif <- function() {
 }
 
 # name -> (cells, contour pieces, boundary length), measured at sigma = 40,
-# interface_width = 100 on the shipped example data.
+# interface_width = 100 on the shipped example data under the DEFAULT
+# rescale = TRUE. Rescaling each class image to [0, 1] before differencing moves
+# the zero set, so these differ from the rescale = FALSE figures below -- and it
+# fragments more on these cores, not less (10 -> 16 pieces on TMA1_[3,B]).
 full_targets <- function() {
+  list(
+    `TMA1_[3,B].tif` = list(cells = 3803, pieces = 16, length = 7128.0),
+    `TMA2_[3,B].tif` = list(cells = 3008, pieces = 9,  length = 6941.3),
+    `TMA3_[7,B].tif` = list(cells = 1850, pieces = 13, length = 5092.4),
+    `TMA3_[9,K].tif` = list(cells = 1803, pieces = 7,  length = 6723.8),
+    `TMA3_[8,U].tif` = list(cells = 2318, pieces = 16, length = 5831.3)
+  )
+}
+
+# The same table with rescale = FALSE. These are the 2.1.0 numbers verbatim, so
+# they double as the regression that `rescale = FALSE` really is the old
+# behaviour rather than merely a nearby one.
+full_targets_raw <- function() {
   list(
     `TMA1_[3,B].tif` = list(cells = 3803, pieces = 10, length = 3238.2),
     `TMA2_[3,B].tif` = list(cells = 3008, pieces = 4,  length = 5189.2),
@@ -502,5 +518,215 @@ test_that("split_tissue rejects a non-mif", {
     split_tissue(list(), classifier = "x", class1 = "a", class2 = "b",
                 sigma = 40, interface_width = 100),
     "class `mif`"
+  )
+})
+
+# ---- 2.2.0: rescale / min_density / hard_threshold / density_score -----------
+
+test_that("rescale = FALSE reproduces the 2.1.0 target table exactly", {
+  # The point of keeping both tables: `rescale = FALSE` must be the OLD
+  # behaviour, not merely something near it.
+  out <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma",
+                      sigma = 40, interface_width = 100,
+                      rescale = FALSE, overwrite = TRUE)
+  targets <- full_targets_raw()
+  for (nm in names(targets)) {
+    len <- out$sample$`Boundary Length`[out$sample$deidentified_sample == nm]
+    pieces <- length(unique(out$derived$density_boundary[[nm]]$piece))
+    expect_equal(len, targets[[nm]]$length, tolerance = 0.05, info = nm)
+    expect_equal(pieces, targets[[nm]]$pieces, info = nm)
+  }
+})
+
+test_that("density_score is the field the compartments come from", {
+  out <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma",
+                      sigma = 40, interface_width = 100, overwrite = TRUE)
+  for (nm in names(out$spatial)) {
+    s <- out$spatial[[nm]]
+    expect_true(is.numeric(s$density_score), info = nm)
+    expect_equal(sum(is.na(s$density_score)), 0, info = nm)
+    # The factor is sign(score) by construction, so they cannot disagree.
+    expect_identical(as.character(s$density_compartment),
+                     ifelse(s$density_score > 0, "Tumor", "Stroma"), info = nm)
+  }
+})
+
+test_that("density_score units follow rescale", {
+  rs  <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, overwrite = TRUE)
+  raw <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, rescale = FALSE, overwrite = TRUE)
+  v_rs  <- unlist(lapply(rs$spatial,  function(s) s$density_score))
+  v_raw <- unlist(lapply(raw$spatial, function(s) s$density_score))
+  # rescaled lands in [-1, 1]; raw is an intensity difference, orders smaller
+  expect_lte(max(abs(v_rs)), 1 + 1e-9)
+  expect_gt(max(abs(v_rs)), 0.5)
+  expect_lt(max(abs(v_raw)), 0.1)
+})
+
+test_that("density_score is bit-identical across worker counts", {
+  one <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, workers = 1, overwrite = TRUE)
+  two <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, workers = 2, overwrite = TRUE)
+  expect_identical(lapply(one$spatial, function(s) s$density_score),
+                   lapply(two$spatial, function(s) s$density_score))
+})
+
+test_that("min_density = NULL, 0 and NA all mean off", {
+  args <- list(classifier = "Classifier.Label", class1 = "Tumor",
+               class2 = "Stroma", sigma = 40, interface_width = 100,
+               overwrite = TRUE)
+  off  <- do.call(split_tissue, c(list(full_mif()), args))
+  zero <- do.call(split_tissue, c(list(full_mif()), args, list(min_density = 0)))
+  na   <- do.call(split_tissue, c(list(full_mif()), args, list(min_density = NA_real_)))
+  expect_identical(off$sample$`Boundary Length`, zero$sample$`Boundary Length`)
+  expect_identical(off$sample$`Boundary Length`, na$sample$`Boundary Length`)
+})
+
+test_that("min_density shortens the boundary without moving the compartments", {
+  # The sign always comes from the unfiltered field, so masking can only change
+  # boundary geometry and the Interface band -- never which side a cell is on.
+  off <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, overwrite = TRUE)
+  on  <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, min_density = 0.05, overwrite = TRUE)
+  expect_lt(sum(on$sample$`Boundary Length`, na.rm = TRUE),
+            sum(off$sample$`Boundary Length`, na.rm = TRUE))
+  for (nm in names(off$spatial)) {
+    expect_identical(off$spatial[[nm]]$density_compartment,
+                     on$spatial[[nm]]$density_compartment, info = nm)
+    expect_identical(off$spatial[[nm]]$density_score,
+                     on$spatial[[nm]]$density_score, info = nm)
+  }
+})
+
+test_that("a min_density high enough to mask everything empties the boundary but keeps every label", {
+  # Both ends of the contract at once. The mask must degrade to "no boundary"
+  # rather than erroring or fabricating geometry -- AND, because it is applied to
+  # the contour field only, it must not orphan a single cell to NA even when it
+  # masks the entire image. That is the same invariant filter_density has, and it
+  # is the whole reason the mask is not applied to `raw`.
+  ref <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100)
+  out <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, min_density = 1e6)
+  expect_equal(nrow(out$derived$density_boundary[[1]]), 0)
+  expect_equal(out$sample$`Boundary Length`[1], 0)
+  expect_equal(sum(is.na(out$spatial[[1]]$density_compartment)), 0)
+  expect_identical(out$spatial[[1]]$density_compartment,
+                   ref$spatial[[1]]$density_compartment)
+  expect_identical(out$spatial[[1]]$density_score, ref$spatial[[1]]$density_score)
+  # with no boundary left, nothing can be Interface
+  expect_false(any(out$spatial[[1]]$refined_density_compartment == "Interface"))
+})
+
+test_that("hard_threshold inflates length without changing topology or the score", {
+  off <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, overwrite = TRUE)
+  on  <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, hard_threshold = TRUE, overwrite = TRUE)
+  eps <- 40 / 8
+  for (nm in names(off$spatial)) {
+    # The boundary must not MOVE -- sign() is monotone, so the zero set is the
+    # same curve; all thresholding can do is force contourLines() to place each
+    # crossing at a pixel midpoint instead of interpolating. Asserting the
+    # displacement bound rather than an equal piece count, because the latter is
+    # not a theorem: merging/splitting at exact-zero plateaus makes it differ by
+    # one or two on some whole-slide samples even though the line is unmoved.
+    s <- off$spatial[[nm]]
+    win <- spatstat.geom::convexhull.xy((s$XMin + s$XMax) / 2, (s$YMin + s$YMax) / 2)
+    S  <- boundary_psp(off$derived$density_boundary[[nm]], win)
+    bh <- on$derived$density_boundary[[nm]]
+    d  <- spatstat.geom::nncross(
+      spatstat.geom::ppp(bh$x, bh$y, window = spatstat.geom::Frame(win), check = FALSE),
+      S)$dist
+    expect_lt(max(d), eps, label = paste0(nm, ": hard contour displacement"))
+
+    # applied to the contour field only -- the score must be untouched
+    expect_identical(off$spatial[[nm]]$density_score,
+                     on$spatial[[nm]]$density_score, info = nm)
+  }
+  # but quantising the crossing to pixel midpoints adds a staircase: +5-6% here
+  expect_gt(sum(on$sample$`Boundary Length`, na.rm = TRUE),
+            sum(off$sample$`Boundary Length`, na.rm = TRUE))
+})
+
+test_that("the new settings round-trip through call_info", {
+  f <- function(im) im
+  out <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                      interface_width = 100, rescale = FALSE,
+                      min_density = 0.05, hard_threshold = TRUE,
+                      filter_density = f)
+  ci <- attr(out$derived$density_boundary, "call_info")
+  expect_identical(ci$rescale, FALSE)
+  expect_identical(ci$min_density, 0.05)
+  expect_identical(ci$hard_threshold, TRUE)
+  # NULL would be deleted from the list, so "off" is stored as NA_real_
+  out2 <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                       class1 = "Tumor", class2 = "Stroma", sigma = 40,
+                       interface_width = 100)
+  ci2 <- attr(out2$derived$density_boundary, "call_info")
+  expect_true("min_density" %in% names(ci2))
+  expect_true(is.na(ci2$min_density))
+})
+
+test_that("provenance written by 2.1.0 still resolves, backfilled to 2.1.0 behaviour", {
+  # A mif saved before these three arguments existed must keep working, and must
+  # be reconstructed as what 2.1.0 actually computed -- not as today's defaults.
+  out <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma",
+                      sigma = 40, interface_width = 100)
+  old <- out
+  ci <- attr(old$derived$density_boundary, "call_info")
+  attr(old$derived$density_boundary, "call_info") <-
+    ci[setdiff(names(ci), c("rescale", "min_density", "hard_threshold"))]
+
+  cfg <- split_tissue_settings(old, NULL)
+  expect_identical(cfg$rescale, FALSE)
+  expect_identical(cfg$hard_threshold, FALSE)
+  expect_true(is.na(cfg$min_density))
+  # and the same via the `settings =` path
+  cfg2 <- split_tissue_settings(
+    out, ci[setdiff(names(ci), c("rescale", "min_density", "hard_threshold"))])
+  expect_identical(cfg2$rescale, FALSE)
+})
+
+test_that("the new arguments are validated", {
+  mif <- halfplane_mif()
+  base <- list(classifier = "Classifier.Label", class1 = "Tumor",
+               class2 = "Stroma", sigma = 40, interface_width = 100)
+  expect_error(do.call(split_tissue, c(list(mif), base, list(rescale = NA))),
+               "`rescale` must be a single TRUE or FALSE")
+  expect_error(do.call(split_tissue, c(list(mif), base, list(rescale = c(TRUE, FALSE)))),
+               "`rescale` must be a single TRUE or FALSE")
+  expect_error(do.call(split_tissue, c(list(mif), base, list(hard_threshold = "yes"))),
+               "`hard_threshold` must be a single TRUE or FALSE")
+  expect_error(do.call(split_tissue, c(list(mif), base, list(min_density = -1))),
+               "`min_density` must be NULL")
+  expect_error(do.call(split_tissue, c(list(mif), base, list(min_density = c(1, 2)))),
+               "`min_density` must be NULL")
+})
+
+test_that("overwrite = FALSE detects a pre-existing density_score", {
+  mif <- halfplane_mif()
+  mif$spatial[[1]]$density_score <- 0
+  expect_error(
+    split_tissue(mif, classifier = "Classifier.Label", class1 = "Tumor",
+                class2 = "Stroma", sigma = 40, interface_width = 100),
+    "density_score"
   )
 })
