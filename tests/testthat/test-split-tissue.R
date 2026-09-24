@@ -28,7 +28,7 @@ full_targets <- function() {
   )
 }
 
-# The same table with rescale = FALSE. These are the 2.1.0 numbers verbatim, so
+# The same table with rescale = FALSE. These are the pre-rescale numbers verbatim, so
 # they double as the regression that `rescale = FALSE` really is the old
 # behaviour rather than merely a nearby one.
 full_targets_raw <- function() {
@@ -521,9 +521,9 @@ test_that("split_tissue rejects a non-mif", {
   )
 })
 
-# ---- 2.1.1: rescale / min_density / hard_threshold / density_score -----------
+# ---- rescale / min_density / hard_threshold / density_score -----------
 
-test_that("rescale = FALSE reproduces the 2.1.0 target table exactly", {
+test_that("rescale = FALSE reproduces the unrescaled target table exactly", {
   # The point of keeping both tables: `rescale = FALSE` must be the OLD
   # behaviour, not merely something near it.
   out <- split_tissue(full_mif(), classifier = "Classifier.Label",
@@ -684,9 +684,9 @@ test_that("the new settings round-trip through call_info", {
   expect_true(is.na(ci2$min_density))
 })
 
-test_that("provenance written by 2.1.0 still resolves, backfilled to 2.1.0 behaviour", {
+test_that("provenance predating these fields resolves, backfilled to the old behaviour", {
   # A mif saved before these three arguments existed must keep working, and must
-  # be reconstructed as what 2.1.0 actually computed -- not as today's defaults.
+  # be reconstructed as what that version actually computed -- not as today's defaults.
   out <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
                       class1 = "Tumor", class2 = "Stroma",
                       sigma = 40, interface_width = 100)

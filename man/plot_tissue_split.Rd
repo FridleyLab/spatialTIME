@@ -58,10 +58,10 @@ attaches. That attribute does not survive \code{[} subsetting or
 pass the settings list explicitly to recover from that: a list with
 \code{classifier}, \code{class1}, \code{class2}, \code{sigma}, \code{eps}, \code{interface_width},
 \code{xloc}, \code{yloc}, \code{filter_density}, \code{rescale}, \code{min_density},
-\code{hard_threshold}, \code{sample_id} and \code{spatialTIME_version}. The three added in
-2.1.1 (\code{rescale}, \code{min_density}, \code{hard_threshold}) may be omitted: they are
-backfilled to what 2.1.0 computed (\code{FALSE}, off, \code{FALSE}), so provenance
-recorded by 2.1.0 still replots correctly.}
+\code{hard_threshold}, \code{sample_id} and \code{spatialTIME_version}. \code{rescale},
+\code{min_density} and \code{hard_threshold} may be omitted: they are backfilled to
+the behaviour that predated them (\code{FALSE}, off, \code{FALSE}), so provenance
+recorded before those arguments existed still replots correctly.}
 
 \item{...}{accepts no arguments; present only so that a mistyped named
 argument above produces an informative "Unknown argument" error instead

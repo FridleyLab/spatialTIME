@@ -1,109 +1,21 @@
-# spatialTIME 2.1.1
+# spatialTIME 2.0.0
 
-## Read this first: `Boundary Length` changes for everyone
+A cleanup and correctness release, plus one new capability. Roughly 1,100 lines of
+unreachable code are gone, the count-based measures now agree with **spatstat** to
+floating-point precision on samples of any size, every metric returns the same
+columns, density-based tissue segmentation is new, and test coverage went from 4
+assertions to 732.
 
-`split_tissue()` now rescales each class's density image to `[0, 1]` before
-differencing (`rescale = TRUE`, the new default). This moves the boundary, so
-every `Boundary Length` and every contour piece count differs from 2.1.0. On the
-shipped example data at `sigma = 40`:
-
-| core | 2.1.0 (`rescale = FALSE`) | 2.1.1 (`rescale = TRUE`) |
-|---|---|---|
-| `TMA1_[3,B].tif` | 10 pieces / 3238.2 | 16 pieces / 7128.0 |
-| `TMA2_[3,B].tif` | 4 pieces / 5189.2 | 9 pieces / 6941.3 |
-| `TMA3_[7,B].tif` | 6 pieces / 2346.8 | 13 pieces / 5092.4 |
-| `TMA3_[9,K].tif` | 9 pieces / 6756.5 | 7 pieces / 6723.8 |
-| `TMA3_[8,U].tif` | 8 pieces / 4469.4 | 16 pieces / 5831.3 |
-
-Pass `rescale = FALSE` to reproduce 2.1.0 exactly — that is asserted in the test
-suite, not merely intended. Per-cell compartment labels are unaffected in kind:
-they are still the sign of the difference.
-
-Why rescale by default: a sparse class is otherwise swamped by an abundant one,
-which matters when compartment proportions vary a lot across a cohort. What it
-costs: the boundary sits where the two *rescaled* densities are equal, so it
-depends on each sample's own density range and `Boundary Length` is no longer an
-absolute criterion comparable across samples on its own terms. Each image gets
-its own affine map, so this is not a shared monotone transform and the zero set
-genuinely moves rather than being reparameterised.
-
-## New features
-
-* **`split_tissue(min_density =)`** drops pixels where there is essentially no
-  tissue, as a fraction of the sample's own mean `class1 + class2` intensity.
-  `NULL` (default) disables it. Where both classes are near zero the difference
-  sits at the floating-point noise floor and its sign is meaningless, so the zero
-  contour fragments into noise there. On a whole-slide sample with a large tissue
-  hole, unmasked: 227 contour pieces, with 74% of the boundary length lying in
-  space containing essentially no cells (median total density 1.46e-12 there
-  against 1.24e-3 elsewhere). At `min_density = 0.05`: 23 pieces, and **5 of
-  1,000,977 cells changed compartment**.
-  * The threshold is not a smoothing knob. Anything from 0.01 to 0.10 gave the
-    same answer on that sample, because the gap it straddles is several orders of
-    magnitude. Above roughly 0.2 it starts clipping real boundary (101 cells
-    changed at 0.2, 8,250 at 1.0), so counting label changes is a cheap check
-    that you are in the safe range.
-  * It is also grid-independent: across a 16x range of pixel counts
-    (`eps = sigma/4` to `sigma/16`) the masked fraction was 20.9 / 20.9 / 21.0%.
-  * Applied to the contour field only. The per-cell sign and `density_score`
-    always come from the unmasked, unfiltered difference, so masking — even
-    masking the entire sample — cannot orphan a cell to `NA`.
-* **`split_tissue()` adds a `density_score` column** to every spatial frame: the
-  signed `class1 - class2` difference at the cell's own location. This is the
-  field the two compartment factors are derived from, so its sign always agrees
-  with `density_compartment`; keeping the magnitude gives "how far into this
-  compartment" as a covariate rather than only "which side". Its units follow
-  `rescale`, so it is comparable across samples only when `rescale = FALSE`.
-* **`split_tissue(hard_threshold =)`** collapses the difference to its sign before
-  contouring (default `FALSE`), for comparison with implementations that threshold
-  first. Since the zero level set is already invariant to any monotone transform
-  this cannot change the contour's topology, and measurably does not — piece
-  counts are unchanged on all five example cores, and the line moves by at most
-  0.7 of a pixel. What it does do is force `contourLines()` to place every
-  crossing at a pixel midpoint, quantising the boundary to the grid and inflating
-  `Boundary Length` by 5–6%. Leave it off unless you need to reproduce something.
-
-## Bug fixes
-
-* `plot_tissue_split()` errored with "replacement has 1 row, data has 0" when the
-  density field was entirely `NA`. Reachable in 2.1.0 via a `filter_density` that
-  masked everything, and easy to hit now via `min_density`.
-* `split_tissue()`'s one-class path is preserved under the new default. Rescaling
-  an absent class is undefined, and rescaling the *present* class to `[0, 1]` puts
-  its minimum at exactly 0 — the contour level — which would have manufactured a
-  boundary around the edge of its support where 2.1.0 correctly reported none.
-  Rescaling is now skipped unless both classes have cells.
-
-## Notes
-
-* `split_tissue()`'s provenance (`attr(mif$derived$density_boundary, "call_info")`)
-  gains `rescale`, `min_density` and `hard_threshold`. A mif written by 2.1.0 has
-  none of them and still replots correctly: the missing fields are backfilled to
-  what 2.1.0 actually computed (`FALSE`, off, `FALSE`), not to the new defaults.
-* Because `merge_mifs()` compares the whole `call_info` with `identical()`,
-  merging a 2.1.0 mif with a 2.1.1 one now warns that the settings differ. That is
-  correct — they were computed differently.
-* The `sigma/8` resolution figures in `?split_tissue` were measured on the
-  unrescaled field and are now labelled as such. The argument they support is
-  about the `eps/sigma` ratio, which `rescale` does not affect.
-* `tests/testthat/test-split-tissue.R` no longer asserts the contour piece count
-  on `halfplane_mif()`. That fixture's two halves are exact mirror images, so the
-  two densities along the boundary are equal to ~16 significant figures and
-  `contourLines()` decides each crossing from the sign of floating-point noise —
-  the same geometric line came back as 1 piece under one R/spatstat build and 47
-  under another. Position and length are stable to a fraction of a pixel and are
-  still asserted, with tolerance.
-
-# spatialTIME 2.1.0
-
-## New features
+## New: density-based tissue segmentation
 
 * **`split_tissue()`** segments a sample into tissue compartments from the
   difference of two classes' kernel density estimates (e.g. Tumor vs Stroma).
-  Every cell gains `density_compartment` (2 levels: `class1`/`class2`, by the
-  sign of `class1 - class2` density) and `refined_density_compartment` (3
-  levels: those two plus `"Interface"` for cells within `interface_width / 2`
-  of the boundary). `mif$sample` gains a `Boundary Length` column.
+  Every cell gains `density_compartment` (2 levels, `class1`/`class2`, by the sign
+  of the `class1 - class2` density), `refined_density_compartment` (those two plus
+  `"Interface"` for cells within `interface_width / 2` of the boundary) and
+  `density_score`, the signed difference itself — the field the two factors are
+  derived from, kept because "how far into this compartment" is more useful as a
+  covariate than "which side". `mif$sample` gains a `Boundary Length` column.
   * `sigma` (the KDE bandwidth) has **no default** — units differ by imaging
     platform, so a silent default would make cores processed with different
     undocumented defaults incomparable.
@@ -111,59 +23,63 @@ genuinely moves rather than being reparameterised.
     extracted with `grDevices::contourLines()`, not a thresholded band around
     zero — so there is no `boundary_threshold` to tune.
   * Pixel resolution (`dimyx`) is not exposed either. It is derived as
-    `sigma / 8`: contour *topology* is set by `sigma` at every resolution
-    tested (9 pieces from `eps = sigma` down to `eps = sigma/32` on a real
-    core), and resolution only adds a bias in boundary length that converges
-    by `sigma/8` (−0.6%, vs −11.5% at `eps = sigma`). There is nothing left
-    for the user to tune, and hiding it avoids non-square pixels on
-    non-square windows (`dimyx` gave 4x anisotropic pixels in testing).
-  * `overwrite = FALSE` (the default) errors, naming every existing clash,
-    rather than appending a new `Run` — a cell can carry only one compartment
-    label, so there is nowhere for a second run to go. Run `split_tissue()`
-    into two separate mifs to compare two settings.
-  * The density images and point patterns used to find the boundary are
-    discarded once the boundary and per-cell labels are derived, to avoid
-    inflating the mif. Only the boundary polyline
-    (`mif$derived$density_boundary`, a named list, one data frame per sample)
-    survives.
-  * `filter_density`, passed through `...`, is an optional
-    `function(im) im` applied to each class's density image before
-    differencing, to keep near-zero-density tissue holes from inflating or
-    bouncing the boundary. It affects only the boundary geometry — the sign
-    that drives the two spatial columns always comes from the *unfiltered*
-    difference, so a filtered-out hole never leaves a cell `NA`.
-* **`plot_tissue_split()`** recomputes the density difference on demand, at
-  plot time, from the settings `split_tissue()` recorded, and draws the
-  *stored* boundary polyline (never a recontoured one) over a raster of the
-  density difference and a scatter of the compartment label. Unlike
-  `plot_immunoflo()`, it returns a **named list of `ggplot` objects**, not the
-  `mif` — each plot's raster can carry as much data as the sample itself, and
-  attaching several to `mif$derived` would multiply the mif's size for no
-  benefit once list-valued derived slots are already fragile (see Bug fixes).
-
-## Bug fixes
-
-* `merge_mifs()` called `dplyr::bind_rows()` on every `derived` slot
-  regardless of type, so a list-valued slot (`spatial_plots`, and now
-  `density_boundary`) was silently collapsed into a nameless data frame
-  instead of being merged or erroring. List-valued slots are now
-  concatenated instead, with a warning if the inputs' recorded settings
-  (`call_info`) disagree.
-
-## Notes
-
-* `subset_mif()` rebuilds the mif from scratch and drops `derived` entirely
-  (`R/subset_mif.R`), so `split_tissue()`'s boundary slot and `Boundary
-  Length` column do not survive a later `subset_mif()` call, even though the
-  two spatial columns ride along with the row filter. Run `split_tissue()`
-  after subsetting, not before.
-
-# spatialTIME 2.0.0
-
-A cleanup and correctness release. Roughly 1,100 lines of unreachable code are
-gone, the count-based measures now agree with **spatstat** to floating-point
-precision on samples of any size, every metric returns the same columns, and test
-coverage went from 4 assertions to 465 (91%).
+    `sigma / 8`: contour *topology* is set by `sigma` at every resolution tested
+    (9 pieces from `eps = sigma` down to `eps = sigma/32` on a real core, with
+    `rescale = FALSE`), while boundary length converges by `sigma/8` (−0.6%
+    bias, against −11.5% at `eps = sigma`). Hiding it also avoids the non-square
+    pixels `dimyx` gives on a non-square window (4x anisotropy in testing).
+  * `rescale` (default `TRUE`) rescales each class's density image to `[0, 1]`
+    before differencing, so a sparse class is not swamped by an abundant one. The
+    cost: the boundary then sits where the *rescaled* densities are equal, which
+    depends on each sample's own density range, so `Boundary Length` is not an
+    absolute criterion comparable across a cohort. `rescale = FALSE` gives the
+    absolute one — the boundary where the intensities themselves are equal. On
+    `TMA3_[9,K].tif` at `sigma = 40`: 7 pieces / length 6723.8 rescaled, 9 /
+    6756.5 not.
+  * `min_density` (default off) drops pixels where both classes are near zero.
+    There the difference sits at the floating-point noise floor and its sign is
+    meaningless, so the contour fragments into noise. On a whole slide with a
+    large tissue hole, unmasked: 227 contour pieces, with 74% of the boundary
+    length lying in space containing essentially no cells (median total density
+    1.46e-12 there against 1.24e-3 elsewhere). At `min_density = 0.05`: 23
+    pieces, and 5 of 1,000,977 cells changed compartment. Given as a fraction of
+    the sample's own mean intensity, so the same value means the same thing across
+    samples and coordinate units, and insensitive — anything from 0.01 to 0.10
+    gave the same answer, because the gap it straddles is orders of magnitude.
+    Above roughly 0.2 it starts clipping real boundary, so count how many labels
+    move if you raise it.
+  * `filter_density`, through `...`, is an arbitrary `function(im) im` applied to
+    each class image, for anything the above does not cover.
+  * `min_density` and `filter_density` affect the **boundary geometry only**. The
+    per-cell sign and `density_score` always come from the unmasked, unfiltered
+    difference, so masking — even masking an entire sample — cannot orphan a cell
+    to `NA`.
+  * `hard_threshold` (default off) collapses the field to its sign before
+    contouring, for comparison with implementations that threshold first. It
+    cannot change the contour's topology, since the zero level set is invariant to
+    any monotone transform, and measurably does not: piece counts unchanged on all
+    five example cores and the line displaced by at most 0.7 of a pixel. What it
+    does do is force every crossing onto a pixel midpoint, inflating
+    `Boundary Length` by 5–6%.
+  * `overwrite = FALSE` (the default) errors, naming every existing clash, rather
+    than appending a new `Run` — a cell can carry only one compartment label, so
+    there is nowhere for a second run to go. Keep two mifs to compare two
+    settings.
+  * The density images and point patterns are discarded once the boundary and
+    per-cell labels are derived, to avoid inflating the mif. Only the boundary
+    polyline survives, in `mif$derived$density_boundary` (a named list, one data
+    frame per sample), with the settings used attached as `"call_info"`.
+  * `subset_mif()` rebuilds the mif from scratch and drops `derived` entirely, so
+    the boundary slot and `Boundary Length` do not survive it, even though the
+    three spatial columns ride along with the row filter. Split *after*
+    subsetting, not before.
+* **`plot_tissue_split()`** recomputes the density difference on demand, at plot
+  time, from the settings `split_tissue()` recorded, and draws the *stored*
+  boundary polyline (never a recontoured one) over a raster of the difference and
+  a scatter of the compartment label. Unlike `plot_immunoflo()`, it returns a
+  **named list of `ggplot` objects**, not the `mif` — each plot's raster can carry
+  as much data as the sample itself, and attaching several to `mif$derived` would
+  multiply the mif's size for no benefit.
 
 ## Read this first: results that were wrong
 
@@ -331,6 +247,13 @@ cells gives 0.52 at a radius where the mean permuted G is 0.13. See `?NN_G`.
   error in R — and returned `NULL` instead of `invisible(x)`.
 * `merge_mifs()` accepted an empty list and then failed obscurely inside `seq(0)`.
   Its "No variables have been derived yet" message was unreachable.
+* `merge_mifs()` called `dplyr::bind_rows()` on every `derived` slot regardless of
+  type, so a **list**-valued slot — `spatial_plots`, and now `density_boundary` —
+  was silently collapsed into a nameless data frame instead of being merged or
+  erroring. List-valued slots are now concatenated, with a warning when the
+  inputs' recorded settings disagree. A second bug in the same path prefixed every
+  sample name with its source mif's index (`"1.S1"` rather than `"S1"`), because
+  `do.call(c, parts)` read the list's own names as argument names.
 * `create_mif()`'s "each item must be named" check could never fail.
 * `is()` was used in three files without **methods** being declared; replaced with
   `inherits()`.

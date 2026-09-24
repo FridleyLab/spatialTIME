@@ -8,8 +8,8 @@
 #   2. `dimyx` is exposed and can give non-square pixels on a non-square window.
 #      density_pixel_size() derives a square eps from sigma instead.
 #
-# Per-image [0, 1] rescaling is NOT a bug -- it is `rescale`, on by default since
-# 2.1.1 -- but it is a real tradeoff and the measurement behind it belongs here.
+# Per-image [0, 1] rescaling is NOT a bug -- it is the `rescale` argument, on by
+# default -- but it is a real tradeoff and the measurement behind it belongs here.
 # It is not a shared monotone transform: each image gets its own affine map, so
 # the zero set moves rather than being reparameterised. Measured on
 # example_spatial[["TMA3_[9,K].tif"]] at sigma 40, the raw difference gives 9
@@ -326,11 +326,11 @@ split_tissue_settings <- function(mif, settings = NULL) {
                 "rescale", "min_density", "hard_threshold",
                 "sample_id", "spatialTIME_version")
 
-  # Fields added in 2.1.1. A mif written by 2.1.0 has none of them, and both
-  # returns below subset to `required`, so without this backfill every such mif
-  # would fail the missing-field check. The values are not arbitrary defaults:
-  # they are what 2.1.0 actually computed, so an old mif replots correctly rather
-  # than merely not erroring.
+  # These three arrived after the others, so a mif saved before they existed has
+  # none of them -- and both returns below subset to `required`, which would make
+  # every such mif fail the missing-field check. The backfill values are not
+  # arbitrary defaults: they are the behaviour that predated the arguments, so an
+  # older mif replots *correctly* rather than merely not erroring.
   backfill <- function(x) {
     if (is.null(x$rescale))        x$rescale        <- FALSE
     if (is.null(x$hard_threshold)) x$hard_threshold <- FALSE

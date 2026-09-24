@@ -172,7 +172,7 @@ test_that("an unrecognised argument in ... is an error naming it", {
   expect_error(plot_tissue_split(mif, bogus = TRUE), "Unknown argument.*bogus")
 })
 
-# ---- 2.1.1 settings -----------------------------------------------------------
+# ---- rescale / min_density / hard_threshold settings -----------------------------------------------------------
 
 test_that("the raster honours the rescale the boundary was computed with", {
   # The whole point of recording provenance: the recomputed raster has to be the
@@ -213,7 +213,7 @@ test_that("min_density and hard_threshold reach the plot through call_info", {
   expect_lte(length(unique(vals)), 3)
 })
 
-test_that("a 2.1.0-era settings list still plots", {
+test_that("a settings list predating these fields still plots", {
   mif <- split_tissue(halfplane_mif(), classifier = "Classifier.Label",
                       class1 = "Tumor", class2 = "Stroma",
                       sigma = 40, interface_width = 100, rescale = FALSE)
