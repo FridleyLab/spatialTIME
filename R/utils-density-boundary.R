@@ -292,17 +292,35 @@ boundary_length <- function(S) {
 }
 
 
-#' Density value at arbitrary points, with an edge-pixel fallback
+#' Density value at arbitrary points: bilinear, with a nearest-pixel fallback
 #'
-#' `lookup.im()` returns `NA` for cells whose pixel *centre* falls outside the
-#' image mask even though the cell itself is inside the hull the mask was built
-#' from (verified: 9-16 per example core). `nearest.valid.pixel()` resolves
-#' those instead of leaving the cell's compartment as `NA`.
+#' `interp.im()` interpolates bilinearly between the four surrounding pixel
+#' centres rather than snapping to the nearest one, which matters here for a
+#' reason beyond accuracy: `contourLines()` places the boundary by linear
+#' interpolation along grid edges, so interpolating the field the same way keeps
+#' `density_score` **consistent with the drawn polyline**. At the polyline's own
+#' vertices this field is 0 to machine precision (<= 4.3e-15 across the example
+#' cores); nearest-pixel lookup reads up to 0.041 there, ~4% of the rescaled
+#' field's range.
+#'
+#' The payoff is the score, not the labels. Switching from nearest-pixel changes
+#' the sign for only 6-12 cells per example core, and because those all sit within
+#' half a pixel of the contour -- hence inside any sensible interface band -- the
+#' 3-level label moves for 0-1 cells per core. What does change materially is
+#' `density_score` itself, by up to 0.3 near the boundary.
+#'
+#' It returns `NA` in two situations, both of which the fallback has to cover:
+#' any of the four neighbours is outside the mask (a cell inside the hull but
+#' near a masked hole), or the point is outside the image frame entirely. Verified
+#' that `interp.im()` returns `NA` rather than erroring in both cases. Falling
+#' back to `nearest.valid.pixel()` means no cell is ever left `NA` by a lookup --
+#' 178 cells on that same sample -- so an `NA` compartment can only ever mean an
+#' exactly-zero field, which is what it is documented to mean.
 #'
 #' @keywords internal
 #' @noRd
 im_value_at <- function(im, x, y) {
-  v <- spatstat.geom::lookup.im(im, x, y, naok = TRUE)
+  v <- spatstat.geom::interp.im(im, x, y)
   na <- is.na(v)
   if (any(na)) {
     nv <- spatstat.geom::nearest.valid.pixel(x[na], y[na], im)

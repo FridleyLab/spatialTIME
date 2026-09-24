@@ -730,3 +730,44 @@ test_that("overwrite = FALSE detects a pre-existing density_score", {
     "density_score"
   )
 })
+
+test_that("density_score is consistent with the drawn boundary, and never NA", {
+  # Why im_value_at() interpolates bilinearly instead of snapping to the nearest
+  # pixel: contourLines() places the boundary where the LINEARLY interpolated field
+  # crosses zero, so evaluating the field the same way makes each cell's sign agree
+  # with the side of the drawn polyline it is on. Evaluated at the polyline's own
+  # vertices the field must therefore be zero to machine precision. Nearest-pixel
+  # lookup gives up to 0.041 on those same points -- ~4% of the rescaled field's
+  # range -- i.e. it disagrees with the line it is drawn next to.
+  out <- split_tissue(full_mif(), classifier = "Classifier.Label",
+                      class1 = "Tumor", class2 = "Stroma",
+                      sigma = 40, interface_width = 100, overwrite = TRUE)
+  cfg <- attr(out$derived$density_boundary, "call_info")
+
+  for (nm in names(out$spatial)) {
+    s   <- add_cell_centres(out$spatial[[nm]], cfg$xloc, cfg$yloc)
+    win <- spatstat.geom::convexhull.xy(s$xloc, s$yloc)
+    pp  <- spatstat.geom::ppp(s$xloc, s$yloc, window = win, check = FALSE)
+    d   <- compartment_diff(pp, class_mask(s$Classifier.Label, "Tumor"),
+                            class_mask(s$Classifier.Label, "Stroma"),
+                            cfg$sigma, cfg$eps, NULL, rescale = cfg$rescale,
+                            min_density = cfg$min_density,
+                            hard_threshold = cfg$hard_threshold)
+    bd <- out$derived$density_boundary[[nm]]
+
+    # Checked against interp.im() directly rather than im_value_at(), because a
+    # contour piece terminating at the mask edge has vertices where interpolation
+    # is undefined; im_value_at() falls back to the nearest valid pixel there,
+    # which is correct but necessarily nonzero. The property asserted is that the
+    # interpolator agrees with contourLines(), so it applies only where the
+    # interpolator is defined.
+    on_contour <- spatstat.geom::interp.im(d$raw, bd$x, bd$y)
+    expect_lt(max(abs(on_contour), na.rm = TRUE), 1e-9)
+
+    # The fallback is load-bearing, not dead code: interpolation alone leaves
+    # cells NA wherever one of the four neighbouring pixels is outside the mask.
+    expect_gt(sum(is.na(spatstat.geom::interp.im(d$raw, s$xloc, s$yloc))), 0)
+    expect_equal(sum(is.na(im_value_at(d$raw, s$xloc, s$yloc))), 0, info = nm)
+    expect_equal(sum(is.na(out$spatial[[nm]]$density_score)), 0, info = nm)
+  }
+})

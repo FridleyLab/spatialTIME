@@ -54,6 +54,20 @@ assertions to 732.
     per-cell sign and `density_score` always come from the unmasked, unfiltered
     difference, so masking — even masking an entire sample — cannot orphan a cell
     to `NA`.
+  * The field is read at each cell by **bilinear interpolation** between the four
+    surrounding pixel centres, with a nearest-valid-pixel fallback for cells whose
+    neighbourhood is incomplete (23–39 per example core). `contourLines()` places
+    the boundary where the linearly interpolated field crosses zero, so
+    interpolating the same way makes `density_score` consistent with the drawn
+    polyline: evaluated at the polyline's own vertices the field is zero to machine
+    precision (`<= 4.3e-15`), where nearest-pixel lookup is off by up to 0.041,
+    roughly 4% of the rescaled field's range. The gain is in the *score*, not in
+    relabelling — it shifts `density_score` by up to 0.3 for cells near the
+    boundary, but flips the 2-level compartment for only 6–12 cells per example
+    core, and since essentially all of those lie within half a pixel of the contour
+    (and so inside any sensible interface band) the 3-level label changes for 0–1
+    cells per core. The fallback also means a lookup never yields `NA`, so an `NA`
+    compartment can only mean an exactly-zero field.
   * `hard_threshold` (default off) collapses the field to its sign before
     contouring, for comparison with implementations that threshold first. It
     cannot change the contour's topology, since the zero level set is invariant to
