@@ -156,10 +156,19 @@ the spatial slot still answers to <code><a href="https://rdrr.io/r/base/length.h
 <span><span class="co">#&gt; [5] "TMA3_[8,U].tif"</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">[[</span><span class="st">"TMA3_[9,K].tif"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] 1803   51</span></span></code></pre></div>
-<p>That last line reads one file off disk. Iteration works too, so code
-written against an in-memory <code>mif</code> does not need
-rewriting:</p>
+<p>That last line reads one file off disk. So does <code>$</code>, which
+is the convenient way to pull one sample up at the console:</p>
 <div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/dim.html" class="external-link">dim</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">$</span><span class="va">`TMA3_[9,K].tif`</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] 1803   51</span></span></code></pre></div>
+<p>Tab completion works on both, and neither form reads more than it has
+to. <code>xd$spatial$</code><kbd>Tab</kbd> offers the sample names and
+reads nothing at all — they come from the index.
+<code>xd$spatial[["TMA3_[9,K].tif"]]$</code><kbd>Tab</kbd> offers that
+sample’s columns, having read that one sample.</p>
+<p>Iteration works too, so code written against an in-memory
+<code>mif</code> does not need rewriting:</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">sapply</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span>, <span class="va">nrow</span><span class="op">)</span></span>
 <span><span class="co">#&gt; TMA1_[3,B].tif TMA2_[3,B].tif TMA3_[7,B].tif TMA3_[9,K].tif TMA3_[8,U].tif </span></span>
 <span><span class="co">#&gt;           3803           3008           1850           1803           2318</span></span></code></pre></div>
@@ -169,17 +178,17 @@ before applying anything, so iterating the slot reads
 <strong>every</strong> sample — which is the cost disk-backing exists to
 avoid. Iterating over <code><a href="https://rdrr.io/r/base/names.html" class="external-link">names()</a></code> instead keeps one sample
 resident at a time:</p>
-<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/lapply.html" class="external-link">vapply</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span>, <span class="kw">function</span><span class="op">(</span><span class="va">s</span><span class="op">)</span> <span class="fu"><a href="https://rdrr.io/r/base/nrow.html" class="external-link">nrow</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">[[</span><span class="va">s</span><span class="op">]</span><span class="op">]</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/numeric.html" class="external-link">numeric</a></span><span class="op">(</span><span class="fl">1</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; TMA1_[3,B].tif TMA2_[3,B].tif TMA3_[7,B].tif TMA3_[9,K].tif TMA3_[8,U].tif </span></span>
 <span><span class="co">#&gt;           3803           3008           1850           1803           2318</span></span></code></pre></div>
 <p>Both give the same answer here, on five cores. On 283 slides the
 first reads 34 GB and the second reads one slide at a time.</p>
 <p>The slot itself is an index:</p>
-<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span></span>
 <span><span class="co">#&gt; &lt;mif_store&gt; 5 samples, 12,782 cells</span></span>
-<span><span class="co">#&gt;   root: /var/folders/63/qj4bjln95bs911vg920503rh001s8k/T//RtmpV40gjV/spatialTIME-vignette/cohort.mif</span></span>
+<span><span class="co">#&gt;   root: /var/folders/63/qj4bjln95bs911vg920503rh001s8k/T//Rtmp4GHmlh/spatialTIME-vignette/cohort.mif</span></span>
 <span><span class="co">#&gt;   TMA1_[3,B].tif (3,803), TMA2_[3,B].tif (3,008), TMA3_[7,B].tif (1,850), ... and 2 more</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/object.size.html" class="external-link">object.size</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span>, units <span class="op">=</span> <span class="st">"KB"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "7.9 Kb"</span></span>
@@ -187,7 +196,7 @@ first reads 34 GB and the second reads one slide at a time.</p>
 <span><span class="co">#&gt; [1] "3.6 Mb"</span></span></code></pre></div>
 <p>The store is a plain directory you can inspect, copy, archive and
 move:</p>
-<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="va">store</span>, recursive <span class="op">=</span> <span class="cn">FALSE</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "clinical.rds"  "derived"       "manifest.json" "sample.rds"   </span></span>
 <span><span class="co">#&gt; [5] "spatial"</span></span>
@@ -199,7 +208,7 @@ columns, and each sample’s file, row count, byte size and column schema.
 Paths inside it are relative, so moving or copying the whole directory
 does not break it.</p>
 <p><code><a href="../reference/open_mif.html">open_mif()</a></code> reads one back:</p>
-<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">y</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_mif.html">open_mif</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">y</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
@@ -214,7 +223,7 @@ data.</p>
 <code><a href="../reference/mif_to_disk.html">mif_to_disk()</a></code>, named after <code><a href="https://dplyr.tidyverse.org/reference/compute.html" class="external-link">dplyr::collect()</a></code>
 for the same reason: it is where lazily-referenced data gets
 materialised.</p>
-<div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">back</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_mif.html">collect_mif</a></span><span class="op">(</span><span class="va">xd</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/class.html" class="external-link">class</a></span><span class="op">(</span><span class="va">back</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "list"</span></span>
@@ -223,7 +232,7 @@ materialised.</p>
 <p>On a cohort that does not fit in memory, collecting all of it defeats
 the point. <code>samples</code> takes a subset, which is how you pull a
 few samples out to look at them:</p>
-<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">two</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/collect_mif.html">collect_mif</a></span><span class="op">(</span><span class="va">xd</span>, samples <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"TMA3_[9,K].tif"</span>, <span class="st">"TMA1_[3,B].tif"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">two</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "TMA3_[9,K].tif" "TMA1_[3,B].tif"</span></span>
@@ -236,7 +245,7 @@ few samples out to look at them:</p>
 </h2>
 <p>Nothing changes. Every function in the package takes a disk-backed
 <code>mif</code> the same way it takes an in-memory one.</p>
-<div class="sourceCode" id="cb10"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">mnames</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"CD3..Opal.570..Positive"</span>, <span class="st">"CD8..Opal.520..Positive"</span><span class="op">)</span></span>
 <span></span>
 <span><span class="va">xd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span>mif <span class="op">=</span> <span class="va">xd</span>, mnames <span class="op">=</span> <span class="va">mnames</span>, r_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">100</span>, <span class="fl">10</span><span class="op">)</span>,</span>
@@ -253,7 +262,7 @@ few samples out to look at them:</p>
 <span><span class="co">#&gt; 5      TMA1_[3,B].tif CD3..Opal.570..Positive 40       0.00  6896.66270</span></span>
 <span><span class="co">#&gt; 6      TMA1_[3,B].tif CD3..Opal.570..Positive 50   28741.79 10376.44414</span></span></code></pre></div>
 <p>The results are the same numbers. Not approximately — the same:</p>
-<div class="sourceCode" id="cb11"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span>mif <span class="op">=</span> <span class="va">x</span>, mnames <span class="op">=</span> <span class="va">mnames</span>, r_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">100</span>, <span class="fl">10</span><span class="op">)</span>,</span>
 <span>               edge_correction <span class="op">=</span> <span class="st">"translation"</span>, permute <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>               workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -268,7 +277,7 @@ metric, at one and two workers, with and without permutation.</p>
 <p>Permuted results match too. Seeds are drawn once in the parent
 process and handed to the workers, so a run depends only on your
 <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> and not on <code>workers</code>:</p>
-<div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
 <span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span><span class="va">xd</span>, mnames <span class="op">=</span> <span class="va">mnames</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, r_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">50</span>, <span class="fl">10</span><span class="op">)</span>, permute <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>               num_permutations <span class="op">=</span> <span class="fl">10</span>, workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -280,7 +289,7 @@ process and handed to the workers, so a run depends only on your
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
 <p>Derived results are written back to the store as they are computed,
 so they survive a reopen:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_mif.html">open_mif</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">derived</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "univariate_Count"</span></span>
@@ -293,7 +302,7 @@ so they survive a reopen:</p>
 <p>If your data is already parquet, <code><a href="../reference/create_mif.html">create_mif()</a></code> accepts a
 named character vector of file paths instead of a list of data frames.
 Nothing is copied.</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">files</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"spatial"</span><span class="op">)</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">files</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span></span>
 <span></span>
@@ -327,7 +336,7 @@ so <code><a href="../reference/split_tissue.html">split_tissue()</a></code> refu
 <p><code><a href="../reference/subset_mif.html">subset_mif()</a></code> needs somewhere to put the result, for the
 same reason <code><a href="../reference/mif_to_disk.html">mif_to_disk()</a></code> does: the subset of a cohort too
 large for memory usually is too.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sub</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/subset_mif.html">subset_mif</a></span><span class="op">(</span><span class="va">xd</span>, classifier <span class="op">=</span> <span class="st">"Classifier.Label"</span>, level <span class="op">=</span> <span class="st">"Tumor"</span>,</span>
 <span>                  markers <span class="op">=</span> <span class="va">mnames</span>, path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">store_dir</span>, <span class="st">"tumor.mif"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -360,7 +369,7 @@ everything and reports the first file that no longer matches.</p>
 <p>It returns <code>TRUE</code> invisibly and errors otherwise, so it is
 safe to put at the top of a script — wrap it in <code><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE()</a></code> if
 you want to see the answer.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="../reference/verify_mif.html">verify_mif</a></span><span class="op">(</span><span class="va">xd</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="../reference/verify_mif.html">verify_mif</a></span><span class="op">(</span><span class="va">ref</span><span class="op">)</span><span class="op">)</span></span>
@@ -376,7 +385,7 @@ not have to branch on the representation to call it.</p>
 <p><code><a href="../reference/split_tissue.html">split_tissue()</a></code> writes three per-cell columns, and on a
 store those go to a per-sample <em>overlay</em> file rather than into
 the base parquet.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/split_tissue.html">split_tissue</a></span><span class="op">(</span><span class="va">xd</span>, classifier <span class="op">=</span> <span class="st">"Classifier.Label"</span>,</span>
 <span>                   class1 <span class="op">=</span> <span class="st">"Tumor"</span>, class2 <span class="op">=</span> <span class="st">"Stroma"</span>,</span>
 <span>                   sigma <span class="op">=</span> <span class="fl">40</span>, interface_width <span class="op">=</span> <span class="fl">100</span>, workers <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
@@ -415,7 +424,7 @@ only if you compare with <code><a href="https://rdrr.io/r/base/identical.html" c
 them yourself.</p>
 <p>A few column types are refused outright rather than stored badly, and
 the check runs before anything is written:</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bad</span> <span class="op">&lt;-</span> <span class="va">example_spatial</span><span class="op">[[</span><span class="st">"TMA3_[9,K].tif"</span><span class="op">]</span><span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, <span class="op">]</span></span>
 <span><span class="va">bad</span><span class="op">$</span><span class="va">notes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/raw.html" class="external-link">as.raw</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span>
 <span></span>
@@ -436,7 +445,7 @@ that, drop it before writing or keep the <code>mif</code> in memory.</p>
 look like they should work on a named list will not, because underneath
 the slot is a vector of file paths and assigning to it would quietly
 destroy the index:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Error: A disk-backed spatial slot is read-only.</span></span>
 <span><span class="co">#&gt;   Use `collect_mif(mif)` to bring it into memory first, or `split_tissue()` to add per-cell columns through the overlay.</span></span></code></pre></div>
@@ -454,7 +463,7 @@ which is about the worst failure mode available. Reading parquet in a
 child is fine; it is only the resize that hangs.</p>
 <p>If you need to limit arrow’s threads, set the count in the parent
 before calling a metric and the workers will inherit it safely.</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/cpu_count.html" class="external-link">set_cpu_count</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span>        <span class="co"># in the parent, before the metric</span></span>
 <span><span class="va">xd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span><span class="va">xd</span>, mnames <span class="op">=</span> <span class="va">mnames</span>, r_range <span class="op">=</span> <span class="fl">0</span><span class="op">:</span><span class="fl">100</span>, workers <span class="op">=</span> <span class="fl">6</span><span class="op">)</span></span></code></pre></div>
 </div>
