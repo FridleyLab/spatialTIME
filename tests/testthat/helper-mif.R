@@ -97,6 +97,71 @@ corner_marker_mif <- function(seed = 6, n = 3000) {
   )
 }
 
+#' A sample carrying a clustered marker AND an inhibited one
+#'
+#' Every other fixture in this file is either random-labelled or clustered, so the
+#' suite could only ever detect clustering. A measure that reported the right
+#' magnitude with a flipped sign, or that clamped at zero, would pass everything.
+#' This fixture makes the two-sided check possible.
+#'
+#' `clustered` takes the `m` cells nearest a focal point, so its K is far above
+#' CSR. `inhibited` is a greedy hard-core thinning -- cells accepted only if no
+#' already-accepted cell lies within `hardcore` units -- so its K is far below CSR
+#' at every radius up to roughly the hard-core distance. `labelled` is a genuine
+#' random labelling of the same size, i.e. the null is true for it by construction,
+#' which is what the p-value calibration test needs.
+#'
+#' Coordinates are continuous rather than on a grid: tied pair distances make the
+#' permutation distribution degenerate at small radii (many relabellings give the
+#' identical statistic), which silently weakens any test of the permuted null.
+#'
+#' @param n total cells. @param m cells in each marker.
+#' @param hardcore minimum separation enforced for `inhibited`.
+#' @param seed deterministic, so a failure is reproducible.
+dispersion_mif <- function(n = 600, m = 120, hardcore = 40, seed = 17) {
+  set.seed(seed)
+  x <- runif(n, 0, 500); y <- runif(n, 0, 500)
+
+  # Clustered: the m cells closest to one focal point.
+  d_focal <- (x - 250)^2 + (y - 250)^2
+  clustered <- logical(n); clustered[order(d_focal)[seq_len(m)]] <- TRUE
+
+  # Inhibited: greedy hard core. Walk the cells in a fixed random order and keep
+  # one only if it is at least `hardcore` from everything kept so far.
+  ord <- sample.int(n)
+  kept <- integer(0)
+  for (i in ord) {
+    if (!length(kept) || min((x[kept] - x[i])^2 + (y[kept] - y[i])^2) >= hardcore^2) {
+      kept <- c(kept, i)
+      if (length(kept) == m) break
+    }
+  }
+  inhibited <- logical(n); inhibited[kept] <- TRUE
+
+  labelled <- logical(n); labelled[sample.int(n, m)] <- TRUE
+
+  spat <- data.frame(
+    deidentified_sample = "S1",
+    XMin = x, XMax = x, YMin = y, YMax = y,
+    clustered = as.integer(clustered),
+    inhibited = as.integer(inhibited),
+    labelled  = as.integer(labelled),
+    stringsAsFactors = FALSE
+  )
+  list(
+    spat = spat,
+    n_kept = length(kept),   # may be < m if the hard core cannot be packed
+    mif = create_mif(
+      clinical_data = data.frame(deidentified_id = "p1", stringsAsFactors = FALSE),
+      sample_data   = data.frame(deidentified_id = "p1", deidentified_sample = "S1",
+                                 stringsAsFactors = FALSE),
+      spatial_list  = list(S1 = spat),
+      patient_id = "deidentified_id",
+      sample_id  = "deidentified_sample"
+    )
+  )
+}
+
 #' Hand-built spatial data with full control over counts and levels
 #'
 #' For the cases the shipped data cannot express: a classifier level missing from
