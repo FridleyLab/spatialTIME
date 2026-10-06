@@ -98,8 +98,20 @@ names(xd$spatial)
 dim(xd$spatial[["TMA3_[9,K].tif"]])
 ```
 
-That last line reads one file off disk. Iteration works too, so code written against
-an in-memory `mif` does not need rewriting:
+That last line reads one file off disk. So does `$`, which is the convenient way to
+pull one sample up at the console:
+
+```{r, dollar}
+dim(xd$spatial$`TMA3_[9,K].tif`)
+```
+
+Tab completion works on both, and neither form reads more than it has to.
+`xd$spatial$`<kbd>Tab</kbd> offers the sample names and reads nothing at all — they
+come from the index. `xd$spatial[["TMA3_[9,K].tif"]]$`<kbd>Tab</kbd> offers that
+sample's columns, having read that one sample.
+
+Iteration works too, so code written against an in-memory `mif` does not need
+rewriting:
 
 ```{r, iterate}
 sapply(xd$spatial, nrow)

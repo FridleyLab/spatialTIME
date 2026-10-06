@@ -484,6 +484,34 @@ c.mif_store <- function(...) {
 #' @export
 `$.mif_store` <- function(x, name) store_read_sample(x, name)
 
+# Tab completion for `mif$spatial$`. Without this it offers nothing at all:
+# utils:::.DollarNames.default short-circuits on `if (is.atomic(x) || is.symbol(x))
+# character()`, and a store is an atomic character vector underneath. Costs no file
+# access -- sample names come from names(), which the index already holds -- so
+# completing on a 283-slide store is as cheap as on one core.
+#
+# Prefix matching with startsWith() rather than the grep() the default would use,
+# because these names are image tags: `TMA3_[9,K].tif`,
+# `Peres_P3_110212 A3_Scan1.unmixed.qptiff`. A partially typed one is not a valid
+# regular expression -- grep("TMA3_[", ...) is an error, not a non-match -- so regex
+# matching would turn completion into a thrown condition partway through typing a
+# perfectly ordinary sample name.
+#
+# The @importFrom is load-bearing, and `utils::` prefixing is not a substitute for
+# it. Registering an S3 method needs the GENERIC present in this namespace --
+# S3method(.DollarNames, mif_store) is resolved at load time -- so without the
+# import the package does not load at all: "object '.DollarNames' not found whilst
+# loading namespace 'spatialTIME'". devtools::load_all() does not catch this,
+# because it registers methods more permissively than a real namespace load; only
+# R CMD check does.
+#' @importFrom utils .DollarNames
+#' @export
+.DollarNames.mif_store <- function(x, pattern = "") {
+  nms <- names(x)
+  if (!length(pattern) || !nzchar(pattern)) return(nms)
+  nms[startsWith(nms, pattern)]
+}
+
 store_readonly_msg <- function() {
   paste0("A disk-backed spatial slot is read-only.\n",
          "  Use `collect_mif(mif)` to bring it into memory first, or `split_tissue()` ",

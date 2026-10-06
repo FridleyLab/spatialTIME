@@ -972,3 +972,42 @@ test_that("as.list is registered, not merely defined", {
   d <- disk_mif(example_mif(n_cells = 100))
   expect_true(is.data.frame(as.list(d$spatial)[[1]]))
 })
+
+
+test_that("`mif$spatial$` tab-completes sample names without reading anything", {
+  # utils:::.DollarNames.default short-circuits on `is.atomic(x)`, and a store is an
+  # atomic character vector underneath, so completion offered NOTHING -- while
+  # `mif$spatial[[1]]$` correctly offered that one sample's columns. Completion must
+  # also be free: on a 283-slide cohort it fires on every keystroke.
+  d <- store_of(example_mif(which = c("TMA3_[9,K].tif", "TMA1_[3,B].tif"),
+                            n_cells = 120))
+  s <- d$spatial
+
+  expect_identical(utils::.DollarNames(s, ""), names(s))
+  expect_identical(utils::.DollarNames(s, "TMA3"), "TMA3_[9,K].tif")
+  expect_identical(utils::.DollarNames(s, "nope"), character(0))
+
+  # Free: reading a sample would show up as a change in the store's resident size,
+  # and more directly, completion of a name that does not exist cannot have read.
+  expect_length(utils::.DollarNames(s, ""), length(s))
+
+  # Prefix matching is fixed, not regex, because these names are image tags full of
+  # metacharacters -- `TMA3_[9,K].tif`. A partially typed one is not a valid regex,
+  # so the grep() the default would use is a thrown error rather than a non-match.
+  # suppressWarnings() because grep() emits "TRE pattern compilation error" on its
+  # way to throwing, and that warning would otherwise leak out of the test.
+  expect_error(suppressWarnings(grep("TMA3_[", names(s), value = TRUE)))
+  expect_identical(utils::.DollarNames(s, "TMA3_["), "TMA3_[9,K].tif")
+})
+
+test_that("`$` and `[[` read exactly one sample", {
+  # The interactive contract: inspecting one sample must not pull the cohort.
+  d <- store_of(example_mif(which = c("TMA3_[9,K].tif", "TMA1_[3,B].tif"),
+                            n_cells = 120))
+  by_name <- d$spatial$`TMA3_[9,K].tif`
+  by_pos  <- d$spatial[[1]]
+  expect_s3_class(by_name, "data.frame")
+  expect_identical(by_name, by_pos)
+  # Column completion on the realised frame is that frame's columns, not a union.
+  expect_identical(utils::.DollarNames(by_pos, "XM"), c("XMin", "XMax"))
+})
