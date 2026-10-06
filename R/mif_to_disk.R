@@ -69,6 +69,25 @@
 #' and `NA`s -- round-trip exactly, so `collect_mif(mif_to_disk(x, p))` returns the
 #' spatial data `x` had.
 #'
+#' The spatial slot is iterable, so `sapply(mif$spatial, nrow)` and
+#' `lapply(mif$spatial, ...)` work the same way they do on an in-memory `mif`. **But
+#' iterating reads every sample**, because `lapply()` materialises its input before
+#' applying anything, so peak memory becomes the whole cohort — the cost
+#' disk-backing exists to avoid. On a cohort that does not fit, iterate over names
+#' instead and only one sample is resident at a time:
+#'
+#' \preformatted{
+#' # reads everything at once
+#' sapply(mif$spatial, nrow)
+#'
+#' # reads one sample at a time
+#' vapply(names(mif$spatial), function(s) nrow(mif$spatial[[s]]), numeric(1))
+#' }
+#'
+#' Writing to the slot is refused outright — `mif$spatial[[i]] <- x` and
+#' `length(mif$spatial) <- n` error rather than destroying the index. Use
+#' [collect_mif()] to bring the data into memory if you need to modify it.
+#'
 #' **Row names are not preserved**; they come back as `1:nrow`. A columnar file has
 #' nowhere to put them, and storing them would mean an extra column per sample for
 #' something no function in this package reads -- every metric indexes cells by

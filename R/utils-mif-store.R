@@ -380,6 +380,51 @@ store_read_sample <- function(x, i, columns = NULL) {
 }
 
 
+# Make the slot iterable, which it looks like it already is.
+#
+# `lapply()`, `sapply()`, `vapply()`, `Map()` and `purrr::map()` all begin by
+# calling as.list() on anything that is not already a list. Without a method here
+# that returned the underlying character vector of FILE PATHS, so
+# `sapply(mif$spatial, nrow)` gave a list of NULLs on a disk-backed mif and the row
+# counts on an in-memory one -- silently, with no error, which is the worst
+# available outcome and the one failure class this store is otherwise careful to
+# avoid. The same trap is recorded for `colnames()` in the comment on
+# mif_spatial_colnames() below; the package works around it internally by iterating
+# `seq_along(mif$spatial)` and going through mif_spatial(), but user code reasonably
+# expects a named list of data frames to behave like one.
+#
+# The hook is the `is.object()` clause in base lapply():
+#
+#   if (!is.vector(X) || is.object(X)) X <- as.list(X)
+#
+# A classed object always takes that branch, so defining as.list() here is enough to
+# make every *apply function work. The method has to be REGISTERED, not merely
+# defined -- an `@export` tag that has not been through document() leaves no
+# S3method() line in NAMESPACE, dispatch silently falls through to as.list.default,
+# and the paths come back again looking exactly like the original bug.
+#
+# THIS READS EVERY SAMPLE. There is no way around that: lapply() materialises
+# as.list()'s result before applying anything, so the elements cannot be read one at
+# a time and released. Promises do not help -- they cache on forcing, and a list
+# cannot hold them anyway. Peak memory is therefore the whole cohort, which is the
+# thing disk-backing exists to avoid. For a cohort that does not fit, iterate over
+# names and stay bounded to one sample:
+#
+#   for (s in names(mif$spatial)) {
+#     spat <- mif$spatial[[s]]      # one sample, released next iteration
+#     ...
+#   }
+#
+# or use vapply() over names() rather than over the slot. Both are noted in
+# ?mif_to_disk and in the disk-backed vignette.
+#' @export
+as.list.mif_store <- function(x, ...) {
+  out <- lapply(seq_along(x), function(i) store_read_sample(x, i))
+  names(out) <- names(x)
+  out
+}
+
+
 # Concatenate stores. merge_mifs() merges spatial slots with do.call(c, .), so two
 # disk-backed mifs need this. Mixing a disk-backed and an in-memory mif is refused
 # there rather than here, where there is no room for a message naming which mif was

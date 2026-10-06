@@ -45,6 +45,23 @@ sample it is handling. **Peak memory stops scaling with the number of samples.**
 * `length()`, `names()` and `mif$spatial[[i]]` work exactly as before, so code that
   indexes the slot directly — including this package's vignettes and its reverse
   dependencies — works unchanged against a disk-backed `mif`.
+* **The slot is iterable.** `sapply(mif$spatial, nrow)`, `lapply(mif$spatial, ...)`,
+  `vapply()`, `Map()` and `purrr::map()` all behave as they do on an in-memory
+  `mif`. This needed an `as.list()` method: every `*apply` function begins with
+  `if (!is.vector(X) || is.object(X)) X <- as.list(X)`, and without one that
+  returned the store's underlying character vector of **file paths** — so
+  `nrow("spatial/S1.parquet")` was `NULL` and `sapply(mif$spatial, nrow)` gave a
+  list of `NULL`s for every sample, silently, where the same call on an in-memory
+  `mif` gave the counts.
+
+  Iterating **reads every sample**, though, because `lapply()` materialises its
+  input before applying anything — peak memory becomes the whole cohort, which is
+  the cost disk-backing exists to avoid. Iterate over names and only one sample is
+  resident at a time:
+
+  ```r
+  vapply(names(mif$spatial), function(s) nrow(mif$spatial[[s]]), numeric(1))
+  ```
 * Row names are **not** preserved by a round trip; they come back as `1:nrow`. A
   columnar file has nowhere to put them and no function here reads them. See
   `?mif_to_disk`.

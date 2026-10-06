@@ -916,3 +916,59 @@ test_that("a one-row sample round-trips", {
   expect_identical(reset_rn(collect_mif(d)$spatial[[1]]), reset_rn(s))
   expect_output(print(d$spatial), "1 samples")
 })
+
+
+test_that("the spatial slot is iterable, and iteration reads the samples", {
+  # `sapply(mif$spatial, nrow)` used to return the row counts on an in-memory mif
+  # and a list of NULLs on a disk-backed one, silently: every *apply function begins
+  # with `if (!is.vector(X) || is.object(X)) X <- as.list(X)`, and without an
+  # as.list() method that handed back the underlying character vector of FILE PATHS.
+  # nrow("spatial/S1.parquet") is NULL, so the answer looked plausible and was wrong
+  # for every sample. Found while writing the disk-backed vignette.
+  m <- example_mif(which = c("TMA3_[9,K].tif", "TMA1_[3,B].tif"), n_cells = 150)
+  d <- disk_mif(m)
+
+  # The headline case.
+  expect_identical(sapply(d$spatial, nrow), sapply(m$spatial, nrow))
+  expect_type(sapply(d$spatial, nrow), "integer")
+
+  # And the rest of the *apply family, which all route through the same hook.
+  expect_identical(lapply(d$spatial, dim), lapply(m$spatial, dim))
+  expect_identical(vapply(d$spatial, nrow, numeric(1)),
+                   vapply(m$spatial, nrow, numeric(1)))
+  expect_identical(unlist(Map(nrow, d$spatial)), unlist(Map(nrow, m$spatial)))
+
+  # Elements are data frames, not paths.
+  expect_true(all(vapply(d$spatial, is.data.frame, logical(1))))
+  expect_identical(unique(unlist(lapply(d$spatial, class))), "data.frame")
+
+  # as.list() is the method doing the work; it must agree with collect_mif(), which
+  # is the other way of materialising the same thing.
+  expect_equal(as.list(d$spatial), collect_mif(d)$spatial)
+  expect_identical(names(as.list(d$spatial)), names(m$spatial))
+
+  # Iterating must not consume or alter the store.
+  expect_s3_class(d$spatial, "mif_store")
+  expect_length(d$spatial, 2L)
+  expect_identical(sapply(d$spatial, nrow), sapply(d$spatial, nrow))
+})
+
+test_that("the bounded idiom over names() is still available", {
+  # as.list() reads the whole cohort, which on a store that exists because the cohort
+  # does not fit is the wrong thing to do. Iterating names keeps one sample resident,
+  # and is what ?mif_to_disk and the vignette point users at.
+  m <- example_mif(which = c("TMA3_[9,K].tif", "TMA1_[3,B].tif"), n_cells = 150)
+  d <- disk_mif(m)
+  expect_identical(
+    vapply(names(d$spatial), function(s) nrow(d$spatial[[s]]), numeric(1)),
+    vapply(names(m$spatial), function(s) nrow(m$spatial[[s]]), numeric(1)))
+})
+
+test_that("as.list is registered, not merely defined", {
+  # The failure mode this guards is specific: an `@export` tag that has not been
+  # through document() leaves the function callable by name but absent from
+  # NAMESPACE, so dispatch falls through to as.list.default and the paths come back.
+  # getS3method() finds it either way, so that is not the check -- dispatch is.
+  d <- disk_mif(example_mif(n_cells = 100))
+  expect_true(is.data.frame(as.list(d$spatial)[[1]]))
+})

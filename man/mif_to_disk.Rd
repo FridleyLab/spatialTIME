@@ -55,6 +55,25 @@ Column names, column order, types and factor levels -- including unused levels
 and \code{NA}s -- round-trip exactly, so \code{collect_mif(mif_to_disk(x, p))} returns the
 spatial data \code{x} had.
 
+The spatial slot is iterable, so \code{sapply(mif$spatial, nrow)} and
+\code{lapply(mif$spatial, ...)} work the same way they do on an in-memory \code{mif}. \strong{But
+iterating reads every sample}, because \code{lapply()} materialises its input before
+applying anything, so peak memory becomes the whole cohort — the cost
+disk-backing exists to avoid. On a cohort that does not fit, iterate over names
+instead and only one sample is resident at a time:
+
+\preformatted{
+# reads everything at once
+sapply(mif$spatial, nrow)
+
+# reads one sample at a time
+vapply(names(mif$spatial), function(s) nrow(mif$spatial[[s]]), numeric(1))
+}
+
+Writing to the slot is refused outright — \code{mif$spatial[[i]] <- x} and
+\code{length(mif$spatial) <- n} error rather than destroying the index. Use
+\code{\link[=collect_mif]{collect_mif()}} to bring the data into memory if you need to modify it.
+
 \strong{Row names are not preserved}; they come back as \code{1:nrow}. A columnar file has
 nowhere to put them, and storing them would mean an extra column per sample for
 something no function in this package reads -- every metric indexes cells by

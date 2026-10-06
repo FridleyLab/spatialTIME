@@ -98,7 +98,26 @@ names(xd$spatial)
 dim(xd$spatial[["TMA3_[9,K].tif"]])
 ```
 
-That last line reads one file off disk. The slot itself is an index:
+That last line reads one file off disk. Iteration works too, so code written against
+an in-memory `mif` does not need rewriting:
+
+```{r, iterate}
+sapply(xd$spatial, nrow)
+```
+
+There is a catch worth knowing before you use that on a real cohort. `lapply()` and
+everything built on it materialise their input before applying anything, so
+iterating the slot reads **every** sample — which is the cost disk-backing exists to
+avoid. Iterating over `names()` instead keeps one sample resident at a time:
+
+```{r, iterate-bounded}
+vapply(names(xd$spatial), function(s) nrow(xd$spatial[[s]]), numeric(1))
+```
+
+Both give the same answer here, on five cores. On 283 slides the first reads 34 GB
+and the second reads one slide at a time.
+
+The slot itself is an index:
 
 ```{r, index}
 xd$spatial
@@ -243,8 +262,10 @@ refuses on a reference-mode `mif` and tells you to make a store first.
 sub <- subset_mif(xd, classifier = "Classifier.Label", level = "Tumor",
                   markers = mnames, path = file.path(store_dir, "tumor.mif"))
 
-sapply(sub$spatial, nrow)
-sapply(xd$spatial, nrow)
+cells <- function(m) vapply(names(m$spatial),
+                            function(s) nrow(m$spatial[[s]]), numeric(1))
+
+data.frame(all = cells(xd), tumor_only = cells(sub))
 ```
 
 It writes sample by sample and releases each one, so peak memory stays at a single
