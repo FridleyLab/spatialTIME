@@ -192,7 +192,7 @@ check_storable_columns <- function(spat, sample) {
   kind <- vapply(spat[bad], function(col) {
     if (is.raw(col)) "raw" else if (is.complex(col)) "complex" else "list"
   }, character(1))
-  stop("Sample \"", sample, "\" has column", if (length(bad) > 1) "s" else "",
+  stop("Sample \"", sample, "\" has ", if (length(bad) > 1) "columns" else "a column",
        " that cannot be stored on disk: ",
        paste0("\"", bad, "\" (", kind, ")", collapse = ", "), ".\n",
        "  Parquet would not return ", if (length(bad) > 1) "them" else "it",

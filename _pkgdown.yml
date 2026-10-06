@@ -3,6 +3,15 @@ url: https://fridleylab.github.io/spatialTIME/
 template:
   bootstrap: 5
 
+articles:
+- title: Articles
+  navbar: ~
+  contents:
+  - intro
+  - disk_backed_mifs
+  - spatialexperiment
+  - deriving_functions
+
 reference:
 - title: Nearest Neighbor G
   desc: Univariate and Bivariate Nearest Neighbor G(r) functions

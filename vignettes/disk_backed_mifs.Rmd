@@ -1,0 +1,358 @@
+---
+title: "Working with disk-backed mif objects"
+output: rmarkdown::html_vignette
+vignette: >
+  %\VignetteIndexEntry{Working with disk-backed mif objects}
+  %\VignetteEngine{knitr::rmarkdown}
+  %\VignetteEncoding{UTF-8}
+---
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+
+set.seed(126)
+library(spatialTIME)
+library(dplyr)
+
+# Everything below writes into a temporary directory that is removed when the
+# vignette finishes. In real use you would point these at a project directory.
+store_dir <- file.path(tempdir(), "spatialTIME-vignette")
+dir.create(store_dir, showWarnings = FALSE, recursive = TRUE)
+```
+
+# When the spatial data stops fitting
+
+The `mif` object described in the [introduction](intro.html) holds every sample's
+spatial data in memory, as a list of data frames. For TMA cores that is the right
+thing to do. A core is a couple of thousand cells, the five cores shipped with this
+package come to 12,782 cells in total, and the whole object is a few megabytes.
+
+Whole slide images are a different problem. A single slide can be a million cells,
+and a cohort of them does not fit. The numbers from the cohort this feature was
+built for: 283 slides, 342,267,952 cells, 21 columns per cell. As R data frames that
+is **34.2 GB**. On a 38.7 GB machine the `mif` is 89% of memory before any
+computation starts, which means `ripleys_k(workers = 12)` cannot fork a single
+worker — the run fails before it does any work.
+
+The thing that makes this fixable is that the metrics do not need most of the data
+most of the time. `ripleys_k()` reads a sample id, four bounding-box columns and
+however many marker columns you asked for. On a 21-column HALO export that is 4
+columns of 21, and on a real export with 51 columns it is worse. The other 17 are
+carried in memory, in the parent process, for the entire run, and never read.
+
+So the spatial slot can be a manifest of files instead of a list of data frames.
+Each worker then reads only the columns it needs, for the one sample it is handling,
+and the parent holds an index rather than a cohort. On those 283 slides the same
+data is **2.19 GB** of parquet against 34.2 GB in memory.
+
+## This is not a speed-up
+
+Worth saying plainly, because it is easy to assume otherwise. Disk-backing does not
+make the metrics faster, and on a single small sample it is slightly slower — there
+is a file read that was not there before.
+
+What it changes is *which* memory cost you pay. For Ripley's K the per-worker close
+pair list from the engine overtakes the spatial frame at around `max(r_range) = 30`,
+and at the default `r_range = seq(0, 100, 1)` it is roughly twelve times the frame.
+The frame is not what makes a large run fail. The parent's copy of the whole cohort
+is, and that is a fixed cost you cannot trade against `workers`. Disk-backing
+removes it; `big` is the argument for bounding the pair list.
+
+If your data fits in memory, keep it in memory.
+
+# Writing and reading a store
+
+`mif_to_disk()` takes an ordinary `mif` and a directory to write it to, and returns
+a `mif` that reads from that directory.
+
+```{r, write}
+x <- create_mif(clinical_data = example_clinical %>%
+                  mutate(deidentified_id = as.character(deidentified_id)),
+                sample_data = example_summary %>%
+                  mutate(deidentified_id = as.character(deidentified_id)),
+                spatial_list = example_spatial,
+                patient_id = "deidentified_id",
+                sample_id = "deidentified_sample")
+
+store <- file.path(store_dir, "cohort.mif")
+xd <- mif_to_disk(x, store)
+
+xd
+```
+
+`path` has no default. A store can be tens of gigabytes, so it is always written
+where you say it should be and never somewhere chosen for you — the same reasoning
+as `sigma` in `split_tissue()`.
+
+The result is still a `mif`, with the same six slots, and the spatial slot still
+answers to `length()`, `names()` and `[[`:
+
+```{r, slots}
+class(xd)
+names(xd)
+length(xd$spatial)
+names(xd$spatial)
+dim(xd$spatial[["TMA3_[9,K].tif"]])
+```
+
+That last line reads one file off disk. The slot itself is an index:
+
+```{r, index}
+xd$spatial
+format(object.size(xd$spatial), units = "KB")
+format(object.size(x$spatial), units = "MB")
+```
+
+The store is a plain directory you can inspect, copy, archive and move:
+
+```{r, layout}
+list.files(store, recursive = FALSE)
+list.files(file.path(store, "spatial"))
+```
+
+`manifest.json` records the format version, the id columns, and each sample's file,
+row count, byte size and column schema. Paths inside it are relative, so moving or
+copying the whole directory does not break it.
+
+`open_mif()` reads one back:
+
+```{r, reopen}
+y <- open_mif(store)
+identical(names(y$spatial), names(xd$spatial))
+```
+
+Opening validates before returning. Every file is re-probed and compared against
+the manifest — existence, byte size, row count and column names — so a truncated,
+half-written or partially copied store fails immediately, with a message naming the
+sample, rather than somewhere in the middle of a long computation. It costs about a
+millisecond per sample, because a parquet footer read does not touch the data.
+
+`collect_mif()` is the inverse of `mif_to_disk()`, named after `dplyr::collect()`
+for the same reason: it is where lazily-referenced data gets materialised.
+
+```{r, collect}
+back <- collect_mif(xd)
+class(back$spatial)
+all.equal(back$spatial, x$spatial, check.attributes = FALSE)
+```
+
+On a cohort that does not fit in memory, collecting all of it defeats the point.
+`samples` takes a subset, which is how you pull a few samples out to look at them:
+
+```{r, collect-subset}
+two <- collect_mif(xd, samples = c("TMA3_[9,K].tif", "TMA1_[3,B].tif"))
+names(two$spatial)
+sapply(two$spatial, nrow)
+```
+
+# Running the metrics
+
+Nothing changes. Every function in the package takes a disk-backed `mif` the same
+way it takes an in-memory one.
+
+```{r, metrics}
+mnames <- c("CD3..Opal.570..Positive", "CD8..Opal.520..Positive")
+
+xd <- ripleys_k(mif = xd, mnames = mnames, r_range = seq(0, 100, 10),
+                edge_correction = "translation", permute = FALSE,
+                workers = 1, overwrite = TRUE)
+
+head(xd$derived$univariate_Count[, c("deidentified_sample", "Marker", "r",
+                                     "Observed K", "Exact CSR")])
+```
+
+The results are the same numbers. Not approximately — the same:
+
+```{r, parity}
+x <- ripleys_k(mif = x, mnames = mnames, r_range = seq(0, 100, 10),
+               edge_correction = "translation", permute = FALSE,
+               workers = 1, overwrite = TRUE)
+
+all.equal(xd$derived$univariate_Count, x$derived$univariate_Count)
+```
+
+That is a tested contract rather than an aspiration. The in-memory path ignores the
+column projection entirely, which means a projection that forgot a column a metric
+actually uses would fail only on the disk path — so the package carries a parity
+test comparing the two for every metric, at one and two workers, with and without
+permutation.
+
+Permuted results match too. Seeds are drawn once in the parent process and handed
+to the workers, so a run depends only on your `set.seed()` and not on `workers`:
+
+```{r, perm-parity}
+set.seed(42)
+a <- ripleys_k(xd, mnames = mnames[1], r_range = seq(0, 50, 10), permute = TRUE,
+               num_permutations = 10, workers = 1, overwrite = TRUE)
+set.seed(42)
+b <- ripleys_k(x, mnames = mnames[1], r_range = seq(0, 50, 10), permute = TRUE,
+               num_permutations = 10, workers = 1, overwrite = TRUE)
+
+all.equal(a$derived$univariate_Count, b$derived$univariate_Count)
+```
+
+Derived results are written back to the store as they are computed, so they survive
+a reopen:
+
+```{r, derived-persist}
+z <- open_mif(store)
+names(z$derived)
+identical(z$derived$univariate_Count, xd$derived$univariate_Count)
+```
+
+# Pointing at files you already have
+
+If your data is already parquet, `create_mif()` accepts a named character vector of
+file paths instead of a list of data frames. Nothing is copied.
+
+```{r, reference}
+files <- list.files(file.path(store, "spatial"), full.names = TRUE)
+names(files) <- names(xd$spatial)
+
+ref <- create_mif(clinical_data = example_clinical %>%
+                    mutate(deidentified_id = as.character(deidentified_id)),
+                  sample_data = example_summary %>%
+                    mutate(deidentified_id = as.character(deidentified_id)),
+                  spatial_list = files,
+                  patient_id = "deidentified_id",
+                  sample_id = "deidentified_sample")
+
+ref$spatial
+```
+
+This is *reference mode*, and the print-out says so: there is no store root, because
+the files are yours and live wherever you put them. Each file must hold exactly one
+sample — every metric uses the convex hull of all of a file's cells as the
+observation window, so a file with two samples in it would give both the wrong
+window. If the vector is unnamed, the names are read from the `sample_id` column and
+a file holding more than one distinct value is rejected.
+
+The trade-off is that nothing may write to those files. A function that adds a
+per-cell column has no business modifying your primary data, so `split_tissue()`
+refuses on a reference-mode `mif` and tells you to make a store first.
+
+# Subsetting
+
+`subset_mif()` needs somewhere to put the result, for the same reason
+`mif_to_disk()` does: the subset of a cohort too large for memory usually is too.
+
+```{r, subset}
+sub <- subset_mif(xd, classifier = "Classifier.Label", level = "Tumor",
+                  markers = mnames, path = file.path(store_dir, "tumor.mif"))
+
+sapply(sub$spatial, nrow)
+sapply(xd$spatial, nrow)
+```
+
+It writes sample by sample and releases each one, so peak memory stays at a single
+sample regardless of cohort size.
+
+# Checking that the files are still what you think
+
+`open_mif()` validates at open time, but two situations are not covered by that. A
+reference-mode `mif` has no manifest, so there was never anything to validate. And
+a long session can hold a store open for hours while the files underneath it are
+replaced or regenerated.
+
+Both leave the recorded row count stale, and that matters more than it sounds: every
+mask in this package is positional, so a stale row count means markers attached to
+the wrong cells and plausible, wrong numbers rather than an error. `verify_mif()`
+re-probes everything and reports the first file that no longer matches.
+
+It returns `TRUE` invisibly and errors otherwise, so it is safe to put at the top of
+a script — wrap it in `isTRUE()` if you want to see the answer.
+
+```{r, verify}
+isTRUE(verify_mif(xd))
+isTRUE(verify_mif(ref))
+isTRUE(verify_mif(x))     # in-memory: nothing to check, passes trivially
+```
+
+That last line is the point of it passing trivially in memory: you do not have to
+branch on the representation to call it.
+
+# Adding columns
+
+`split_tissue()` writes three per-cell columns, and on a store those go to a
+per-sample *overlay* file rather than into the base parquet.
+
+```{r, split}
+xd <- split_tissue(xd, classifier = "Classifier.Label",
+                   class1 = "Tumor", class2 = "Stroma",
+                   sigma = 40, interface_width = 100, workers = 1)
+
+list.files(file.path(store, "overlay"))
+colnames(mif_spatial <- xd$spatial[["TMA3_[9,K].tif"]])[1:4]
+table(xd$spatial[["TMA3_[9,K].tif"]]$refined_density_compartment)
+```
+
+Appending columns by rewriting would touch all 2.19 GB of a cohort to add about 12
+MB of new data, so the base files are never rewritten. Reads cbind the overlay back
+on, and overlay columns shadow base columns of the same name, which is what lets a
+re-run with `overwrite = TRUE` replace its own columns instead of duplicating them.
+
+# What survives a round trip, and what does not
+
+Column names, column order, types, and factor levels — including unused levels and
+`NA`s — all round-trip exactly. That last one matters because `split_tissue()`
+writes two factor columns per cell.
+
+**Row names do not.** They come back as `1:nrow`. A columnar file has nowhere to put
+them, storing them would mean an extra column per sample for something no function
+here reads, and `dplyr` resets them anyway. Non-default row names only arise from
+having subset a data frame, so this is visible only if you compare with
+`identical()` after doing that. Use `all.equal(check.attributes = FALSE)`, as above,
+or reset them yourself.
+
+A few column types are refused outright rather than stored badly, and the check runs
+before anything is written:
+
+```{r, bad-column, error = TRUE}
+bad <- example_spatial[["TMA3_[9,K].tif"]][1:5, ]
+bad$notes <- as.raw(1:5)
+
+mif_to_disk(toy <- create_mif(
+  clinical_data = data.frame(deidentified_id = "p1"),
+  sample_data = data.frame(deidentified_id = "p1",
+                           deidentified_sample = "TMA3_[9,K].tif"),
+  spatial_list = list(`TMA3_[9,K].tif` = bad),
+  patient_id = "deidentified_id", sample_id = "deidentified_sample"),
+  file.path(store_dir, "will-not-exist.mif"))
+```
+
+`raw` is the one that justifies the check: parquet accepts it and hands back an
+`integer`, silently. List columns come back as something that is not what you put
+in. If you have a column like that, drop it before writing or keep the `mif` in
+memory.
+
+The spatial slot of a store is read-only. The assignment forms that look like they
+should work on a named list will not, because underneath the slot is a vector of
+file paths and assigning to it would quietly destroy the index:
+
+```{r, readonly, error = TRUE}
+xd$spatial[[1]] <- data.frame(a = 1)
+```
+
+Use `collect_mif()` to bring the data into memory if you need to modify it directly.
+
+# One thing to avoid
+
+Do not resize arrow's thread pool from inside a worker. `arrow::set_cpu_count()` or
+`set_io_thread_count()` called in an `mclapply()` child deadlocks — the run hangs at
+0% CPU with no error and no output, which is about the worst failure mode available.
+Reading parquet in a child is fine; it is only the resize that hangs.
+
+If you need to limit arrow's threads, set the count in the parent before calling a
+metric and the workers will inherit it safely.
+
+```{r, threads, eval = FALSE}
+arrow::set_cpu_count(2)        # in the parent, before the metric
+xd <- ripleys_k(xd, mnames = mnames, r_range = 0:100, workers = 6)
+```
+
+```{r, cleanup, include = FALSE}
+unlink(store_dir, recursive = TRUE)
+```

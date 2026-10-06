@@ -14,6 +14,7 @@
 ^plans$
 ^\.Rlib$
 ^\.conda.*$
+^vignettes/disk_backed_mifs\.Rmd$
 ^vignettes/deriving_functions\.Rmd$
 ^vignettes/spatialexperiment\.Rmd$
 ^SplittingTissue$
