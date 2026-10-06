@@ -1,17 +1,193 @@
 # Changelog
 
-## spatialTIME 2.1.0
+## spatialTIME 2.0.0
 
-### New features
+A cleanup and correctness release, plus two new capabilities. Roughly
+1,100 lines of unreachable code are gone, the count-based measures now
+agree with **spatstat** to floating-point precision on samples of any
+size, every metric returns the same columns, density-based tissue
+segmentation and disk-backed `mif` objects are new, and test coverage
+went from 4 assertions to 732.
+
+### New: disk-backed `mif` objects
+
+A `mif`’s spatial slot can now be a manifest of parquet files rather
+than a list of in-memory data frames, so each worker reads only the
+columns it needs for the one sample it is handling. **Peak memory stops
+scaling with the number of samples.**
+
+- **`mif_to_disk(mif, path)`** writes a self-describing store and
+  returns a disk-backed `mif`; **`open_mif(path)`** reopens one;
+  **`collect_mif(mif)`** loads it back into memory. `path` has **no
+  default** — a store can be tens of GB, so it is always written where
+  you say, following the same reasoning as `sigma` in
+  [`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md).
+- **`create_mif(spatial_list = <named character vector of parquet paths>)`**
+  points a `mif` at files you already have, with no copying. This was
+  previously an error (`spatial_list` had to be a list of data frames),
+  so no existing code changes.
+- Measured on 283 whole slide images, 342,267,952 cells, 21 columns:
+  **2.19 GB of parquet against 34.2 GB as R data frames** (100.0
+  bytes/row). On a 38.7 GB machine the in-memory `mif` is 89% of RAM
+  before a single worker forks, so `ripleys_k(workers = 12)` on that
+  cohort could not start at all. Reproduced on 60 of those slides
+  (60,823,803 cells, `workers = 6`, `r_range = seq(0, 30, 1)`): a **30
+  KB** index in place of a 6.08 GB spatial slot, and a **425 MB** peak
+  memory footprint. On a 5-slide subset, in-memory and disk-backed give
+  **the same `Observed K` to the last digit** in the same wall-clock
+  time, with peak footprint 900 MB against 300 MB (−67%).
+- **It is not a general speed-up.** For Ripley’s K the per-worker
+  close-pair list from `k_pairs()` overtakes the spatial frame at about
+  `max(r_range) = 30`, and at the default `r_range = seq(0, 100, 1)` it
+  is roughly 12x the frame (1.23 GB against 0.10 GB on a 1,000,977-cell
+  slide). What disk-backing removes is the parent process’s copy of the
+  whole cohort — a fixed cost you cannot trade against `workers`.
+  Bounding the pair list is what `big` is for.
+- [`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md)’s
+  three per-cell columns go to a per-sample **overlay** file; the base
+  parquet is never rewritten. In reference mode those files are your
+  primary data, so a function that adds a covariate must not modify them
+  — and
+  [`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md)
+  refuses rather than doing so.
+- [`subset_mif()`](https://fridleylab.github.io/spatialTIME/reference/subset_mif.md)
+  gains `path`, required on a disk-backed `mif`: the subset of a cohort
+  too large for memory generally is too, so it is written out sample by
+  sample.
+- [`length()`](https://rdrr.io/r/base/length.html),
+  [`names()`](https://rdrr.io/r/base/names.html) and `mif$spatial[[i]]`
+  work exactly as before, so code that indexes the slot directly —
+  including this package’s vignettes and its reverse dependencies —
+  works unchanged against a disk-backed `mif`.
+- Row names are **not** preserved by a round trip; they come back as
+  `1:nrow`. A columnar file has nowhere to put them and no function here
+  reads them. See
+  [`?mif_to_disk`](https://fridleylab.github.io/spatialTIME/reference/mif_to_disk.md).
+- **Never resize arrow’s thread pool inside a worker.**
+  [`arrow::set_cpu_count()`](https://arrow.apache.org/docs/r/reference/cpu_count.html)
+  / `set_io_thread_count()` called from an `mclapply()` child
+  **deadlocks** on arrow 25.0.1 / R 4.6.1 — the run hangs at 0% CPU with
+  no error, which is the worst failure mode available. Reading parquet
+  in a child is fine (verified on arrow 23.0.1.2 and 25.0.1); it is only
+  the resize that hangs. If you need to limit arrow’s threads, set the
+  count in the parent before calling a metric and the children will
+  inherit it safely. `tests/testthat/test-mif-store.R` guards this by
+  reading the package sources rather than by forking, because a test
+  that reproduced the bug would hang the suite instead of failing it.
+- **Reader note for anyone extending this:** the parquet backend uses
+  `arrow::read_parquet(file, col_select = ...)` and must keep doing so.
+  `arrow::open_dataset() |> collect()` **does not preserve row order** —
+  it matched file order in only 72 of the cohort’s 283 files, diverging
+  at multiples of arrow’s 2^15 read-batch size with an identical sorted
+  multiset. Every mask and write-back in this package is positional, so
+  a Dataset read would attach markers to the wrong cells and return
+  plausible, wrong numbers. `tests/testthat/test-mif-store.R` asserts
+  both halves of this.
+- **`arrow` and `jsonlite` are new hard dependencies (`Imports`), and
+  the R floor rises from `R (>= 4.1)` to `R (>= 4.2)`**, which CRAN
+  `arrow` requires. This is user-visible: an R 4.1 installation will no
+  longer take this package.
+
+#### Metric results are now persisted to the store
+
+Running a metric on a disk-backed mif used to leave its results in the
+calling session only.
+[`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md)
+was the only function that called `sync_manifest()`, so
+`ripleys_k(disk_mif)` returned a mif with a populated `derived` slot
+while `open_mif(root)` afterwards found an empty one — the work was
+silently gone, and nothing in the suite noticed because the tests
+computed *before* writing the store. `write_derived()` now syncs, for
+all seven metrics. It takes a `sync` argument for a caller who does not
+want a metric run to touch disk, and it is a no-op for in-memory mifs
+and for reference mode.
+
+#### The store now refuses what it used to accept and corrupt
+
+Each of these was verified as silently accepted before:
+
+- **A spatial frame with a `list`, `raw` or `complex` column** is
+  refused by
+  [`mif_to_disk()`](https://fridleylab.github.io/spatialTIME/reference/mif_to_disk.md),
+  before anything is written. `raw` was the dangerous one: arrow
+  accepted it and
+  [`collect_mif()`](https://fridleylab.github.io/spatialTIME/reference/collect_mif.md)
+  handed back an `integer`, with no warning anywhere. A list column
+  round-tripped as an `AsIs` column that was not
+  [`identical()`](https://rdrr.io/r/base/identical.html) to the input.
+  `complex` already failed, but with arrow’s “Cannot infer type from
+  vector”, naming neither the column nor the sample. `logical`,
+  `integer`, `double`, `character`, `Date`, `POSIXct` (including
+  `tzone`) and factors are all exact and now pinned by a test;
+  `integer64` is allowed but comes back as `integer` when every value
+  fits in 32 bits.
+- **An overlay file that disagrees with the manifest.** Base files were
+  checked for existence, size, row count and schema; overlays got
+  [`file.exists()`](https://rdrr.io/r/base/files.html) alone, so a
+  truncated or wrong-schema overlay opened cleanly and then failed deep
+  inside a read. Both now go through one `validate_store_file()`.
+- **A manifest whose `sample_id` is not a column of the data.** This
+  used to produce a mif where every metric failed inside
+  `add_cell_centres()`, far from the cause.
+- **A partially copied store.** A missing `clinical.rds`, `sample.rds`
+  or `derived/*.rds` gave a raw `gzfile` warning and “cannot open the
+  connection”. It now names the store and the missing file. Derived
+  slots are read from the manifest rather than from
+  [`list.files()`](https://rdrr.io/r/base/list.files.html), so a slot
+  the manifest promises and the directory lacks is an error instead of a
+  mif that quietly lost a metric table.
+- **Combining stores written in different on-disk formats.**
+  [`c()`](https://rdrr.io/r/base/c.html) took the first part’s format
+  unconditionally and the result claimed to be that.
+- **Writing to a store’s spatial slot.** A store is a named character
+  vector underneath, so `mif$spatial[1] <- list(df)` silently produced a
+  plain list and `length(mif$spatial) <- 0` a plain character vector —
+  every sample lost, no error. `[[<-`, `[<-`, `$<-` and `length<-` now
+  refuse, pointing at
+  [`collect_mif()`](https://fridleylab.github.io/spatialTIME/reference/collect_mif.md).
+  `$` *reads*, since the vignettes and reverse dependencies use
+  `mif$spatial$SampleName`.
+
+#### New: `verify_mif()`
+
+Re-probes every spatial file a mif points at and reports the first whose
+row count or columns no longer match.
+[`open_mif()`](https://fridleylab.github.io/spatialTIME/reference/open_mif.md)
+validates at open time, but two cases are not covered by it: a mif built
+with `create_mif(spatial_list = <parquet paths>)` references your files
+directly and has no manifest, and a long session holds a store open
+while the files underneath it can be replaced. Both leave the recorded
+row count stale, and because every mask is positional a stale count
+means markers attached to the wrong cells rather than an error.
+In-memory mifs pass trivially, so it is safe to call unconditionally.
+
+#### Also
+
+- `collect_mif(mif, samples = )` validates its subscript identically
+  whichever representation it is handed. The in-memory branch used plain
+  `list[samples]`, which returns a `NULL` element named `NA` for an
+  unknown name, so the same call errored on a disk-backed mif and
+  quietly returned a mif with a `NULL` sample in memory. Both now share
+  one implementation.
+- A **heterogeneous cohort** — samples that do not all have the same
+  columns — is now tested. `attr(spatial, "columns")` becomes a list in
+  that case and `store_columns()`, `store_types()`, `[` and
+  [`c()`](https://rdrr.io/r/base/c.html) all branch on it; only the
+  homogeneous case had coverage, so none of those branches were ever
+  exercised.
+
+### New: density-based tissue segmentation
 
 - **[`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md)**
   segments a sample into tissue compartments from the difference of two
   classes’ kernel density estimates (e.g. Tumor vs Stroma). Every cell
-  gains `density_compartment` (2 levels: `class1`/`class2`, by the sign
-  of `class1 - class2` density) and `refined_density_compartment` (3
-  levels: those two plus `"Interface"` for cells within
-  `interface_width / 2` of the boundary). `mif$sample` gains a
-  `Boundary Length` column.
+  gains `density_compartment` (2 levels, `class1`/`class2`, by the sign
+  of the `class1 - class2` density), `refined_density_compartment`
+  (those two plus `"Interface"` for cells within `interface_width / 2`
+  of the boundary) and `density_score`, the signed difference itself —
+  the field the two factors are derived from, kept because “how far into
+  this compartment” is more useful as a covariate than “which side”.
+  `mif$sample` gains a `Boundary Length` column.
   - `sigma` (the KDE bandwidth) has **no default** — units differ by
     imaging platform, so a silent default would make cores processed
     with different undocumented defaults incomparable.
@@ -23,77 +199,163 @@
   - Pixel resolution (`dimyx`) is not exposed either. It is derived as
     `sigma / 8`: contour *topology* is set by `sigma` at every
     resolution tested (9 pieces from `eps = sigma` down to
-    `eps = sigma/32` on a real core), and resolution only adds a bias in
-    boundary length that converges by `sigma/8` (−0.6%, vs −11.5% at
-    `eps = sigma`). There is nothing left for the user to tune, and
-    hiding it avoids non-square pixels on non-square windows (`dimyx`
-    gave 4x anisotropic pixels in testing).
+    `eps = sigma/32` on a real core, with `rescale = FALSE`), while
+    boundary length converges by `sigma/8` (−0.6% bias, against −11.5%
+    at `eps = sigma`). Hiding it also avoids the non-square pixels
+    `dimyx` gives on a non-square window (4x anisotropy in testing).
+  - `rescale` (default `TRUE`) rescales each class’s density image to
+    `[0, 1]` before differencing, so a sparse class is not swamped by an
+    abundant one. The cost: the boundary then sits where the *rescaled*
+    densities are equal, which depends on each sample’s own density
+    range, so `Boundary Length` is not an absolute criterion comparable
+    across a cohort. `rescale = FALSE` gives the absolute one — the
+    boundary where the intensities themselves are equal. On
+    `TMA3_[9,K].tif` at `sigma = 40`: 7 pieces / length 6723.8 rescaled,
+    9 / 6756.5 not.
+  - `min_density` (default off) drops pixels where both classes are near
+    zero. There the difference sits at the floating-point noise floor
+    and its sign is meaningless, so the contour fragments into noise. On
+    a whole slide with a large tissue hole, unmasked: 227 contour
+    pieces, with 74% of the boundary length lying in space containing
+    essentially no cells (median total density 1.46e-12 there against
+    1.24e-3 elsewhere). At `min_density = 0.05`: 23 pieces, and 5 of
+    1,000,977 cells changed compartment. Given as a fraction of the
+    sample’s own mean intensity, so the same value means the same thing
+    across samples and coordinate units, and insensitive — anything from
+    0.01 to 0.10 gave the same answer, because the gap it straddles is
+    orders of magnitude. Above roughly 0.2 it starts clipping real
+    boundary, so count how many labels move if you raise it.
+  - `filter_density`, through `...`, is an arbitrary `function(im) im`
+    applied to each class image, for anything the above does not cover.
+  - `min_density` and `filter_density` affect the **boundary geometry
+    only**. The per-cell sign and `density_score` always come from the
+    unmasked, unfiltered difference, so masking — even masking an entire
+    sample — cannot orphan a cell to `NA`.
+  - The field is read at each cell by **bilinear interpolation** between
+    the four surrounding pixel centres, with a nearest-valid-pixel
+    fallback for cells whose neighbourhood is incomplete (23–39 per
+    example core).
+    [`contourLines()`](https://rdrr.io/r/grDevices/contourLines.html)
+    places the boundary where the linearly interpolated field crosses
+    zero, so interpolating the same way makes `density_score` consistent
+    with the drawn polyline: evaluated at the polyline’s own vertices
+    the field is zero to machine precision (`<= 4.3e-15`), where
+    nearest-pixel lookup is off by up to 0.041, roughly 4% of the
+    rescaled field’s range. The gain is in the *score*, not in
+    relabelling — it shifts `density_score` by up to 0.3 for cells near
+    the boundary, but flips the 2-level compartment for only 6–12 cells
+    per example core, and since essentially all of those lie within half
+    a pixel of the contour (and so inside any sensible interface band)
+    the 3-level label changes for 0–1 cells per core. The fallback also
+    means a lookup never yields `NA`, so an `NA` compartment can only
+    mean an exactly-zero field.
+  - `hard_threshold` (default off) collapses the field to its sign
+    before contouring, for comparison with implementations that
+    threshold first. It cannot change the contour’s topology, since the
+    zero level set is invariant to any monotone transform, and
+    measurably does not: piece counts unchanged on all five example
+    cores and the line displaced by at most 0.7 of a pixel. What it does
+    do is force every crossing onto a pixel midpoint, inflating
+    `Boundary Length` by 5–6%.
   - `overwrite = FALSE` (the default) errors, naming every existing
     clash, rather than appending a new `Run` — a cell can carry only one
-    compartment label, so there is nowhere for a second run to go. Run
-    [`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md)
-    into two separate mifs to compare two settings.
-  - The density images and point patterns used to find the boundary are
-    discarded once the boundary and per-cell labels are derived, to
-    avoid inflating the mif. Only the boundary polyline
-    (`mif$derived$density_boundary`, a named list, one data frame per
-    sample) survives.
-  - `filter_density`, passed through `...`, is an optional
-    `function(im) im` applied to each class’s density image before
-    differencing, to keep near-zero-density tissue holes from inflating
-    or bouncing the boundary. It affects only the boundary geometry —
-    the sign that drives the two spatial columns always comes from the
-    *unfiltered* difference, so a filtered-out hole never leaves a cell
-    `NA`.
+    compartment label, so there is nowhere for a second run to go. Keep
+    two mifs to compare two settings.
+  - The density images and point patterns are discarded once the
+    boundary and per-cell labels are derived, to avoid inflating the
+    mif. Only the boundary polyline survives, in
+    `mif$derived$density_boundary` (a named list, one data frame per
+    sample), with the settings used attached as `"call_info"`.
+  - [`subset_mif()`](https://fridleylab.github.io/spatialTIME/reference/subset_mif.md)
+    rebuilds the mif from scratch and drops `derived` entirely, so the
+    boundary slot and `Boundary Length` do not survive it, even though
+    the three spatial columns ride along with the row filter. Split
+    *after* subsetting, not before.
 - **[`plot_tissue_split()`](https://fridleylab.github.io/spatialTIME/reference/plot_tissue_split.md)**
   recomputes the density difference on demand, at plot time, from the
   settings
   [`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md)
   recorded, and draws the *stored* boundary polyline (never a
-  recontoured one) over a raster of the density difference and a scatter
-  of the compartment label. Unlike
+  recontoured one) over a raster of the difference and a scatter of the
+  compartment label. Unlike
   [`plot_immunoflo()`](https://fridleylab.github.io/spatialTIME/reference/plot_immunoflo.md),
   it returns a **named list of `ggplot` objects**, not the `mif` — each
   plot’s raster can carry as much data as the sample itself, and
   attaching several to `mif$derived` would multiply the mif’s size for
-  no benefit once list-valued derived slots are already fragile (see Bug
-  fixes).
-
-### Bug fixes
-
-- [`merge_mifs()`](https://fridleylab.github.io/spatialTIME/reference/merge_mifs.md)
-  called
-  [`dplyr::bind_rows()`](https://dplyr.tidyverse.org/reference/bind_rows.html)
-  on every `derived` slot regardless of type, so a list-valued slot
-  (`spatial_plots`, and now `density_boundary`) was silently collapsed
-  into a nameless data frame instead of being merged or erroring.
-  List-valued slots are now concatenated instead, with a warning if the
-  inputs’ recorded settings (`call_info`) disagree.
-
-### Notes
-
-- [`subset_mif()`](https://fridleylab.github.io/spatialTIME/reference/subset_mif.md)
-  rebuilds the mif from scratch and drops `derived` entirely
-  (`R/subset_mif.R`), so
-  [`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md)’s
-  boundary slot and `Boundary Length` column do not survive a later
-  [`subset_mif()`](https://fridleylab.github.io/spatialTIME/reference/subset_mif.md)
-  call, even though the two spatial columns ride along with the row
-  filter. Run
-  [`split_tissue()`](https://fridleylab.github.io/spatialTIME/reference/split_tissue.md)
-  after subsetting, not before.
-
-## spatialTIME 2.0.0
-
-A cleanup and correctness release. Roughly 1,100 lines of unreachable
-code are gone, the count-based measures now agree with **spatstat** to
-floating-point precision on samples of any size, every metric returns
-the same columns, and test coverage went from 4 assertions to 465 (91%).
+  no benefit.
 
 ### Read this first: results that were wrong
 
-Two functions were producing incorrect output. If you have used either,
-re-run it.
+Several functions were producing incorrect output. If you have used any
+of them, re-run it.
+
+- **`edge_correction = "border"` returned the uncorrected estimator.**
+  The K engine had branches for `"translation"` and `"isotropic"` only,
+  so `"border"` fell through with an edge weight of 1 and was
+  bit-identical to `"none"` — while `match_edge_correction()` accepted
+  the spelling and the documentation advertised it as supported. On 400
+  uniform points it was 174 away from
+  `Kest(correction = "border")$border`. Nothing caught it because
+  `"border"` was the one correction missing from the engine’s own test
+  loop.
+
+  It is now a real reduced-sample estimator: only cells further than `r`
+  from the window edge contribute, with an `r`-dependent denominator,
+  mirroring `spatstat.explore:::Kount()` and
+  [`spatstat.univar::reduced.sample()`](https://rdrr.io/pkg/spatstat.univar/man/reduced.sample.html).
+  Verified to `max|diff| = 0` against
+  `Kest(correction = c("border", "translation"))$border` and the
+  matching `Kcross()`, on continuous and integer coordinates, for whole
+  samples and marker subsets, including the `NaN` region past the
+  window’s inradius where the eligible set empties. Boundary distances
+  are computed once per sample and re-masked, so border keeps the
+  permutation reuse the other corrections get.
+
+  **`Exact CSR` is now `NA` for border.** Its denominator depends on
+  which cells are marker-positive, so the K of all cells is *not* the
+  expected K of a subset the way it is for the other three — measured 1%
+  low at larger radii (600 cells, 120 positive, 3000 permutations, z =
+  −7.9). Use `permute = TRUE` with border.
+
+- **K was reported as 0 instead of `NA` past the valid radius for sparse
+  markers.** When a marker’s positive cells had no pair closer than
+  `max(r_range)`, `k_from_pairs()` took an early return that skipped the
+  `r >= rmax_valid` truncation, so it reported 0 at every radius —
+  including radii where every other marker correctly reported `NA`.
+  Under `permute = TRUE` those zeros were then averaged in with genuine
+  `NA`s by `rowMeans(na.rm = TRUE)`, pulling `Permuted CSR` toward zero
+  and biasing `Degree of Clustering Permutation`.
+
+- **`Permutations Larger than Observed` was 0 where nothing had been
+  estimated.** It was computed with `rowSums(..., na.rm = TRUE)`, which
+  returns 0 when every term is `NA`. A radius where `Observed K` was
+  `NA` therefore reported “no permutation exceeded the observation” —
+  maximal clustering — rather than “not estimated”. Both it and the new
+  p-value are now `NA` there.
+
+- **[`interaction_variable()`](https://fridleylab.github.io/spatialTIME/reference/interaction_variable.md)
+  measured distances between scrambled marker sets.** Found by the
+  cross-version parity harness (`tools/parity/`), not previously known.
+  `get_bi_rows()` returns its rows marker-major — every anchor cell,
+  then every counted cell — so `cells$cell` is not globally ascending.
+  But `subset(sample_ppp, cells$cell)` returns points in *sorted* order,
+  and the following `marks(ps) <- cells$Marker` then attached the marker
+  labels in marker-major order to points in index order. Every
+  anchor/counted assignment was therefore permuted, and the
+  nearest-neighbour distances were measured between the wrong cells.
+
+  Verified by brute force on `example_spatial[["TMA3_[9,K].tif"]]` with
+  FOXP3 as anchor and CD8 as counted: exactly 4 of the 109 anchor cells
+  lie within 20 units (the fifth-nearest is at 20.55), so
+  `Observed Interaction` at `r = 20` is `4/109 = 3.669725`. 1.4.0
+  reported `4.587156`, which is `5/109`, and re-running 1.4.0’s exact
+  code path reproduces that figure. The denominator was never the
+  problem — both versions divide by 109.
+
+  Every `Observed Interaction` 1.4.0 produced is affected whenever the
+  two markers’ cell indices interleave, which is essentially always.
+  2.0.0 uses `nncross(pp[keep_i], pp[keep_j])` over masks computed in
+  place, so no reordering is possible.
 
 - **[`marker_freq_diff()`](https://fridleylab.github.io/spatialTIME/reference/marker_freq_diff.md)
   p-values were all wrong.** The Fisher contingency table was built with
@@ -153,10 +415,39 @@ re-run it.
   [`marker_freq_diff()`](https://fridleylab.github.io/spatialTIME/reference/marker_freq_diff.md)
   put percentages in its `%` columns, so the two disagreed on what `%`
   meant. Values change by 100x.
+- **`Permutations Larger than Observed` now counts ties.** It uses `>=`
+  rather than `>`, so permutations equalling the observed value count
+  toward it and therefore toward a *larger* p-value. Tied permuted
+  values are common at small radii — on a 600-cell fixture only 20 of
+  300 relabellings gave distinct values at `r = 5`, and at `r = 0` every
+  K is 0 — and under `>` every one of those ties was silently treated as
+  evidence of clustering. The column existed in only four of the seven
+  metrics before 2.0.0 (`bi_ripleys_k`, `pair_correlation`,
+  `bi_pair_correlation`, `interaction_variable`); those four change
+  value, and the other three gain it.
+- **`Exact CSR` is now filled in when `permute = TRUE`.** It was
+  hard-`NA` on the permutation path, which hid the one comparison that
+  tells you whether your permutation count was enough: under random
+  labelling `E[Permuted CSR]` *is* `Exact CSR`, exactly, so the two
+  converging is the diagnostic. Costs one extra mask over a pair list
+  that has already been built. Does not apply to border.
 - [`dixons_s()`](https://fridleylab.github.io/spatialTIME/reference/dixons_s.md)
   and
   [`marker_freq_diff()`](https://fridleylab.github.io/spatialTIME/reference/marker_freq_diff.md)
   gain a correct `Run` column; see Bug fixes.
+
+#### New column: `Permutation p-value`
+
+Every metric that permutes now reports alongside the raw count, where
+`B` counts the permutations that actually produced a value at that
+radius rather than `num_permutations`. The two differ wherever the
+estimator returns `NA`, and dividing by the requested count there
+understates the p-value.
+
+The `+1`s make it a valid p-value at any `B`: unlike `count / B` it can
+never be exactly 0, which would read as infinite significance rather
+than “nothing in this sample was more extreme”. The raw count is kept so
+nothing downstream breaks.
 
 ### Breaking changes
 
@@ -319,6 +610,17 @@ the mean permuted G is 0.13. See
 - [`merge_mifs()`](https://fridleylab.github.io/spatialTIME/reference/merge_mifs.md)
   accepted an empty list and then failed obscurely inside `seq(0)`. Its
   “No variables have been derived yet” message was unreachable.
+- [`merge_mifs()`](https://fridleylab.github.io/spatialTIME/reference/merge_mifs.md)
+  called
+  [`dplyr::bind_rows()`](https://dplyr.tidyverse.org/reference/bind_rows.html)
+  on every `derived` slot regardless of type, so a **list**-valued slot
+  — `spatial_plots`, and now `density_boundary` — was silently collapsed
+  into a nameless data frame instead of being merged or erroring.
+  List-valued slots are now concatenated, with a warning when the
+  inputs’ recorded settings disagree. A second bug in the same path
+  prefixed every sample name with its source mif’s index (`"1.S1"`
+  rather than `"S1"`), because `do.call(c, parts)` read the list’s own
+  names as argument names.
 - [`create_mif()`](https://fridleylab.github.io/spatialTIME/reference/create_mif.md)’s
   “each item must be named” check could never fail.
 - `is()` was used in three files without **methods** being declared;
@@ -358,6 +660,46 @@ the mean permuted G is 0.13. See
   literal backticks and dead cross-references.
 - `vignettes/spatialexperiment.Rmd` is now excluded from the CRAN
   tarball while remaining published on the pkgdown site.
+
+### Verifying this against 1.4.0 yourself
+
+`tools/parity/` captures 1.4.0 and the current tree in two separate R
+processes and diffs them against a declared contract:
+
+``` sh
+bash tools/parity/run.sh
+```
+
+It writes `tests/testthat/fixtures/parity-v1.4.0.rds` and exits non-zero
+if any measured result contradicts its declared verdict — so it is a
+check, not only a generator. `tests/testthat/test-parity-v1.4.0.R` then
+replays the captured calls on every test run. 30 entries, covering both
+corrections and both degenerate-marker paths, all agreeing with the
+contract.
+
+Neither the harness nor the fixture ships: `^tools$` and the fixture are
+in `.Rbuildignore`, so `R CMD check` on the tarball skips those tests
+(“v1.4.0 parity fixture not present”) and CRAN never sees them.
+[`devtools::test()`](https://devtools.r-lib.org/reference/test.html)
+from a git checkout runs them.
+
+Three results from it worth knowing, because they are narrower than they
+sound:
+
+- **The `"none"` binning difference only exists for evenly spaced `r`.**
+  `Kest` takes its fast C path — which bins `d <= r` where `whist` bins
+  left-closed — only when `r` is evenly spaced. With unevenly spaced
+  radii 1.4.0 routed through `whist` too and the two versions agree
+  exactly.
+- **And only for quantities `Kest` computes.** In `bi_ripleys_k` on an
+  even grid, `Observed K` *agrees* while `Exact CSR` *differs*, in the
+  same call: `Kcross`/`Kmulti` have no fast path, but 1.4.0 computed the
+  bivariate `Exact CSR` with `Kest()` over all cells, which did take it.
+- **`border`’s `Observed K` is unchanged from 1.4.0.** 1.4.0 passed
+  `border` through to `Kest` on its `permute = FALSE` path, and the new
+  reduced-sample engine reproduces those values exactly. What changed is
+  that the correction is no longer silently replaced by `"none"` (see
+  above), and that `Exact CSR` is now `NA` for it.
 
 ### Note for maintainers
 

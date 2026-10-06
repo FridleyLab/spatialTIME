@@ -8,7 +8,7 @@ subset the spatial list to just the cells in the desired compartment
 ## Usage
 
 ``` r
-subset_mif(mif, classifier, level, markers)
+subset_mif(mif, classifier, level, markers, path = NULL)
 ```
 
 ## Arguments
@@ -28,6 +28,15 @@ subset_mif(mif, classifier, level, markers)
 - markers:
 
   vector of
+
+- path:
+
+  for a disk-backed `mif` only (see
+  [`mif_to_disk()`](https://fridleylab.github.io/spatialTIME/reference/mif_to_disk.md)),
+  the directory to write the subset store to. Required in that case and
+  ignored otherwise: the subset of a cohort too large for memory is
+  generally also too large for memory, so it is written out sample by
+  sample rather than returned in one piece.
 
 ## Value
 

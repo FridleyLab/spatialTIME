@@ -18,7 +18,7 @@ library(ggplot2)
 devtools::load_all()
 #> ℹ Loading spatialTIME
 #> spatialTIME version:
-#> 2.1.0
+#> 2.0.0
 #> If using for publication, please cite our manuscript:
 #> https://doi.org/10.1093/bioinformatics/btab757
 mif = create_mif(clinical_data = example_clinical %>% 

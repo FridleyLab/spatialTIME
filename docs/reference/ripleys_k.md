@@ -13,6 +13,10 @@ Carlo error. Permutations are still useful if you want the full null
 distribution rather than its mean – run 1000 and treat an observed value
 outside the 95th percentile as significant.
 
+`Exact CSR` is filled in either way, so with `permute = TRUE` you can
+read `Permuted CSR` against it and see directly whether your permutation
+count was large enough to converge. They agree exactly in expectation.
+
 ## Usage
 
 ``` r
@@ -56,7 +60,11 @@ ripleys_k(
 
   edge correction method: one of "translation", "isotropic", "border" or
   "none". Unlike previous versions this is never silently downgraded for
-  large samples.
+  large samples. All four agree with
+  [`spatstat.explore::Kest()`](https://rdrr.io/pkg/spatstat.explore/man/Kest.html)
+  to floating-point precision; note that `"border"` reports no
+  `Exact CSR` (see below) and that `"none"` applies no correction at all
+  and so is biased downward near the window edge.
 
 - permute:
 
@@ -97,6 +105,50 @@ ripleys_k(
 ## Value
 
 object of class `mif`
+
+## The CSR columns, and which to trust
+
+Three references are reported for each radius, and
+`Degree of Clustering X` is always `Observed K - X CSR`:
+
+- `Theoretical CSR` is \\\pi r^2\\, the K of a homogeneous Poisson
+  process. It ignores the shape of the window and the cell density
+  actually present, so it is the weakest of the three on real tissue.
+
+- `Exact CSR` is the K of every cell in the sample. Under random
+  labelling of a fixed set of cell locations this is *exactly* the
+  expected K of a marker-positive subset – not an approximation – for
+  translation, isotropic and none. It is the reference to prefer.
+
+- `Permuted CSR` is the mean over `num_permutations` random
+  relabellings.
+
+`Exact CSR` is `NA` for `edge_correction = "border"`. Border is a
+reduced-sample estimator whose denominator counts only the cells still
+further than `r` from the window edge, and that count changes with which
+cells are marker-positive. So the cancellation that makes the other
+three exact does not apply, and the K of all cells is *not* the expected
+K of a subset: measured on 600 cells with 120 positive, it sits about 1%
+below the mean permuted K at larger radii. Rather than report a number
+that is quietly wrong in a column called "Exact", it is omitted – as it
+is for
+[`NN_G()`](https://fridleylab.github.io/spatialTIME/reference/NN_G.md)
+and
+[`pair_correlation()`](https://fridleylab.github.io/spatialTIME/reference/pair_correlation.md),
+for the same reason. Use `permute = TRUE` with border.
+
+## Permutation p-values
+
+`Permutations Larger than Observed` counts the permutations at least as
+extreme as the observation (`>=`), so ties count toward the count and
+therefore toward a larger p-value. `Permutation p-value` is the standard
+Monte Carlo p-value, \\(1 + \\\\perm \ge obs\\) / (B + 1)\\, where `B`
+is the number of permutations that actually produced a value at that
+radius. The `+1`s mean it can never be exactly 0, which a raw count
+divided by `B` can be, and which would read as infinite significance
+rather than "nothing in this sample was more extreme".
+
+Both are `NA` at radii where `Observed K` is `NA`.
 
 ## Accuracy
 

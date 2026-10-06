@@ -29,8 +29,17 @@ create_mif(
 
 - spatial_list:
 
-  A named list of data frames with the spatial data from each sample
-  making up each individual data frame
+  Either a named list of data frames with the spatial data from each
+  sample making up each individual data frame, or a **named character
+  vector of paths to parquet files**, one sample per file, which builds
+  a disk-backed mif that reads each sample only when a computation needs
+  it. The files are referenced where they are and never copied or
+  modified. Use this for whole slide images, where holding every sample
+  in memory at once is what stops a multi-core run from starting – see
+  [`mif_to_disk()`](https://fridleylab.github.io/spatialTIME/reference/mif_to_disk.md)
+  for the sizes involved and for building a store from data already in
+  memory. If the vector is unnamed, names are taken from each file's
+  `sample_id` column.
 
 - patient_id:
 
@@ -77,14 +86,6 @@ Returns a custom MIF
 ``` r
 #Create mif object
 library(dplyr)
-#> 
-#> Attaching package: ‘dplyr’
-#> The following objects are masked from ‘package:stats’:
-#> 
-#>     filter, lag
-#> The following objects are masked from ‘package:base’:
-#> 
-#>     intersect, setdiff, setequal, union
 x <- create_mif(clinical_data = example_clinical %>% 
 mutate(deidentified_id = as.character(deidentified_id)),
 sample_data = example_summary %>% 

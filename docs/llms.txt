@@ -88,6 +88,27 @@ Immunoflourescent objects
 - [`subset_mif()`](https://fridleylab.github.io/spatialTIME/reference/subset_mif.md)
   : Subset mif object on cellular level
 
+## Disk-backed MIF Objects
+
+Keep per-cell spatial data in parquet files and read only the columns
+each computation needs, so peak memory scales with the number of workers
+rather than with the number of samples. Intended for whole slide images.
+
+- [`mif_to_disk()`](https://fridleylab.github.io/spatialTIME/reference/mif_to_disk.md)
+  : Write a mif's spatial data to disk
+
+- [`open_mif()`](https://fridleylab.github.io/spatialTIME/reference/open_mif.md)
+  :
+
+  Reopen a mif store written by
+  [`mif_to_disk()`](https://fridleylab.github.io/spatialTIME/reference/mif_to_disk.md)
+
+- [`collect_mif()`](https://fridleylab.github.io/spatialTIME/reference/collect_mif.md)
+  : Load a disk-backed mif's spatial data back into memory
+
+- [`verify_mif()`](https://fridleylab.github.io/spatialTIME/reference/verify_mif.md)
+  : Re-probe every spatial file a mif points at
+
 ## Other Spatial Statistics
 
 - [`dixons_s()`](https://fridleylab.github.io/spatialTIME/reference/dixons_s.md)

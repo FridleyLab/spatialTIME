@@ -23,9 +23,33 @@ if (!("spatialTIME" %in% installed.packages())) {
 if (!("BiocManager" %in% installed.packages())) {
   install.packages("BiocManager")
 }
+```
+
+    ## Updating HTML index of packages in '.Library'
+
+    ## Making 'packages.html' ... done
+
+``` r
+
 if (!("VectraPolarisData" %in% installed.packages())) {
   BiocManager::install("VectraPolarisData")
 }
+```
+
+    ## 'getOption("repos")' replaces Bioconductor standard repositories, see
+    ## 'help("repositories", package = "BiocManager")' for details.
+    ## Replacement repositories:
+    ##     CRAN: https://cran.case.edu
+    ## Bioconductor version 3.23 (BiocManager 1.30.27), R 4.6.1 (2026-06-24)
+    ## Installing package(s) 'BiocVersion', 'VectraPolarisData'
+    ## also installing the dependencies 'Biostrings', 'XVector', 'blob', 'KEGGREST', 'SparseArray', 'RSQLite', 'AnnotationDbi', 'BiocBaseUtils', 'dbplyr', 'DBI', 'filelock', 'GenomicRanges', 'DelayedArray', 'MatrixGenerics', 'Biobase', 'IRanges', 'Seqinfo', 'S4Arrays', 'BiocGenerics', 'AnnotationHub', 'BiocFileCache', 'S4Vectors', 'SingleCellExperiment', 'rjson', 'magick', 'SummarizedExperiment', 'ExperimentHub', 'SpatialExperiment'
+    ## 
+    ## Updating HTML index of packages in '.Library'
+    ## Making 'packages.html' ... done
+    ## Old packages: 'irlba', 'listenv', 'Seurat', 'spatstat', 'spatstat.linnet'
+
+``` r
+
 if (!("survival" %in% installed.packages())) {
   BiocManager::install("survival")
 }
@@ -33,11 +57,6 @@ if (!("lmtest" %in% installed.packages())) {
  install.packages("lmtest")
 }
 ```
-
-    ## Installing package into '/private/var/folders/63/qj4bjln95bs911vg920503rh001s8k/T/RtmpdUJ9CN/temp_libpath566e675d5fe8'
-    ## (as 'lib' is unspecified)
-
-    ## also installing the dependency 'zoo'
 
 We’ll need to load these packages. This just means these packages will
 be made readily available to us.
@@ -65,7 +84,7 @@ library(spatialTIME)
 ```
 
     ## spatialTIME version:
-    ## 2.1.0
+    ## 2.0.0
     ## If using for publication, please cite our manuscript:
     ## https://doi.org/10.1093/bioinformatics/btab757
 
@@ -479,20 +498,27 @@ head(analysis_dat)
     ## 4 Estimate 50        7853.982           NA 12436.604  137283.93
     ## 5 Estimate 50        7853.982           NA 11713.179   20728.65
     ## 6 Estimate 50        7853.982           NA 11249.827  135060.12
-    ##   Permutations Larger than Observed Degree of Clustering Theoretical
-    ## 1                                NA                        21163.906
-    ## 2                                NA                        45075.972
-    ## 3                                NA                         5845.099
-    ## 4                                NA                       129429.946
-    ## 5                                NA                        12874.672
-    ## 6                                NA                       127206.141
-    ##   Degree of Clustering Permutation Degree of Clustering Exact Run
-    ## 1                               NA                  18366.015   1
-    ## 2                               NA                  42915.348   1
-    ## 3                               NA                   5613.550   1
-    ## 4                               NA                 124847.324   1
-    ## 5                               NA                   9015.475   1
-    ## 6                               NA                 123810.296   1
+    ##   Permutations Larger than Observed Permutation p-value
+    ## 1                                NA                  NA
+    ## 2                                NA                  NA
+    ## 3                                NA                  NA
+    ## 4                                NA                  NA
+    ## 5                                NA                  NA
+    ## 6                                NA                  NA
+    ##   Degree of Clustering Theoretical Degree of Clustering Permutation
+    ## 1                        21163.906                               NA
+    ## 2                        45075.972                               NA
+    ## 3                         5845.099                               NA
+    ## 4                       129429.946                               NA
+    ## 5                        12874.672                               NA
+    ## 6                       127206.141                               NA
+    ##   Degree of Clustering Exact Run
+    ## 1                  18366.015   1
+    ## 2                  42915.348   1
+    ## 3                   5613.550   1
+    ## 4                 124847.324   1
+    ## 5                   9015.475   1
+    ## 6                 123810.296   1
 
 ## Performing Association with Survival
 
@@ -631,18 +657,18 @@ sessionInfo()
 ```
 
     ## R version 4.6.1 (2026-06-24)
-    ## Platform: aarch64-apple-darwin24.6.0
-    ## Running under: macOS Sequoia 15.7.9
+    ## Platform: aarch64-apple-darwin20.0.0
+    ## Running under: macOS Sequoia 15.8
     ## 
     ## Matrix products: default
-    ## BLAS:   /opt/homebrew/Cellar/openblas/0.3.33/lib/libopenblasp-r0.3.33.dylib 
-    ## LAPACK: /opt/homebrew/Cellar/r/4.6.1/lib/R/lib/libRlapack.dylib;  LAPACK version 3.12.1
+    ## BLAS:   /opt/anaconda3/envs/spatialTIME/lib/libblas.3.9.0.dylib 
+    ## LAPACK: /opt/anaconda3/envs/spatialTIME/lib/liblapack.3.9.0.dylib  LAPACK version 3.9.0
     ## 
     ## locale:
     ## [1] en_US.UTF-8/en_US.UTF-8/en_US.UTF-8/C/en_US.UTF-8/en_US.UTF-8
     ## 
     ## time zone: America/New_York
-    ## tzcode source: internal
+    ## tzcode source: system (macOS)
     ## 
     ## attached base packages:
     ## [1] stats4    stats     graphics  grDevices utils     datasets  methods  
@@ -653,42 +679,42 @@ sessionInfo()
     ##  [3] SingleCellExperiment_1.34.0 SummarizedExperiment_1.42.0
     ##  [5] Biobase_2.72.0              GenomicRanges_1.64.0       
     ##  [7] Seqinfo_1.2.0               IRanges_2.46.0             
-    ##  [9] S4Vectors_0.50.2            MatrixGenerics_1.24.0      
+    ##  [9] S4Vectors_0.50.3            MatrixGenerics_1.24.0      
     ## [11] matrixStats_1.5.0           ExperimentHub_3.2.2        
     ## [13] AnnotationHub_4.2.2         BiocFileCache_3.2.0        
     ## [15] dbplyr_2.6.0                BiocGenerics_0.58.1        
-    ## [17] generics_0.1.4              survival_3.8-6             
-    ## [19] spatialTIME_2.1.0           dplyr_1.2.1                
+    ## [17] generics_0.1.4              survival_3.8-12            
+    ## [19] spatialTIME_2.0.0           dplyr_1.2.1                
     ## [21] ggplot2_4.0.3              
     ## 
     ## loaded via a namespace (and not attached):
     ##  [1] DBI_1.3.0              deldir_2.0-4           httr2_1.3.0           
     ##  [4] rlang_1.3.0            magrittr_2.0.5         otel_0.2.0            
-    ##  [7] compiler_4.6.1         RSQLite_3.53.3         spatstat.geom_3.8-2   
+    ##  [7] compiler_4.6.1         RSQLite_3.53.3         spatstat.geom_3.8-3   
     ## [10] png_0.1-9              systemfonts_1.3.2      pbmcapply_1.5.1       
     ## [13] vctrs_0.7.3            pkgconfig_2.0.3        crayon_1.5.3          
     ## [16] fastmap_1.2.0          magick_2.9.1           XVector_0.52.0        
-    ## [19] labeling_0.4.3         rmarkdown_2.31         ragg_1.5.2            
-    ## [22] purrr_1.2.2            bit_4.6.0              xfun_0.60             
+    ## [19] labeling_0.4.3         rmarkdown_2.32         ragg_1.5.2            
+    ## [22] purrr_1.2.2            bit_4.6.0              xfun_0.61             
     ## [25] cachem_1.1.0           jsonlite_2.0.0         goftest_1.2-3         
-    ## [28] blob_1.3.0             DelayedArray_0.38.2    spatstat.utils_3.2-4  
+    ## [28] blob_1.3.0             DelayedArray_0.38.2    spatstat.utils_3.2-5  
     ## [31] parallel_4.6.1         R6_2.6.1               bslib_0.12.0          
     ## [34] RColorBrewer_1.1-3     spatstat.data_3.1-9    spatstat.univar_3.2-0 
     ## [37] lmtest_0.9-40          jquerylib_0.1.4        Rcpp_1.1.2            
-    ## [40] knitr_1.51             tensor_1.5.1           zoo_1.9-0             
-    ## [43] Matrix_1.7-5           splines_4.6.1          tidyselect_1.2.1      
-    ## [46] abind_1.4-8            yaml_2.3.12            spatstat.random_3.5-1 
-    ## [49] spatstat.explore_3.8-2 curl_8.0.0             lattice_0.22-9        
+    ## [40] knitr_1.52             tensor_1.5.1           zoo_1.9-1             
+    ## [43] Matrix_1.7-6           splines_4.6.1          tidyselect_1.2.1      
+    ## [46] abind_1.4-8            yaml_2.3.12            spatstat.random_3.5-2 
+    ## [49] spatstat.explore_3.8-3 curl_8.0.0             lattice_0.23-1        
     ## [52] tibble_3.3.1           withr_3.0.3            KEGGREST_1.52.2       
     ## [55] S7_0.2.2               evaluate_1.0.5         desc_1.4.3            
     ## [58] polyclip_1.10-7        Biostrings_2.80.2      pillar_1.11.1         
     ## [61] BiocManager_1.30.27    filelock_1.0.3         BiocVersion_3.23.1    
     ## [64] scales_1.4.0           glue_1.8.1             tools_4.6.1           
     ## [67] fs_2.1.0               grid_4.6.1             tidyr_1.3.2           
-    ## [70] AnnotationDbi_1.74.0   nlme_3.1-169           cli_3.6.6             
+    ## [70] AnnotationDbi_1.74.0   nlme_3.1-171           cli_3.6.6             
     ## [73] spatstat.sparse_3.2-0  rappdirs_0.3.4         textshaping_1.0.5     
-    ## [76] S4Arrays_1.12.0        gtable_0.3.6           sass_0.4.10           
-    ## [79] digest_0.6.39          SparseArray_1.12.2     rjson_0.2.23          
+    ## [76] S4Arrays_1.12.1        gtable_0.3.6           sass_0.4.10           
+    ## [79] digest_0.6.39          SparseArray_1.12.3     rjson_0.2.23          
     ## [82] htmlwidgets_1.6.4      farver_2.1.2           memoise_2.0.1         
     ## [85] htmltools_0.5.9        pkgdown_2.2.1          lifecycle_1.0.5       
     ## [88] httr_1.4.9             bit64_4.8.6

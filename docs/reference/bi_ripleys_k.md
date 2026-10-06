@@ -51,7 +51,10 @@ bi_ripleys_k(
 - edge_correction:
 
   edge correction method: one of "translation", "isotropic", "border" or
-  "none"
+  "none". `"border"` reports no `Exact CSR` – see the CSR columns
+  section of
+  [`ripleys_k()`](https://fridleylab.github.io/spatialTIME/reference/ripleys_k.md)
+  for why.
 
 - num_permutations:
 
@@ -118,6 +121,19 @@ Values agree with
 to floating-point precision. The observation window is the convex hull
 of **every** cell in the sample and is held fixed across all marker
 pairs and permutations.
+
+## The CSR columns
+
+`Exact CSR` here is the *univariate* K of all cells in the sample, which
+is the closed form for the expected `Kcross` under random labelling –
+the anchor and counted sets are drawn from one sample without
+replacement, so an ordered pair survives with probability \\n_i n_j /
+(n(n-1))\\ against a denominator of \\n_i n_j / area\\, and the two
+cancel. It is filled in whether or not `permute` is set, so
+`Permuted CSR` can be read against it as a convergence check. See the
+fuller discussion, including why `"border"` is excluded, under
+[`ripleys_k()`](https://fridleylab.github.io/spatialTIME/reference/ripleys_k.md).
+Cells positive for both markers of a pair belong to neither set.
 
 ## Examples
 
