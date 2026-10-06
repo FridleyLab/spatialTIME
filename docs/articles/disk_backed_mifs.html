@@ -188,7 +188,7 @@ first reads 34 GB and the second reads one slide at a time.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span></span>
 <span><span class="co">#&gt; &lt;mif_store&gt; 5 samples, 12,782 cells</span></span>
-<span><span class="co">#&gt;   root: /var/folders/63/qj4bjln95bs911vg920503rh001s8k/T//Rtmp5QmNGP/spatialTIME-vignette/cohort.mif</span></span>
+<span><span class="co">#&gt;   root: /var/folders/63/qj4bjln95bs911vg920503rh001s8k/T//RtmpMa6X14/spatialTIME-vignette/cohort.mif</span></span>
 <span><span class="co">#&gt;   TMA1_[3,B].tif (3,803), TMA2_[3,B].tif (3,008), TMA3_[7,B].tif (1,850), ... and 2 more</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/object.size.html" class="external-link">object.size</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span>, units <span class="op">=</span> <span class="st">"KB"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "7.9 Kb"</span></span>
@@ -252,15 +252,23 @@ few samples out to look at them:</p>
 <span>                edge_correction <span class="op">=</span> <span class="st">"translation"</span>, permute <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>                workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"deidentified_sample"</span>, <span class="st">"Marker"</span>, <span class="st">"r"</span>,</span>
-<span>                                     <span class="st">"Observed K"</span>, <span class="st">"Exact CSR"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
-<span><span class="co">#&gt;   deidentified_sample                  Marker  r Observed K   Exact CSR</span></span>
-<span><span class="co">#&gt; 1      TMA1_[3,B].tif CD3..Opal.570..Positive  0       0.00     0.00000</span></span>
-<span><span class="co">#&gt; 2      TMA1_[3,B].tif CD3..Opal.570..Positive 10       0.00    33.41301</span></span>
-<span><span class="co">#&gt; 3      TMA1_[3,B].tif CD3..Opal.570..Positive 20       0.00  1516.95442</span></span>
-<span><span class="co">#&gt; 4      TMA1_[3,B].tif CD3..Opal.570..Positive 30       0.00  3892.93725</span></span>
-<span><span class="co">#&gt; 5      TMA1_[3,B].tif CD3..Opal.570..Positive 40       0.00  6896.66270</span></span>
-<span><span class="co">#&gt; 6      TMA1_[3,B].tif CD3..Opal.570..Positive 50   28741.79 10376.44414</span></span></code></pre></div>
+<span><span class="va">k</span> <span class="op">&lt;-</span> <span class="va">xd</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">head</a></span><span class="op">(</span><span class="va">k</span><span class="op">[</span><span class="va">k</span><span class="op">$</span><span class="va">deidentified_sample</span> <span class="op">==</span> <span class="st">"TMA3_[9,K].tif"</span> <span class="op">&amp;</span></span>
+<span>         <span class="va">k</span><span class="op">$</span><span class="va">Marker</span> <span class="op">==</span> <span class="va">mnames</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>,</span>
+<span>       <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"deidentified_sample"</span>, <span class="st">"Marker"</span>, <span class="st">"r"</span>, <span class="st">"Observed K"</span>, <span class="st">"Exact CSR"</span><span class="op">)</span><span class="op">]</span><span class="op">)</span></span>
+<span><span class="co">#&gt;    deidentified_sample                  Marker  r  Observed K  Exact CSR</span></span>
+<span><span class="co">#&gt; 67      TMA3_[9,K].tif CD3..Opal.570..Positive  0     0.00000    0.00000</span></span>
+<span><span class="co">#&gt; 68      TMA3_[9,K].tif CD3..Opal.570..Positive 10    38.53943   18.72003</span></span>
+<span><span class="co">#&gt; 69      TMA3_[9,K].tif CD3..Opal.570..Positive 20  4651.50907 1268.35887</span></span>
+<span><span class="co">#&gt; 70      TMA3_[9,K].tif CD3..Opal.570..Positive 30 11112.73225 3188.16333</span></span>
+<span><span class="co">#&gt; 71      TMA3_[9,K].tif CD3..Opal.570..Positive 40 20118.32327 5871.05676</span></span>
+<span><span class="co">#&gt; 72      TMA3_[9,K].tif CD3..Opal.570..Positive 50 30962.47935 9204.24046</span></span></code></pre></div>
+<p><code>TMA3_[9,K].tif</code> is picked deliberately. The marker counts
+in these example cores vary by a factor of thirty — this one has 536
+CD3+ cells where <code>TMA1_[3,B].tif</code> has 17 — and on the sparse
+cores no two positive cells are within 40 units of each other, so
+<code>Observed K</code> is a legitimate but unenlightening column of
+zeros.</p>
 <p>Derived results are written to the store as they are computed, so
 they survive a reopen rather than living only in the session that
 produced them:</p>
@@ -426,10 +434,13 @@ the base parquet.</p>
 <span><span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"overlay"</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "TMA1__3_B_.tif.parquet" "TMA2__3_B_.tif.parquet" "TMA3__7_B_.tif.parquet"</span></span>
 <span><span class="co">#&gt; [4] "TMA3__8_U_.tif.parquet" "TMA3__9_K_.tif.parquet"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">mif_spatial</span> <span class="op">&lt;-</span> <span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">[[</span><span class="st">"TMA3_[9,K].tif"</span><span class="op">]</span><span class="op">]</span><span class="op">)</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">4</span><span class="op">]</span></span>
-<span><span class="co">#&gt; [1] "deidentified_sample" "Analysis.Region"     "Analysis.Inputs"    </span></span>
-<span><span class="co">#&gt; [4] "Object.Id"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">[[</span><span class="st">"TMA3_[9,K].tif"</span><span class="op">]</span><span class="op">]</span><span class="op">$</span><span class="va">refined_density_compartment</span><span class="op">)</span></span>
+<span></span>
+<span><span class="co"># the three columns the overlay added, appended after the base ones</span></span>
+<span><span class="va">spat</span> <span class="op">&lt;-</span> <span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">[[</span><span class="st">"TMA3_[9,K].tif"</span><span class="op">]</span><span class="op">]</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/utils/head.html" class="external-link">tail</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/colnames.html" class="external-link">colnames</a></span><span class="op">(</span><span class="va">spat</span><span class="op">)</span>, <span class="fl">3</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "density_compartment"         "refined_density_compartment"</span></span>
+<span><span class="co">#&gt; [3] "density_score"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/table.html" class="external-link">table</a></span><span class="op">(</span><span class="va">spat</span><span class="op">$</span><span class="va">refined_density_compartment</span><span class="op">)</span></span>
 <span><span class="co">#&gt; </span></span>
 <span><span class="co">#&gt;     Tumor Interface    Stroma </span></span>
 <span><span class="co">#&gt;       466       882       455</span></span></code></pre></div>

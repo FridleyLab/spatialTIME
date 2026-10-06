@@ -191,9 +191,16 @@ xd <- ripleys_k(mif = xd, mnames = mnames, r_range = seq(0, 100, 10),
                 edge_correction = "translation", permute = FALSE,
                 workers = 1, overwrite = TRUE)
 
-head(xd$derived$univariate_Count[, c("deidentified_sample", "Marker", "r",
-                                     "Observed K", "Exact CSR")])
+k <- xd$derived$univariate_Count
+head(k[k$deidentified_sample == "TMA3_[9,K].tif" &
+         k$Marker == mnames[1],
+       c("deidentified_sample", "Marker", "r", "Observed K", "Exact CSR")])
 ```
+
+`TMA3_[9,K].tif` is picked deliberately. The marker counts in these example cores
+vary by a factor of thirty — this one has 536 CD3+ cells where `TMA1_[3,B].tif` has
+17 — and on the sparse cores no two positive cells are within 40 units of each
+other, so `Observed K` is a legitimate but unenlightening column of zeros.
 
 Derived results are written to the store as they are computed, so they survive a
 reopen rather than living only in the session that produced them:
@@ -351,8 +358,11 @@ xd <- split_tissue(xd, classifier = "Classifier.Label",
                    sigma = 40, interface_width = 100, workers = 1)
 
 list.files(file.path(store, "overlay"))
-colnames(mif_spatial <- xd$spatial[["TMA3_[9,K].tif"]])[1:4]
-table(xd$spatial[["TMA3_[9,K].tif"]]$refined_density_compartment)
+
+# the three columns the overlay added, appended after the base ones
+spat <- xd$spatial[["TMA3_[9,K].tif"]]
+tail(colnames(spat), 3)
+table(spat$refined_density_compartment)
 ```
 
 Appending columns by rewriting would touch all 2.19 GB of a cohort to add about 12
