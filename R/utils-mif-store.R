@@ -277,22 +277,36 @@ store_index <- function(x, i) {
 #'
 #' @keywords internal
 #' @noRd
-store_subscript <- function(x, i) {
+subscript_samples <- function(nms, n, i) {
   if (is.character(i)) {
-    pos <- match(i, names(x))
+    pos <- match(i, nms)
     if (anyNA(pos)) {
       stop("No sample named ", paste0("\"", i[is.na(pos)], "\"", collapse = ", "),
            " in this mif.", call. = FALSE)
     }
     return(pos)
   }
-  pos <- seq_along(x)[i]
+  pos <- seq_len(n)[i]
   if (anyNA(pos)) {
-    stop("Sample subscript is out of range; this mif has ", length(x),
-         " sample", if (length(x) == 1L) "" else "s", ".", call. = FALSE)
+    stop("Sample subscript is out of range; this mif has ", n,
+         " sample", if (n == 1L) "" else "s", ".", call. = FALSE)
   }
   pos
 }
+
+#' @keywords internal
+#' @noRd
+store_subscript <- function(x, i) subscript_samples(names(x), length(x), i)
+
+#' The same subscript rules for an in-memory spatial slot
+#'
+#' So that `collect_mif(samples = )` validates identically whichever representation
+#' it is handed. Sharing one implementation is the point: when the in-memory branch
+#' used plain `list[i]`, an unknown name produced a `NULL` element named `NA` while
+#' the disk branch errored, and nothing made the two converge.
+#' @keywords internal
+#' @noRd
+list_subscript <- function(x, i) subscript_samples(names(x), length(x), i)
 
 
 #' Read one sample, applying the overlay
@@ -378,6 +392,15 @@ c.mif_store <- function(...) {
          "  Use `collect_mif()` on the disk-backed mif first, or `mif_to_disk()` ",
          "on the in-memory one.", call. = FALSE)
   }
+  # Two stores written by versions that disagree about the on-disk layout cannot be
+  # read by one set of accessors. Previously the result silently took the first
+  # part's format and claimed to be that.
+  fmts <- unique(vapply(parts, function(p) as.integer(attr(p, "format")), integer(1)))
+  if (length(fmts) > 1L) {
+    stop("Cannot combine mif stores written in different on-disk formats (",
+         paste(fmts, collapse = ", "), ").\n",
+         "  Rebuild the older one with `mif_to_disk()`.", call. = FALSE)
+  }
   roots <- unique(vapply(parts, function(p) attr(p, "root"), character(1)))
   # Different roots mean the relative paths are no longer comparable, so absolutise.
   absolute <- length(roots) > 1L
@@ -404,6 +427,35 @@ c.mif_store <- function(...) {
   attr(out, "overlay_columns") <- ovc
   out
 }
+
+
+# A store is a named character vector underneath, which is what makes length() and
+# names() correct for free -- but it also means the ordinary ways of writing to a
+# named list land on that vector instead of on the data. `mif$spatial[1] <- list(df)`
+# silently turned the store into a plain list, and `length(mif$spatial) <- 0` into a
+# plain character vector; both lose every sample with no error. The assignment forms
+# are therefore refused outright, and `$` is supported because the vignettes and
+# reverse dependencies read `mif$spatial$SampleName`.
+#' @export
+`$.mif_store` <- function(x, name) store_read_sample(x, name)
+
+store_readonly_msg <- function() {
+  paste0("A disk-backed spatial slot is read-only.\n",
+         "  Use `collect_mif(mif)` to bring it into memory first, or `split_tissue()` ",
+         "to add per-cell columns through the overlay.")
+}
+
+#' @export
+`[[<-.mif_store` <- function(x, i, value) stop(store_readonly_msg(), call. = FALSE)
+
+#' @export
+`[<-.mif_store` <- function(x, i, value) stop(store_readonly_msg(), call. = FALSE)
+
+#' @export
+`$<-.mif_store` <- function(x, name, value) stop(store_readonly_msg(), call. = FALSE)
+
+#' @export
+`length<-.mif_store` <- function(x, value) stop(store_readonly_msg(), call. = FALSE)
 
 
 #' @export

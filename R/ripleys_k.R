@@ -323,9 +323,22 @@ add_cell_centres <- function(spat, xloc = NULL, yloc = NULL) {
 #' Centralised because each metric function had its own copy of this logic and
 #' three of them wrote to a misspelled slot name on the append path.
 #'
+#' On a disk-backed mif the new slot is also persisted to the store. Without that,
+#' `ripleys_k(disk_mif)` returned a mif whose results existed only in the calling
+#' session: `open_mif(root)` afterwards found an empty `derived` and the work was
+#' silently gone. `split_tissue()` was the only function that called
+#' `sync_manifest()`, so disk-backed mifs persisted their compartment columns but
+#' none of the seven metric tables.
+#'
+#' Writing costs one `saveRDS()` per derived slot plus a manifest rewrite -- small
+#' against the metric itself, and `sync_manifest()` is a no-op for an in-memory mif
+#' and for reference mode, where there is no store to write to.
+#'
+#' @param sync whether to persist to the store. `FALSE` keeps the results in the
+#'   returned mif only, for a caller who does not want a metric run to touch disk.
 #' @keywords internal
 #' @noRd
-write_derived <- function(mif, slot, out, overwrite) {
+write_derived <- function(mif, slot, out, overwrite, sync = TRUE) {
   existing <- mif$derived[[slot]]
   if (overwrite || is.null(existing) || !nrow(existing)) {
     mif$derived[[slot]] <- dplyr::mutate(out, Run = 1)
@@ -335,5 +348,6 @@ write_derived <- function(mif, slot, out, overwrite) {
       dplyr::mutate(out, Run = max(existing$Run, na.rm = TRUE) + 1)
     )
   }
+  if (sync) sync_manifest(mif)
   mif
 }

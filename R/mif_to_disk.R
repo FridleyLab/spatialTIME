@@ -141,6 +141,7 @@ mif_to_disk <- function(mif, path, overwrite = FALSE) {
     if (!is.data.frame(spat)) {
       stop("Sample \"", samples[k], "\" is not a data frame.", call. = FALSE)
     }
+    check_storable_columns(spat, samples[k])
     rel[k] <- file.path("spatial", paste0(stems[k], ".parquet"))
     pq_write(spat, file.path(root, rel[k]))
     p <- pq_probe(file.path(root, rel[k]))
@@ -159,6 +160,44 @@ mif_to_disk <- function(mif, path, overwrite = FALSE) {
   write_store_tables(root, mif)
   write_manifest(root, mif, store, bytes)
   mif
+}
+
+
+#' Refuse column types that parquet cannot carry back unchanged
+#'
+#' Checked before the first byte is written, so a cohort does not get half-written
+#' and then rejected.
+#'
+#' `raw` is the dangerous one: `arrow::write_parquet()` accepts it and
+#' `collect_mif()` hands back an `integer`, silently, with no warning anywhere. A
+#' list column round-trips as an `AsIs` column whose contents are not
+#' [identical()] to the input. `complex` is refused by arrow itself, but with
+#' "Cannot infer type from vector", which names neither the column nor the sample.
+#'
+#' Factors, `logical`, `integer`, `double`, `character`, `Date` and `POSIXct`
+#' (including `tzone`) are all exact, so they are not mentioned here. `integer64`
+#' is allowed through but comes back as `integer` when every value fits in 32 bits
+#' -- documented in `?mif_to_disk` rather than refused, because it is lossless for
+#' the values concerned.
+#'
+#' @param spat one sample's spatial data frame. @param sample its name.
+#' @keywords internal
+#' @noRd
+check_storable_columns <- function(spat, sample) {
+  is_bad <- function(col) {
+    (is.list(col) && !is.data.frame(col)) || is.raw(col) || is.complex(col)
+  }
+  bad <- names(spat)[vapply(spat, is_bad, logical(1))]
+  if (!length(bad)) return(invisible(TRUE))
+  kind <- vapply(spat[bad], function(col) {
+    if (is.raw(col)) "raw" else if (is.complex(col)) "complex" else "list"
+  }, character(1))
+  stop("Sample \"", sample, "\" has column", if (length(bad) > 1) "s" else "",
+       " that cannot be stored on disk: ",
+       paste0("\"", bad, "\" (", kind, ")", collapse = ", "), ".\n",
+       "  Parquet would not return ", if (length(bad) > 1) "them" else "it",
+       " unchanged. Drop the column", if (length(bad) > 1) "s" else "",
+       ", or keep this mif in memory.", call. = FALSE)
 }
 
 
@@ -224,41 +263,33 @@ open_mif <- function(path) {
   cols    <- lapply(m$samples, function(s) as.character(unlist(s$columns)))
   types   <- lapply(m$samples, function(s) as.character(unlist(s$types)))
 
+  ov  <- vapply(m$samples, function(s) s$overlay %||% NA_character_, character(1))
+  ovc <- lapply(m$samples, function(s) as.character(unlist(s$overlay_columns)))
+
   # Re-probe rather than trust. This is the point of the manifest.
   for (k in seq_len(n)) {
-    f <- file.path(root, rel[k])
-    if (!file.exists(f)) {
-      stop("Store is incomplete: sample \"", samples[k], "\" should be at \"",
-           rel[k], "\", which does not exist.", call. = FALSE)
-    }
-    got <- file.size(f)
-    if (!identical(as.numeric(got), bytes[k])) {
-      stop("Sample \"", samples[k], "\" has changed on disk: manifest records ",
-           format(bytes[k], big.mark = ","), " bytes, file is ",
-           format(got, big.mark = ","), " bytes.\n",
-           "  The store was modified outside spatialTIME; rebuild it with ",
-           "`mif_to_disk()`.", call. = FALSE)
-    }
-    p <- pq_probe(f)
-    if (!identical(as.numeric(p$nrow), nrows[k])) {
-      stop("Sample \"", samples[k], "\": manifest says ",
-           format(nrows[k], big.mark = ","), " rows, file has ",
-           format(p$nrow, big.mark = ","), ".", call. = FALSE)
-    }
-    if (!identical(p$columns, cols[[k]])) {
-      stop("Sample \"", samples[k], "\": columns on disk do not match the ",
-           "manifest.\n  manifest: ", paste(cols[[k]], collapse = ", "),
-           "\n  file:     ", paste(p$columns, collapse = ", "), call. = FALSE)
+    validate_store_file(file.path(root, rel[k]), rel = rel[k], sample = samples[k],
+                        what = "spatial file", nrow_expect = nrows[k],
+                        cols_expect = cols[[k]], bytes_expect = bytes[k])
+    # A sample id column that is absent or misnamed fails much later and far from
+    # the cause -- inside add_cell_centres() or a dplyr::select() in whichever
+    # metric was called. Catch it here, where the message can say so.
+    if (!m$sample_id %in% cols[[k]]) {
+      stop("Sample \"", samples[k], "\" has no column named \"", m$sample_id,
+           "\", which this store's manifest gives as its `sample_id`.\n",
+           "  Available: ", abbreviate_names(cols[[k]]), call. = FALSE)
     }
   }
 
-  ov  <- vapply(m$samples, function(s) s$overlay %||% NA_character_, character(1))
-  ovc <- lapply(m$samples, function(s) as.character(unlist(s$overlay_columns)))
+  # Overlays used to get file.exists() and nothing else, so a truncated or
+  # wrong-schema overlay opened cleanly and then failed deep inside a read. There
+  # is no recorded byte size for them (that would need a format bump), but the row
+  # count must match the sample and the columns must match what the manifest says
+  # the overlay added -- both already in format 1.
   for (k in which(!is.na(ov))) {
-    if (!file.exists(file.path(root, ov[k]))) {
-      stop("Sample \"", samples[k], "\" records an overlay at \"", ov[k],
-           "\", which does not exist.", call. = FALSE)
-    }
+    validate_store_file(file.path(root, ov[k]), rel = ov[k], sample = samples[k],
+                        what = "overlay", nrow_expect = nrows[k],
+                        cols_expect = ovc[[k]], bytes_expect = NULL)
   }
 
   store <- new_mif_store(
@@ -268,25 +299,139 @@ open_mif <- function(path) {
   )
   attr(store, "overlay_columns") <- ovc
 
+  # Manifest order is authoritative: list.files() sorts alphabetically, which would
+  # silently reorder derived slots on every reopen. And the manifest is the list of
+  # what SHOULD be there, so read from it rather than from the directory -- an
+  # intersect() with whatever happens to be on disk turns a half-copied store into
+  # a mif that quietly lost a metric table.
   derived <- list()
-  dd <- file.path(root, "derived")
-  if (dir.exists(dd)) {
-    for (f in list.files(dd, pattern = "\\.rds$", full.names = TRUE)) {
-      derived[[sub("\\.rds$", "", basename(f))]] <- readRDS(f)
-    }
-    # Manifest order is authoritative: list.files() sorts alphabetically, which
-    # would silently reorder derived slots on every reopen.
-    known <- as.character(unlist(m$derived))
-    if (length(known)) derived <- derived[intersect(known, names(derived))]
+  known <- as.character(unlist(m$derived))
+  for (slot in known) {
+    derived[[slot]] <- read_store_rds(root, file.path("derived",
+                                                      paste0(sample_file_stem(slot), ".rds")))
   }
 
-  structure(list(clinical = readRDS(file.path(root, "clinical.rds")),
-                 sample   = readRDS(file.path(root, "sample.rds")),
+  structure(list(clinical = read_store_rds(root, "clinical.rds"),
+                 sample   = read_store_rds(root, "sample.rds"),
                  spatial  = store,
                  derived  = derived,
                  patient_id = m$patient_id,
                  sample_id  = m$sample_id),
             class = "mif")
+}
+
+
+#' Probe one store file and compare it to what the manifest claims
+#'
+#' Shared by the base-file and overlay loops of [open_mif()] and by [verify_mif()],
+#' so a file can never be validated one way in one place and another way elsewhere
+#' -- which is how overlays ended up with only an existence check.
+#'
+#' @param f absolute path. @param rel path as recorded, for the message.
+#' @param sample sample name, for the message. @param what "spatial file" or "overlay".
+#' @param nrow_expect,cols_expect expected row count and column names.
+#' @param bytes_expect expected size, or `NULL` where none is recorded.
+#' @keywords internal
+#' @noRd
+validate_store_file <- function(f, rel, sample, what, nrow_expect, cols_expect,
+                                bytes_expect = NULL) {
+  if (!file.exists(f)) {
+    stop("Store is incomplete: ", what, " for sample \"", sample,
+         "\" should be at \"", rel, "\", which does not exist.", call. = FALSE)
+  }
+  if (!is.null(bytes_expect)) {
+    got <- file.size(f)
+    if (!identical(as.numeric(got), as.numeric(bytes_expect))) {
+      stop("Sample \"", sample, "\" has changed on disk: manifest records ",
+           format(bytes_expect, big.mark = ","), " bytes, ", what, " is ",
+           format(got, big.mark = ","), " bytes.\n",
+           "  The store was modified outside spatialTIME; rebuild it with ",
+           "`mif_to_disk()`.", call. = FALSE)
+    }
+  }
+  p <- pq_probe(f)
+  if (!identical(as.numeric(p$nrow), as.numeric(nrow_expect))) {
+    stop("Sample \"", sample, "\" (", what, "): manifest says ",
+         format(nrow_expect, big.mark = ","), " rows, file has ",
+         format(p$nrow, big.mark = ","), ".", call. = FALSE)
+  }
+  if (!identical(p$columns, as.character(cols_expect))) {
+    stop("Sample \"", sample, "\" (", what, "): columns on disk do not match the ",
+         "manifest.\n  manifest: ", paste(cols_expect, collapse = ", "),
+         "\n  file:     ", paste(p$columns, collapse = ", "), call. = FALSE)
+  }
+  invisible(TRUE)
+}
+
+
+#' Read one of a store's RDS slots, reporting a missing one as a store problem
+#'
+#' A bare `readRDS()` on an absent file gives a raw `gzfile` warning followed by
+#' "cannot open the connection", which names neither the store nor what was
+#' missing. A half-copied store is exactly the case this has to explain.
+#' @keywords internal
+#' @noRd
+read_store_rds <- function(root, rel) {
+  f <- file.path(root, rel)
+  if (!file.exists(f)) {
+    stop("Store is incomplete: \"", rel, "\" is missing from \"", root, "\".\n",
+         "  The store was not finished writing, or was only partially copied.",
+         call. = FALSE)
+  }
+  readRDS(f)
+}
+
+
+#' Re-probe every spatial file a mif points at
+#'
+#' @description
+#' Checks that each file still has the row count and columns the mif expects, and
+#' reports the first that does not.
+#'
+#' [open_mif()] does this automatically, but two cases are not covered by it. A mif
+#' built with `create_mif(spatial_list = <parquet paths>)` references your files
+#' directly and has no manifest, so there is nothing to validate at construction
+#' and nothing stops those files changing afterwards. And a long-running session
+#' holds a store open across hours of computation, during which the files can be
+#' replaced underneath it. In both cases the recorded row count goes stale, and
+#' because the metrics index cells by position a stale count means markers attached
+#' to the wrong cells rather than an error.
+#'
+#' @param mif object of class `mif`. In-memory mifs have nothing to verify and pass
+#'   trivially, so this is safe to call unconditionally.
+#' @return invisibly `TRUE`; errors naming the first sample that fails.
+#' @seealso [mif_to_disk()], [open_mif()]
+#' @export
+#' @examples
+#' x <- create_mif(clinical_data = spatialTIME::example_clinical,
+#'   sample_data = spatialTIME::example_summary,
+#'   spatial_list = spatialTIME::example_spatial[1],
+#'   patient_id = "deidentified_id", sample_id = "deidentified_sample")
+#' store <- file.path(tempdir(), "verify.mif")
+#' xd <- mif_to_disk(x, store, overwrite = TRUE)
+#' verify_mif(xd)
+#' unlink(store, recursive = TRUE)
+verify_mif <- function(mif) {
+  if (!inherits(mif, "mif")) {
+    stop("mIF should be of class `mif` created with function `create_mif()`",
+         call. = FALSE)
+  }
+  if (!is_disk_mif(mif)) return(invisible(TRUE))
+  x <- mif$spatial
+  for (k in seq_along(x)) {
+    validate_store_file(
+      store_paths(x, k), rel = unname(unclass(x)[k]), sample = names(x)[k],
+      what = "spatial file", nrow_expect = attr(x, "nrow")[[k]],
+      cols_expect = store_columns(x, k), bytes_expect = NULL)
+    ov <- store_overlay_path(x, k)
+    if (!is.na(ov)) {
+      validate_store_file(
+        ov, rel = attr(x, "overlay")[[k]], sample = names(x)[k], what = "overlay",
+        nrow_expect = attr(x, "nrow")[[k]],
+        cols_expect = attr(x, "overlay_columns")[[k]], bytes_expect = NULL)
+    }
+  }
+  invisible(TRUE)
 }
 
 
@@ -311,7 +456,11 @@ collect_mif <- function(mif, samples = NULL) {
   }
   if (!is_disk_mif(mif)) {
     if (is.null(samples)) return(mif)
-    mif$spatial <- mif$spatial[samples]
+    # Validated the same way as the disk path, and with the same message. Plain
+    # `list[samples]` returns a NULL element named NA for a name that is not there,
+    # so `collect_mif(m, samples = "typo")` used to hand back a one-sample mif whose
+    # sample was NULL -- on the disk path the identical call errors.
+    mif$spatial <- mif$spatial[list_subscript(mif$spatial, samples)]
     return(mif)
   }
   store <- mif$spatial

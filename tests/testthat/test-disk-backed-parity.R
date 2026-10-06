@@ -243,3 +243,40 @@ test_that("the v1.4.0 numeric baseline holds through a disk-backed mif", {
     expect_equal(new$`Exact CSR`, old$`Exact CSR`, tolerance = 1e-9, info = ec)
   }
 })
+
+
+test_that("every metric's derived slot is byte-identical after a store round trip", {
+  # The parity tests above compare the mif a metric RETURNS. This one compares what
+  # survives to disk, which until 2.0.0 was nothing: write_derived() mutated
+  # mif$derived in memory only, so open_mif() after a metric run found an empty
+  # `derived` and the work was silently gone.
+  dir <- withr::local_tempdir()
+  root <- file.path(dir, "s.mif")
+  m <- two_sample_mif()
+  d <- mif_to_disk(m, root)
+
+  rr <- seq(0, 30, 10)
+  runs <- list(
+    univariate_Count = function(x) ripleys_k(x, mnames = mnames_good()[1], r_range = rr,
+                                             permute = FALSE, workers = 1, overwrite = TRUE),
+    univariate_NN    = function(x) NN_G(x, mnames = mnames_good()[1], r_range = rr,
+                                       num_permutations = 3, workers = 1, overwrite = TRUE),
+    bivariate_Count  = function(x) bi_ripleys_k(x, mnames = mnames_bivariate(), r_range = rr,
+                                                permute = FALSE, workers = 1, overwrite = TRUE)
+  )
+
+  for (slot in names(runs)) {
+    set.seed(31)
+    d <- runs[[slot]](d)
+    reopened <- open_mif(root)
+    expect_identical(reopened$derived[[slot]], d$derived[[slot]], info = slot)
+    # Slot order is the manifest's, not list.files()' alphabetical one.
+    expect_identical(names(reopened$derived), names(d$derived), info = slot)
+  }
+
+  # And the numbers still match the in-memory mif they came from.
+  set.seed(31)
+  mem <- runs$univariate_Count(m)
+  expect_equal(open_mif(root)$derived$univariate_Count,
+               mem$derived$univariate_Count)
+})

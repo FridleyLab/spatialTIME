@@ -69,6 +69,73 @@ sample it is handling. **Peak memory stops scaling with the number of samples.**
   rises from `R (>= 4.1)` to `R (>= 4.2)`**, which CRAN `arrow` requires. This is
   user-visible: an R 4.1 installation will no longer take this package.
 
+### Metric results are now persisted to the store
+
+Running a metric on a disk-backed mif used to leave its results in the calling
+session only. `split_tissue()` was the only function that called `sync_manifest()`,
+so `ripleys_k(disk_mif)` returned a mif with a populated `derived` slot while
+`open_mif(root)` afterwards found an empty one — the work was silently gone, and
+nothing in the suite noticed because the tests computed *before* writing the store.
+`write_derived()` now syncs, for all seven metrics. It takes a `sync` argument for a
+caller who does not want a metric run to touch disk, and it is a no-op for in-memory
+mifs and for reference mode.
+
+### The store now refuses what it used to accept and corrupt
+
+Each of these was verified as silently accepted before:
+
+* **A spatial frame with a `list`, `raw` or `complex` column** is refused by
+  `mif_to_disk()`, before anything is written. `raw` was the dangerous one: arrow
+  accepted it and `collect_mif()` handed back an `integer`, with no warning anywhere.
+  A list column round-tripped as an `AsIs` column that was not `identical()` to the
+  input. `complex` already failed, but with arrow's "Cannot infer type from vector",
+  naming neither the column nor the sample. `logical`, `integer`, `double`,
+  `character`, `Date`, `POSIXct` (including `tzone`) and factors are all exact and
+  now pinned by a test; `integer64` is allowed but comes back as `integer` when every
+  value fits in 32 bits.
+* **An overlay file that disagrees with the manifest.** Base files were checked for
+  existence, size, row count and schema; overlays got `file.exists()` alone, so a
+  truncated or wrong-schema overlay opened cleanly and then failed deep inside a read.
+  Both now go through one `validate_store_file()`.
+* **A manifest whose `sample_id` is not a column of the data.** This used to produce
+  a mif where every metric failed inside `add_cell_centres()`, far from the cause.
+* **A partially copied store.** A missing `clinical.rds`, `sample.rds` or
+  `derived/*.rds` gave a raw `gzfile` warning and "cannot open the connection". It
+  now names the store and the missing file. Derived slots are read from the manifest
+  rather than from `list.files()`, so a slot the manifest promises and the directory
+  lacks is an error instead of a mif that quietly lost a metric table.
+* **Combining stores written in different on-disk formats.** `c()` took the first
+  part's format unconditionally and the result claimed to be that.
+* **Writing to a store's spatial slot.** A store is a named character vector
+  underneath, so `mif$spatial[1] <- list(df)` silently produced a plain list and
+  `length(mif$spatial) <- 0` a plain character vector — every sample lost, no error.
+  `[[<-`, `[<-`, `$<-` and `length<-` now refuse, pointing at `collect_mif()`. `$`
+  *reads*, since the vignettes and reverse dependencies use
+  `mif$spatial$SampleName`.
+
+### New: `verify_mif()`
+
+Re-probes every spatial file a mif points at and reports the first whose row count
+or columns no longer match. `open_mif()` validates at open time, but two cases are
+not covered by it: a mif built with `create_mif(spatial_list = <parquet paths>)`
+references your files directly and has no manifest, and a long session holds a store
+open while the files underneath it can be replaced. Both leave the recorded row count
+stale, and because every mask is positional a stale count means markers attached to
+the wrong cells rather than an error. In-memory mifs pass trivially, so it is safe to
+call unconditionally.
+
+### Also
+
+* `collect_mif(mif, samples = )` validates its subscript identically whichever
+  representation it is handed. The in-memory branch used plain `list[samples]`, which
+  returns a `NULL` element named `NA` for an unknown name, so the same call errored on
+  a disk-backed mif and quietly returned a mif with a `NULL` sample in memory. Both
+  now share one implementation.
+* A **heterogeneous cohort** — samples that do not all have the same columns — is now
+  tested. `attr(spatial, "columns")` becomes a list in that case and
+  `store_columns()`, `store_types()`, `[` and `c()` all branch on it; only the
+  homogeneous case had coverage, so none of those branches were ever exercised.
+
 ## New: density-based tissue segmentation
 
 * **`split_tissue()`** segments a sample into tissue compartments from the

@@ -536,3 +536,383 @@ test_that("split_tissue refuses to write derived columns in reference mode", {
                  class2 = "Stroma", sigma = 40, interface_width = 20, workers = 1),
     "nowhere to write")
 })
+
+
+# ---------------------------------------------------------------------------
+# Validation that was missing. Each block below corresponds to a case the store
+# previously ACCEPTED and then failed on, or silently corrupted.
+# ---------------------------------------------------------------------------
+
+test_that("a metric's derived slot is persisted and survives a reopen", {
+  # split_tissue() was the only function calling sync_manifest(), so metric results
+  # on a disk-backed mif lived in the calling session only: open_mif() afterwards
+  # found an empty `derived` and the run was silently gone. The existing tests
+  # sidestepped this by computing BEFORE mif_to_disk().
+  dir <- withr::local_tempdir()
+  root <- file.path(dir, "s.mif")
+  m <- example_mif(n_cells = 120)
+  d <- mif_to_disk(m, root)
+
+  d <- ripleys_k(d, mnames = mnames_good()[1], r_range = c(0, 10, 20),
+                 permute = FALSE, workers = 1, overwrite = TRUE)
+  expect_identical(open_mif(root)$derived$univariate_Count,
+                   d$derived$univariate_Count)
+
+  # Two slots in sequence: the manifest's order is authoritative on reopen, and
+  # list.files() would sort them alphabetically instead.
+  d <- NN_G(d, mnames = mnames_good()[1], r_range = c(0, 10),
+            num_permutations = 2, workers = 1, overwrite = TRUE)
+  o <- open_mif(root)
+  expect_identical(names(o$derived), c("univariate_Count", "univariate_NN"))
+  expect_identical(names(o$derived), names(d$derived))
+  expect_identical(o$derived$univariate_NN, d$derived$univariate_NN)
+})
+
+test_that("an overlay that does not match the manifest is refused", {
+  # Base files got existence, size, row-count and schema checks; overlays got
+  # file.exists() alone, so a truncated or wrong-schema overlay opened cleanly and
+  # failed later inside a read with an opaque message.
+  d <- store_of(halfplane_mif())
+  root <- attr(d$spatial, "root")
+  sd <- split_tissue(d, classifier = "Classifier.Label", class1 = "Tumor",
+                     class2 = "Stroma", sigma = 40, interface_width = 20,
+                     workers = 1)
+  ov <- file.path(root, attr(sd$spatial, "overlay")[[1]])
+  expect_true(file.exists(ov))
+
+  # Right columns, wrong row count.
+  good <- as.data.frame(arrow::read_parquet(ov))
+  arrow::write_parquet(good[1:3, , drop = FALSE], ov)
+  expect_error(open_mif(root), "overlay")
+
+  # Right row count, wrong columns.
+  arrow::write_parquet(
+    data.frame(nonsense = seq_len(nrow(good))), ov)
+  expect_error(open_mif(root), "overlay")
+
+  unlink(ov)
+  expect_error(open_mif(root), "Store is incomplete")
+})
+
+test_that("column types that parquet cannot return unchanged are refused up front", {
+  # `raw` is the dangerous one: arrow accepts it and hands back an integer with no
+  # warning. A list column comes back as AsIs and is not identical to the input.
+  # `complex` was refused by arrow itself, but with a message naming neither the
+  # column nor the sample.
+  with_col <- function(col) {
+    s <- example_spatial[["TMA3_[9,K].tif"]][1:5, ]
+    s$BAD <- col
+    toy_mif(list(S1 = s))
+  }
+  for (case in list(list(as.list(1:5), "list"),
+                    list(as.raw(1:5), "raw"),
+                    list(complex(real = 1:5, imaginary = 1), "complex"))) {
+    expect_error(mif_to_disk(with_col(case[[1]]), withr::local_tempfile()),
+                 "cannot be stored on disk", info = case[[2]])
+    # The message names the offending column and its kind, not just the sample.
+    expect_error(mif_to_disk(with_col(case[[1]]), withr::local_tempfile()),
+                 "BAD", info = case[[2]])
+  }
+
+  # Nothing was written before the refusal.
+  p <- withr::local_tempfile()
+  try(mif_to_disk(with_col(as.raw(1:5)), p), silent = TRUE)
+  expect_false(dir.exists(file.path(p, "spatial")) &&
+                 length(list.files(file.path(p, "spatial"))) > 0)
+})
+
+test_that("the column types that ARE exact stay exact", {
+  # Pinned so a future arrow upgrade that changes one of these fails here. Dates and
+  # times matter because a HALO export can carry an acquisition timestamp.
+  s <- toy_spatial("S1", n = 20)
+  s$lgl  <- rep(c(TRUE, FALSE, NA), length.out = 20)
+  s$int  <- 1:20
+  s$dte  <- as.Date("2024-01-01") + 0:19
+  s$tm   <- as.POSIXct("2024-01-01 12:00:00", tz = "America/New_York") + 0:19
+  s$chr  <- as.character(1:20)
+  s$fct  <- factor(rep(c("y", "x"), 10), levels = c("y", "x", "unused"))
+  back <- collect_mif(store_of(toy_mif(list(S1 = s))))$spatial[[1]]
+
+  for (nm in c("lgl", "int", "dte", "chr", "fct")) {
+    expect_identical(back[[nm]], s[[nm]], info = nm)
+  }
+  # POSIXct compares equal as an instant; assert the time zone survived too.
+  expect_equal(back$tm, s$tm)
+  expect_identical(attr(back$tm, "tzone"), attr(s$tm, "tzone"))
+  expect_identical(levels(back$fct), levels(s$fct))
+})
+
+test_that("collect_mif validates a sample subscript the same way in both modes", {
+  # The in-memory branch used plain `list[samples]`, which returns a NULL element
+  # named NA for an unknown name, so the same call errored on disk and quietly
+  # returned a mif with a NULL sample in memory.
+  d <- store_of()
+  m <- example_mif()
+  mem <- tryCatch(collect_mif(m, samples = "nope"), error = conditionMessage)
+  dsk <- tryCatch(collect_mif(d, samples = "nope"), error = conditionMessage)
+  expect_type(mem, "character")
+  expect_identical(mem, dsk)
+  expect_match(mem, "No sample named")
+
+  # And out-of-range positions, also previously silent in memory.
+  expect_error(collect_mif(m, samples = 99), "out of range")
+  expect_error(collect_mif(d, samples = 99), "out of range")
+})
+
+test_that("stores written in different on-disk formats refuse to combine", {
+  # c.mif_store() took the first part's format unconditionally, so the result
+  # claimed a format it had not verified for every part.
+  d1 <- store_of()
+  d2 <- store_of()
+  s2 <- d2$spatial
+  attr(s2, "format") <- 99L
+  expect_error(c(d1$spatial, s2), "different on-disk formats")
+  expect_error(merge_mifs(list(d1, structure(
+    list(clinical = d2$clinical, sample = d2$sample, spatial = s2,
+         derived = list(), patient_id = d2$patient_id, sample_id = d2$sample_id),
+    class = "mif"))), "different on-disk formats")
+})
+
+test_that("verify_mif re-probes the files a mif points at", {
+  # open_mif() validates at open time, but reference-mode mifs have no manifest and
+  # never get that, and a long session holds a store open while the files underneath
+  # it can change. A stale row count means markers attached to the wrong cells.
+  d <- store_of()
+  expect_true(verify_mif(d))
+  expect_true(verify_mif(example_mif()))     # in-memory: nothing to check
+
+  arrow::write_parquet(data.frame(a = 1:2), store_paths(d$spatial, 1))
+  expect_error(verify_mif(d), "rows|columns")
+
+  expect_error(verify_mif("not a mif"), "class `mif`")
+})
+
+test_that("verify_mif catches a reference-mode source file changing underneath", {
+  d <- store_of()
+  src <- store_paths(d$spatial, 1)
+  ref <- create_mif(
+    clinical_data = data.frame(deidentified_id = "p1"),
+    sample_data = data.frame(deidentified_id = "p1",
+                             deidentified_sample = names(d$spatial)[1]),
+    spatial_list = stats::setNames(src, names(d$spatial)[1]),
+    patient_id = "deidentified_id", sample_id = "deidentified_sample")
+  expect_true(verify_mif(ref))
+
+  keep <- as.data.frame(arrow::read_parquet(src))
+  arrow::write_parquet(keep[1:5, , drop = FALSE], src)
+  expect_error(verify_mif(ref), "rows")
+})
+
+test_that("a partially copied store names what is missing", {
+  # A bare readRDS() on an absent file gives a gzfile warning and "cannot open the
+  # connection", naming neither the store nor the slot.
+  for (slot in c("clinical.rds", "sample.rds")) {
+    d <- store_of()
+    root <- attr(d$spatial, "root")
+    unlink(file.path(root, slot))
+    expect_error(open_mif(root), "Store is incomplete", info = slot)
+    expect_error(open_mif(root), slot, info = slot)
+  }
+
+  # A derived slot the manifest promises but the directory does not have. Reading
+  # from the manifest rather than list.files() is what makes this an error instead
+  # of a mif that quietly lost a metric table.
+  dir <- withr::local_tempdir()
+  root <- file.path(dir, "s.mif")
+  d <- mif_to_disk(example_mif(n_cells = 120), root)
+  d <- ripleys_k(d, mnames = mnames_good()[1], r_range = c(0, 10),
+                 permute = FALSE, workers = 1, overwrite = TRUE)
+  unlink(file.path(root, "derived", "univariate_Count.rds"))
+  expect_error(open_mif(root), "Store is incomplete")
+})
+
+test_that("a store's spatial slot is read-only, and says so", {
+  # A store is a named character vector underneath, so the ordinary ways of writing
+  # to a named list land on that vector rather than on the data.
+  # `mif$spatial[1] <- list(df)` silently produced a plain list and
+  # `length(mif$spatial) <- 0` a plain character vector -- every sample lost, no error.
+  d <- store_of()
+  s <- d$spatial
+
+  # `$` must WORK: the vignettes and reverse dependencies read mif$spatial$Name.
+  expect_s3_class(s[[names(s)[1]]], "data.frame")
+  expect_identical(s[[1]], s[[names(s)[1]]])
+
+  expect_error({ s[[1]] <- data.frame(a = 1) }, "read-only")
+  expect_error({ s[1] <- list(data.frame(a = 1)) }, "read-only")
+  expect_error({ s$anything <- 1 }, "read-only")
+  expect_error({ length(s) <- 0L }, "read-only")
+
+  # Refusing must leave the store whole, not half-converted.
+  expect_s3_class(s, "mif_store")
+  expect_length(s, length(d$spatial))
+  expect_s3_class(s[[1]], "data.frame")
+
+  expect_error(collect_mif(d)$spatial[[1]], NA)   # the sanctioned route still works
+})
+
+test_that("open_mif rejects a manifest whose sample_id is not a column", {
+  # Previously this produced a mif where every metric failed deep inside
+  # add_cell_centres(), far from the cause.
+  d <- store_of()
+  root <- attr(d$spatial, "root")
+  mp <- file.path(root, "manifest.json")
+  j <- jsonlite::fromJSON(mp, simplifyVector = FALSE)
+  j$sample_id <- "not_a_column"
+  writeLines(jsonlite::toJSON(j, auto_unbox = TRUE, pretty = TRUE, null = "null"), mp)
+  expect_error(open_mif(root), "no column named")
+})
+
+
+# ---------------------------------------------------------------------------
+# Heterogeneous cohorts: attr(spatial, "columns") becomes a LIST when samples
+# differ, and store_columns/store_types/`[`/`c` all branch on is.list(). Only the
+# homogeneous case was covered, so none of those branches were ever exercised.
+# ---------------------------------------------------------------------------
+
+test_that("a store whose samples have different columns works throughout", {
+  a <- toy_spatial("A", n = 40, markers = c(A = 10, B = 10))
+  b <- toy_spatial("B", n = 50, markers = c(A = 12, B = 12))
+  b$extra <- seq_len(nrow(b))          # B has a column A does not
+  d <- store_of(toy_mif(list(A = a, B = b)))
+
+  # The schema must NOT have collapsed to a single shared vector.
+  expect_true(is.list(attr(d$spatial, "columns")))
+  expect_true(is.list(attr(d$spatial, "types")))
+  expect_false("extra" %in% store_columns(d$spatial, 1))
+  expect_true("extra" %in% store_columns(d$spatial, 2))
+
+  # Reads, per sample.
+  expect_false("extra" %in% colnames(d$spatial[[1]]))
+  expect_identical(d$spatial[[2]]$extra, b$extra)
+
+  # `[` keeps the per-sample schema aligned with the samples it kept.
+  sub <- d$spatial[2]
+  expect_s3_class(sub, "mif_store")
+  expect_identical(names(sub), "B")
+  expect_true("extra" %in% store_columns(sub, 1))
+  expect_identical(sub[[1]]$extra, b$extra)
+
+  # `c` of two heterogeneous stores.
+  joined <- c(d$spatial[1], d$spatial[2])
+  expect_length(joined, 2L)
+  expect_false("extra" %in% store_columns(joined, 1))
+  expect_true("extra" %in% store_columns(joined, 2))
+
+  # collect_mif and a metric both cope.
+  back <- collect_mif(d)
+  expect_identical(reset_rn(back$spatial$B), reset_rn(b))
+  expect_false("extra" %in% colnames(back$spatial$A))
+  expect_error(ripleys_k(d, mnames = "A", r_range = c(0, 2, 4), permute = FALSE,
+                         workers = 1, overwrite = TRUE), NA)
+
+  # A projection naming a column only one sample has must fail for the other, with
+  # the sample named -- not return a short frame.
+  expect_error(mif_spatial(d, 1, c("XMin", "extra")), "not found in sample")
+  expect_error(mif_spatial(d, 1, c("XMin", "extra")), "\"A\"")
+})
+
+test_that("a projected read and a full read agree on column order", {
+  # store_read_sample() builds `union(base, overlay)` then reorders to `want`.
+  # plot_tissue_split() depends on that order; nothing tested it.
+  d <- store_of(halfplane_mif())
+  sd <- split_tissue(d, classifier = "Classifier.Label", class1 = "Tumor",
+                     class2 = "Stroma", sigma = 40, interface_width = 20,
+                     workers = 1)
+  full <- mif_spatial(sd, 1)
+  want <- c("YMin", "density_score", "XMin", "Classifier.Label")
+  got <- mif_spatial(sd, 1, want)
+  expect_identical(colnames(got), want)
+  for (nm in want) expect_identical(got[[nm]], full[[nm]], info = nm)
+
+  # Base columns keep their original relative order in a full read, with overlay
+  # additions appended.
+  base <- store_columns(sd$spatial, 1)
+  expect_identical(colnames(full)[seq_along(base)], base)
+})
+
+test_that("an overlay column shadows a base column of the same name", {
+  # Promised by store_read_sample()'s contract and relied on by
+  # split_tissue(overwrite = TRUE), but never exercised with a name collision.
+  s <- toy_spatial("S1", n = 30)
+  s$tag <- "base"
+  d <- store_of(toy_mif(list(S1 = s)))
+  base_size <- file.size(store_paths(d$spatial, 1))
+
+  d2 <- mif_spatial_set(d, 1, data.frame(tag = rep("overlay", nrow(s)),
+                                         stringsAsFactors = FALSE))
+  expect_identical(unique(mif_spatial(d2, 1)$tag), "overlay")
+  expect_identical(unique(mif_spatial(d2, 1, "tag")$tag), "overlay")
+  # The base file is untouched; the shadowing happens on read.
+  expect_identical(file.size(store_paths(d2$spatial, 1)), base_size)
+  # And `tag` is not duplicated in the result.
+  expect_equal(sum(colnames(mif_spatial(d2, 1)) == "tag"), 1L)
+})
+
+test_that("mif_spatial_set enforces row count and replaces its own columns", {
+  # Only ever exercised through split_tissue(), which is 21 KB of other logic.
+  s <- toy_spatial("S1", n = 30)
+  d <- store_of(toy_mif(list(S1 = s)))
+
+  expect_error(mif_spatial_set(d, 1, data.frame(z = 1:5)), "30 cells")
+
+  d <- mif_spatial_set(d, 1, data.frame(first = seq_len(30)))
+  d <- mif_spatial_set(d, 1, data.frame(second = seq_len(30) * 2))
+  got <- mif_spatial(d, 1)
+  expect_true(all(c("first", "second") %in% colnames(got)))
+
+  # A re-run replaces its own column rather than duplicating it.
+  d <- mif_spatial_set(d, 1, data.frame(first = rep(99L, 30)))
+  got <- mif_spatial(d, 1)
+  expect_equal(sum(colnames(got) == "first"), 1L)
+  expect_identical(unique(got$first), 99L)
+  expect_true("second" %in% colnames(got))
+})
+
+test_that("colliding sample names map back to the right files on reopen", {
+  # sample_file_stems() disambiguates "A/1" and "A 1", which both sanitise to "A_1".
+  # The existing test checks the paths differ; this checks the mapping survives a
+  # round trip through the manifest.
+  a <- toy_spatial("A/1", n = 20, markers = c(A = 5, B = 5))
+  b <- toy_spatial("A 1", n = 31, markers = c(A = 6, B = 6))
+  dir <- withr::local_tempdir()
+  root <- file.path(dir, "s.mif")
+  mif_to_disk(toy_mif(stats::setNames(list(a, b), c("A/1", "A 1"))), root)
+
+  o <- open_mif(root)
+  expect_identical(names(o$spatial), c("A/1", "A 1"))
+  expect_equal(nrow(o$spatial[["A/1"]]), 20L)
+  expect_equal(nrow(o$spatial[["A 1"]]), 31L)
+  expect_length(unique(store_paths(o$spatial)), 2L)
+})
+
+test_that("c.mif_store permits duplicate names, because merge_mifs governs them", {
+  # Deliberately NOT an error here. `merge_mifs(check.names = FALSE)` is documented
+  # with `merge_mifs(mifs = list(x, x), check.names = FALSE)` as its own example, and
+  # it reaches the spatial slot through `do.call(c, .)` -- so refusing duplicates in
+  # `c()` would break a supported call path. The duplicate check belongs in
+  # merge_mifs() (R/merge_mifs.R:91), the only place that knows whether the caller
+  # asked for it.
+  d <- store_of()
+  joined <- c(d$spatial, d$spatial)
+  expect_s3_class(joined, "mif_store")
+  expect_length(joined, 2L)
+  expect_identical(names(joined)[1], names(joined)[2])
+
+  # The consequence a caller should know about: a duplicated name is reachable only
+  # at its first position, because store_index() resolves names with match().
+  expect_identical(joined[[names(joined)[1]]], joined[[1]])
+
+  # And merge_mifs does catch it when asked.
+  expect_error(merge_mifs(list(store_of(), store_of()), check.names = TRUE),
+               "same name")
+})
+
+test_that("a one-row sample round-trips", {
+  s <- toy_spatial("S1", n = 1, markers = c(A = 1, B = 0))
+  d <- store_of(toy_mif(list(S1 = s)))
+  expect_equal(attr(d$spatial, "nrow")[[1]], 1)
+  expect_equal(nrow(d$spatial[[1]]), 1L)
+  expect_identical(reset_rn(collect_mif(d)$spatial[[1]]), reset_rn(s))
+  expect_output(print(d$spatial), "1 samples")
+})

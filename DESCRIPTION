@@ -64,7 +64,7 @@ Suggests:
     gridExtra,
     pheatmap
 VignetteBuilder: knitr
-URL: https://github.com/FridleyLab/spatialTIME
+URL: https://github.com/FridleyLab/spatialTIME, https://fridleylab.github.io/spatialTIME/
 BugReports: https://github.com/FridleyLab/spatialTIME/issues
 NeedsCompilation: no
 Config/testthat/edition: 3
