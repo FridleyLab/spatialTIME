@@ -20,8 +20,15 @@ per participant.}
 sample. Should at a minimum contain a 2 columns: one for sample names and
 one for the corresponding patient name.}
 
-\item{spatial_list}{A named list of data frames with the spatial data from
-each sample making up each individual data frame}
+\item{spatial_list}{Either a named list of data frames with the spatial data
+from each sample making up each individual data frame, or a \strong{named character
+vector of paths to parquet files}, one sample per file, which builds a
+disk-backed mif that reads each sample only when a computation needs it. The
+files are referenced where they are and never copied or modified. Use this for
+whole slide images, where holding every sample in memory at once is what stops
+a multi-core run from starting -- see \code{\link[=mif_to_disk]{mif_to_disk()}} for the sizes involved
+and for building a store from data already in memory. If the vector is unnamed,
+names are taken from each file's \code{sample_id} column.}
 
 \item{patient_id}{A character string indicating the column name for patient id in
 sample and clinical data frames.}

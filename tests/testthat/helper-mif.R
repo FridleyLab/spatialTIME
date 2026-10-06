@@ -166,6 +166,16 @@ one_class_mif <- function() {
   toy_mif(spatial_list = list(S1 = spat))
 }
 
+#' A disk-backed copy of a mif, in a temp dir tied to the calling test
+#'
+#' The store is written under `withr::local_tempdir()`, so it is removed when the
+#' test that asked for it finishes. Every parity test is "same numbers from this and
+#' from its in-memory original", so they always come in pairs.
+disk_mif <- function(mif = example_mif(), env = parent.frame()) {
+  dir <- withr::local_tempdir(.local_envir = env)
+  mif_to_disk(mif, file.path(dir, "store.mif"))
+}
+
 #' A minimal spatial frame with exactly the requested marker counts
 #'
 #' @param n total cells.

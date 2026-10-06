@@ -29,8 +29,10 @@ Description: Visualization and analysis of multiplex immunofluorescence data.
     avoids permutations entirely. Count-based measures agree with the 'spatstat'
     family to floating-point precision.
 License: MIT + file LICENSE
-Imports: 
+Imports:
     magrittr,
+    arrow,
+    jsonlite,
     dplyr,
     tidyr,
     ggplot2,
@@ -68,7 +70,7 @@ NeedsCompilation: no
 Config/testthat/edition: 3
 Roxygen: list(markdown = TRUE)
 Depends:
-    R (>= 4.1)
+    R (>= 4.2)
 LazyData: true
 Encoding: UTF-8
 Config/roxygen2/version: 8.1.0

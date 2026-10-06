@@ -77,11 +77,12 @@ NN_G = function(mif,
 
   #Seeds drawn in the parent so results depend only on the user's set.seed() and
   #not on `workers`.
-  seeds = sample.int(.Machine$integer.max, length(mif$spatial))
+  seeds = sample.int(.Machine$integer.max, n_mif_samples(mif))
 
-  out = parallel::mclapply(seq_along(mif$spatial), function(sample_i){
+  out = parallel::mclapply(seq_len(n_mif_samples(mif)), function(sample_i){
     set.seed(seeds[[sample_i]])
-    spat = mif$spatial[[sample_i]]
+    spat = mif_spatial(mif, sample_i,
+                       spatial_columns(mif, mnames, xloc, yloc, i = sample_i))
     spat = add_cell_centres(spat, xloc, yloc)
     label = as.character(spat[[mif$sample_id]][1])
 

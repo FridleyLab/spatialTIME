@@ -126,7 +126,11 @@ plot_tissue_split <- function(mif, which = NULL,
 
   plots <- parallel::mclapply(idx, function(i) {
     label <- names(mif$spatial)[i]
-    spat  <- add_cell_centres(mif$spatial[[i]], cfg$xloc, cfg$yloc)
+    spat  <- add_cell_centres(
+      mif_spatial(mif, i,
+                  spatial_columns(mif, xloc = cfg$xloc, yloc = cfg$yloc,
+                                  extra = c(cfg$classifier, compartment), i = i)),
+      cfg$xloc, cfg$yloc)
     cls   <- spat[[cfg$classifier]]
 
     win <- spatstat.geom::convexhull.xy(spat$xloc, spat$yloc)

@@ -67,11 +67,12 @@ bi_pair_correlation = function(mif,
   m_combos = marker_combinations(mnames)
   needed   = unique(c(m_combos$anchor, m_combos$counted))
 
-  seeds = sample.int(.Machine$integer.max, length(mif$spatial))
+  seeds = sample.int(.Machine$integer.max, n_mif_samples(mif))
 
-  out = parallel::mclapply(seq_along(mif$spatial), function(sample_i){
+  out = parallel::mclapply(seq_len(n_mif_samples(mif)), function(sample_i){
     set.seed(seeds[[sample_i]])
-    spat = mif$spatial[[sample_i]]
+    spat = mif_spatial(mif, sample_i,
+                       spatial_columns(mif, mnames, xloc, yloc, i = sample_i))
     #Fixed in 2.0.0: the old guard was
     #`if(FALSE %in% unique(unlist(mnames)) %in% colnames(spat))`, which because
     #`%in%` is left-associative evaluated `(FALSE %in% mnames) %in% colnames(spat)`

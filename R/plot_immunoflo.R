@@ -59,7 +59,13 @@ plot_immunoflo <- function(
   # if (missing(filename)) stop("filename is missing; filename must be a string")
   
   # plots
-  plot <- pbmcapply::pbmclapply(mif[["spatial"]], function(x){
+  plot <- pbmcapply::pbmclapply(seq_len(n_mif_samples(mif)), function(sample_i){
+    #Iterate positions rather than the slot itself so that a disk-backed mif reads
+    #one sample at a time; `names(plot)` is restored below because
+    #`derived$spatial_plots` is keyed by sample name and merge_mifs() relies on it.
+    x = mif_spatial(mif, sample_i,
+                    spatial_columns(mif, mnames, xloc, yloc,
+                                    extra = c(plot_title, cell_type), i = sample_i))
     #make the xloc and yloc columns
     if(is.null(xloc) | is.null(yloc)){
       x = x %>%
@@ -152,8 +158,9 @@ plot_immunoflo <- function(
     return(basic_plot)
     
   }, mc.cores = 1)
-  
-  # output to pdf if filename is specified 
+  names(plot) <- mif_samples(mif)
+
+  # output to pdf if filename is specified
   if(!is.null(filename)){
     #ONE dev.off, via on.exit so it still fires if printing errors. Before 2.0.0
     #both an on.exit(dev.off()) and an explicit grDevices::dev.off() were present,

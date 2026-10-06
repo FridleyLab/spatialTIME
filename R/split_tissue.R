@@ -226,7 +226,12 @@ split_tissue <- function(mif, classifier, class1, class2, sigma, interface_width
 
   new_cols <- c("density_compartment", "refined_density_compartment", "density_score")
   clashes <- character(0)
-  if (any(vapply(mif$spatial, function(s) any(new_cols %in% colnames(s)), logical(1)))) {
+  # mif_spatial_colnames() rather than colnames(mif$spatial[[i]]): on a disk-backed
+  # mif the latter would read every sample, and vapply()ing colnames() over the slot
+  # would quietly return NULL for each one and never detect a clash at all.
+  if (any(vapply(seq_len(n_mif_samples(mif)),
+                 function(i) any(new_cols %in% mif_spatial_colnames(mif, i)),
+                 logical(1)))) {
     clashes <- c(clashes,
                  "`density_compartment`/`refined_density_compartment`/`density_score` in `mif$spatial`")
   }
@@ -247,8 +252,12 @@ split_tissue <- function(mif, classifier, class1, class2, sigma, interface_width
 
   # No RNG anywhere in this function (unlike ripleys_k()/pair_correlation()), so
   # there is deliberately no per-sample seed here.
-  res <- parallel::mclapply(seq_along(mif$spatial), function(sample_i) {
-    spat  <- add_cell_centres(mif$spatial[[sample_i]], xloc, yloc)
+  res <- parallel::mclapply(seq_len(n_mif_samples(mif)), function(sample_i) {
+    spat  <- add_cell_centres(
+      mif_spatial(mif, sample_i,
+                  spatial_columns(mif, xloc = xloc, yloc = yloc,
+                                  extra = classifier, i = sample_i)),
+      xloc, yloc)
     label <- as.character(spat[[mif$sample_id]][1])
     cls   <- spat[[classifier]]
     if (is.null(cls)) {
@@ -295,18 +304,25 @@ split_tissue <- function(mif, classifier, class1, class2, sigma, interface_width
 
   lev  <- c(class1, class2)
   levr <- c(class1, "Interface", class2)
-  for (i in seq_along(mif$spatial)) {
+  for (i in seq_len(n_mif_samples(mif))) {
     lab <- lev[res[[i]]$code]
-    mif$spatial[[i]][["density_compartment"]] <- factor(lab, levels = lev)
+    dc <- factor(lab, levels = lev)
     # Overwriting `lab` in place guarantees the two columns cannot disagree --
     # a cell that is Interface in `refined` always has the sign-derived label
     # in `density_compartment` it would have had without the interface rule.
     lab[res[[i]]$interface] <- "Interface"
-    mif$spatial[[i]][["refined_density_compartment"]] <- factor(lab, levels = levr)
     # The signed field itself, not just its sign. Free -- it is the same `v` the
     # compartment was derived from -- and keeps the magnitude the factors discard,
     # which is what you want as a covariate. Its units follow `rescale`.
-    mif$spatial[[i]][["density_score"]] <- res[[i]]$score
+    #
+    # All three go through mif_spatial_set() so that a disk-backed mif writes them
+    # to a per-sample overlay file instead of the base parquet, which is never
+    # rewritten -- in reference mode those files are the user's primary data.
+    mif <- mif_spatial_set(mif, i, data.frame(
+      density_compartment         = dc,
+      refined_density_compartment = factor(lab, levels = levr),
+      density_score               = res[[i]]$score,
+      stringsAsFactors            = FALSE))
   }
 
   boundary <- lapply(res, function(r) r$boundary)
@@ -360,6 +376,12 @@ split_tissue <- function(mif, classifier, class1, class2, sigma, interface_width
 
   mif$sample[["Boundary Length"]] <- NULL   # drop before the join, else left_join makes .x/.y
   mif$sample <- dplyr::left_join(mif$sample, lengths, by = mif$sample_id)
+
+  # On a disk-backed mif, persist the overlay columns written above plus the new
+  # `sample` and `derived` slots. Once, at the end, rather than per sample -- and
+  # only after every validation above has had its chance to stop the run, so a
+  # rejected call leaves the store exactly as it was.
+  sync_manifest(mif)
 
   mif
 }

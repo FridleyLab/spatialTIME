@@ -47,12 +47,17 @@ marker_freq_diff = function(mif, classifier, ref_level, diff_level, mnames, over
     stop("The diff_level must be of length 1")
   }
   
-  #get the spatial information
-  data = mif$spatial
+  #Iterate positions rather than the spatial slot itself, so that a disk-backed mif
+  #reads one sample at a time and only the columns below. See R/utils-mif-store.R.
+  #coords = FALSE: this is the one metric that never looks at where a cell is, only
+  #at its marker positivity and compartment.
+  cols = function(i) spatial_columns(mif, mnames, extra = classifier, i = i,
+                                     coords = FALSE)
   #check that the classifier column exists and that the levels exist in samples
-  tmp = lapply(data, function(spat){
+  tmp = lapply(seq_len(n_mif_samples(mif)), function(i){
+    spat = mif_spatial(mif, i, cols(i))
     data.frame(samp = unique(spat[[mif$sample_id]]), #sample name
-               classifier_exists = classifier %in% colnames(spat), 
+               classifier_exists = classifier %in% colnames(spat),
                ref_exists = ref_level %in% unique(spat[[classifier]]),
                diff_exists = diff_level %in% unique(spat[[classifier]]))
   }) %>%
@@ -72,7 +77,8 @@ marker_freq_diff = function(mif, classifier, ref_level, diff_level, mnames, over
   rm(tmp)
   
   #for each of the spatial samples
-  out = lapply(data, function(spat){
+  out = lapply(seq_len(n_mif_samples(mif)), function(i){
+    spat = mif_spatial(mif, i, cols(i))
     #sort marker names to make output later look nicer
     mnames = sort(mnames)
     

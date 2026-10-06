@@ -4,7 +4,7 @@
 \alias{subset_mif}
 \title{Subset mif object on cellular level}
 \usage{
-subset_mif(mif, classifier, level, markers)
+subset_mif(mif, classifier, level, markers, path = NULL)
 }
 \arguments{
 \item{mif}{An MIF object}
@@ -14,6 +14,11 @@ subset_mif(mif, classifier, level, markers)
 \item{level}{Determines which level of the classifier to keep.}
 
 \item{markers}{vector of}
+
+\item{path}{for a disk-backed \code{mif} only (see \code{\link[=mif_to_disk]{mif_to_disk()}}), the directory to
+write the subset store to. Required in that case and ignored otherwise: the
+subset of a cohort too large for memory is generally also too large for memory,
+so it is written out sample by sample rather than returned in one piece.}
 }
 \value{
 mif object where the spatial list only as the cell that are the specified level.

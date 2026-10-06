@@ -71,9 +71,22 @@ merge_mifs = function(mifs = NULL, check.names = T){
     dplyr::distinct()
   
   #merging spatial data
+  #Mixing storage modes is refused here rather than in c.mif_store(), which has no
+  #way to say which mif was the odd one out. Two disk-backed mifs merge fine:
+  #c.mif_store() concatenates their manifests.
+  backed = vapply(mifs, is_disk_mif, logical(1))
+  if(any(backed) && !all(backed)){
+    stop("Cannot merge disk-backed and in-memory mifs (mif ",
+         paste(which(backed), collapse = ", "), " ",
+         if(sum(backed) == 1) "is" else "are", " disk-backed, ",
+         paste(which(!backed), collapse = ", "), " ",
+         if(sum(!backed) == 1) "is" else "are", " not).\n",
+         "  Use `collect_mif()` on the disk-backed one, or `mif_to_disk()` on the ",
+         "in-memory one, so both are the same kind.", call. = FALSE)
+  }
   spatial = lapply(mifs, function(mif){
     mif$spatial
-  }) %>% 
+  }) %>%
     do.call(c, .)
   if(TRUE %in% duplicated(names(spatial)) & check.names == TRUE){
     stop("Multiple files have the same name")

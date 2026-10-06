@@ -101,11 +101,15 @@ ripleys_k = function(mif,
   #derived from these, so results depend only on the user's set.seed() and not on
   #`workers`. Before 2.0.0 permutations were irreproducible because nested
   #mclapply() calls forked with their own RNG streams.
-  seeds = sample.int(.Machine$integer.max, length(mif$spatial))
+  seeds = sample.int(.Machine$integer.max, n_mif_samples(mif))
 
-  out = parallel::mclapply(seq_along(mif$spatial), function(sample_i){
+  out = parallel::mclapply(seq_len(n_mif_samples(mif)), function(sample_i){
     set.seed(seeds[[sample_i]])
-    spat = mif$spatial[[sample_i]]
+    #On a disk-backed mif this reads only the columns named below, for this one
+    #sample, inside this worker; on an in-memory mif it is `mif$spatial[[sample_i]]`
+    #unchanged. See R/utils-mif-store.R.
+    spat = mif_spatial(mif, sample_i,
+                       spatial_columns(mif, mnames, xloc, yloc, i = sample_i))
 
     spat = add_cell_centres(spat, xloc, yloc)
     label = as.character(spat[[mif$sample_id]][1])

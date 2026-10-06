@@ -31,6 +31,16 @@ reference:
   - merge_mifs
   - subset_mif
 
+- title: Disk-backed MIF Objects
+  desc: >
+    Keep per-cell spatial data in parquet files and read only the columns each
+    computation needs, so peak memory scales with the number of workers rather than
+    with the number of samples. Intended for whole slide images.
+  contents:
+  - mif_to_disk
+  - open_mif
+  - collect_mif
+
 - title: Other Spatial Statistics
   contents:
   - dixons_s

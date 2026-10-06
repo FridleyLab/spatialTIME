@@ -7,7 +7,11 @@
 #' @param mif An MIF object
 #' @param classifier Column name for spatial dataframe to subset
 #' @param level Determines which level of the classifier to keep.
-#' @param markers vector of 
+#' @param markers vector of
+#' @param path for a disk-backed `mif` only (see [mif_to_disk()]), the directory to
+#'   write the subset store to. Required in that case and ignored otherwise: the
+#'   subset of a cohort too large for memory is generally also too large for memory,
+#'   so it is written out sample by sample rather than returned in one piece.
 #' @return mif object where the spatial list only as the cell that are the specified level.
 #'    
 #' @export
@@ -29,9 +33,20 @@
 #' mif_tumor = subset_mif(mif = x, classifier = 'Classifier.Label', 
 #' level = 'Tumor', markers = markers)
 
-subset_mif = function(mif, classifier, level, markers){
+subset_mif = function(mif, classifier, level, markers, path = NULL){
   if(!inherits(mif, "mif")){
     stop("mIF should be of class `mif` created with function `create_mif()`")
+  }
+  #A disk-backed mif was adopted precisely because the cohort does not fit in
+  #memory, so filtering it into an in-memory mif would undo that silently, at the
+  #worst possible moment -- after the filtering work is already done. Require a
+  #destination instead.
+  if(is_disk_mif(mif) && is.null(path)){
+    stop("`mif` is disk-backed, so `subset_mif()` needs a `path` to write the ",
+         "subset store to:\n",
+         "    subset_mif(mif, classifier, level, markers, path = \"subset.mif\")\n",
+         "  To get an in-memory subset instead, call `collect_mif(mif)` first -- but ",
+         "that materialises every sample.", call. = FALSE)
   }
   split_spatial = list()
   #Collect one row per RETAINED sample and bind at the end.
@@ -45,8 +60,28 @@ subset_mif = function(mif, classifier, level, markers){
   #dangerous one.
   summary_rows = list()
 
-  for(a in seq_along(mif$spatial)){
-    tmp = mif$spatial[[a]] %>% dplyr::filter(.data[[classifier]] == level)
+  #When writing a store, each filtered frame is written and released immediately, so
+  #peak memory stays at one sample rather than the whole subset.
+  to_disk = is_disk_mif(mif)
+  if(to_disk){
+    root = path.expand(path)
+    if(file.exists(root)){
+      stop("A store already exists at \"", root, "\"; choose another `path`.",
+           call. = FALSE)
+    }
+    dir.create(file.path(root, "spatial"), recursive = TRUE, showWarnings = FALSE)
+    dir.create(file.path(root, "derived"), recursive = TRUE, showWarnings = FALSE)
+    written = list()
+    #Stems for EVERY sample, computed up front, not sample_file_stem() per retained
+    #sample: two distinct names can sanitise to one stem ("A/1" and "A 1" both give
+    #"A_1"), and then one sample's parquet would overwrite another's while the
+    #manifest listed both pointing at the same file. Disambiguating over the full set
+    #also keeps a stem stable regardless of which samples survive the filter.
+    all_stems = sample_file_stems(names(mif$spatial))
+  }
+
+  for(a in seq_len(n_mif_samples(mif))){
+    tmp = mif_spatial(mif, a) %>% dplyr::filter(.data[[classifier]] == level)
     if(nrow(tmp) <= 2) next
 
     sample_name = tmp[[mif$sample_id]][1]
@@ -55,8 +90,14 @@ subset_mif = function(mif, classifier, level, markers){
     #Length > 1 used to shift every subsequent value in the row by one, silently.
     patient = if(length(patient) < 1) NA else patient[1]
 
-    split_spatial = list.append(split_spatial, tmp)
-    names(split_spatial)[length(split_spatial)] = sample_name
+    if(to_disk){
+      rel = file.path("spatial", paste0(all_stems[[a]], ".parquet"))
+      pq_write(tmp, file.path(root, rel))
+      written[[length(written) + 1]] = list(sample = sample_name, rel = rel)
+    } else {
+      split_spatial = list.append(split_spatial, tmp)
+      names(split_spatial)[length(split_spatial)] = sample_name
+    }
 
     pos = tmp %>%
       dplyr::select(dplyr::all_of(markers)) %>%
@@ -97,6 +138,36 @@ subset_mif = function(mif, classifier, level, markers){
       data.frame(character(0), character(0), stringsAsFactors = FALSE),
       c(mif$patient_id, mif$sample_id)
     )
+  }
+
+  if(to_disk){
+    if(!length(written)){
+      #The store would have no samples at all; do not leave an unopenable directory
+      #behind for the user to puzzle over.
+      unlink(root, recursive = TRUE)
+      stop("No sample had more than 2 cells at level \"", level, "\" of \"",
+           classifier, "\", so there is nothing to write to \"", root, "\".",
+           call. = FALSE)
+    }
+    rel     = vapply(written, function(w) w$rel, character(1))
+    samples = vapply(written, function(w) w$sample, character(1))
+    probes  = lapply(file.path(root, rel), pq_probe)
+    store = new_mif_store(
+      files   = rel, samples = samples,
+      nrow    = vapply(probes, function(p) p$nrow, numeric(1)),
+      columns = collapse_schema(lapply(probes, function(p) p$columns)),
+      types   = collapse_schema(lapply(probes, function(p) p$types)),
+      overlay = NA_character_, root = root)
+    attr(store, "overlay_columns") = rep(list(character(0)), length(rel))
+    mif_new = structure(list(clinical = mif$clinical, sample = summary,
+                             spatial = store, derived = list(),
+                             patient_id = mif$patient_id,
+                             sample_id = mif$sample_id),
+                        class = "mif")
+    write_store_tables(root, mif_new)
+    write_manifest(root, mif_new, store,
+                   vapply(file.path(root, rel), file.size, numeric(1)))
+    return(mif_new)
   }
 
   mif_new = create_mif(clinical_data = mif$clinical, sample_data = summary,

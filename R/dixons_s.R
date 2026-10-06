@@ -76,7 +76,9 @@ dixons_s = function(mif, mnames, num_permutations = 1000, type = c("Z", "C"),
   if(!length(type) || !all(type %in% c("Z", "C"))){
     stop("`type` must be \"Z\", \"C\" or both.")
   }
-  data = mif$spatial
+  #Keep the flat marker vector before `mnames` becomes a table of pairs below; it is
+  #what the spatial projection needs on a disk-backed mif.
+  marker_cols = unique(as.character(mnames))
   #filter names of markers because order doesn't matter, still computes both ways
   mnames = mnames %>%
     expand.grid(., .) %>%
@@ -88,7 +90,9 @@ dixons_s = function(mif, mnames, num_permutations = 1000, type = c("Z", "C"),
     dplyr::ungroup()
   
   #per spatial file
-  out = parallel::mclapply(data, function(spat){
+  out = parallel::mclapply(seq_len(n_mif_samples(mif)), function(sample_i){
+    spat = mif_spatial(mif, sample_i,
+                       spatial_columns(mif, marker_cols, xloc, yloc, i = sample_i))
     #if locations not provided
     if(is.null(xloc)){
       spat$xloc = (spat$XMin+spat$XMax)/2
