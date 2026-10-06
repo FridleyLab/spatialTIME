@@ -75,6 +75,10 @@ of them, so it is both faster and free of Monte Carlo error. Permutations are
 still useful if you want the full null distribution rather than its mean --
 run 1000 and treat an observed value outside the 95th percentile as
 significant.
+
+\verb{Exact CSR} is filled in either way, so with \code{permute = TRUE} you can read
+\verb{Permuted CSR} against it and see directly whether your permutation count was
+large enough to converge. They agree exactly in expectation.
 }
 \section{The CSR columns, and which to trust}{
 

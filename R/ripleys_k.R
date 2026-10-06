@@ -41,6 +41,9 @@
 #' run 1000 and treat an observed value outside the 95th percentile as
 #' significant.
 #'
+#' `Exact CSR` is filled in either way, so with `permute = TRUE` you can read
+#' `Permuted CSR` against it and see directly whether your permutation count was
+#' large enough to converge. They agree exactly in expectation.
 #'
 #' @section The CSR columns, and which to trust:
 #' Three references are reported for each radius, and `Degree of Clustering X` is
@@ -191,7 +194,7 @@ ripleys_k = function(mif,
     #called "Exact CSR". Same precedent as G and the pair correlation function --
     #see the "Why there is no exact CSR for G" section of ?NN_G. Use
     #`permute = TRUE` with border; `Permuted CSR` is still correct for it.
-    exact = if(permute || pairs$edge_correction == "border") rep(NA_real_, length(r_range))
+    exact = if(pairs$edge_correction == "border") rep(NA_real_, length(r_range))
             else k_from_pairs(pairs, rep(TRUE, n))
 
     res = lapply(mnames, function(marker){
@@ -228,13 +231,13 @@ ripleys_k = function(mif,
 
       if(keep_permutation_distribution){
         k_result_frame(label, marker, r_range, theo, observed,
-                       permuted = as.vector(permuted), exact = NA_real_,
+                       permuted = as.vector(permuted), exact = exact,
                        iter = as.character(seq_len(num_permutations)),
                        sample_id = mif$sample_id, larger = ps$larger,
                        p_value = ps$p_value)
       } else {
         k_result_frame(label, marker, r_range, theo, observed,
-                       permuted = rowMeans(permuted, na.rm = TRUE), exact = NA_real_,
+                       permuted = rowMeans(permuted, na.rm = TRUE), exact = exact,
                        iter = "Permuted", sample_id = mif$sample_id,
                        larger = ps$larger, p_value = ps$p_value)
       }

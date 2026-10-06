@@ -254,6 +254,11 @@ re-run it.
   treated as evidence of clustering. The column existed in only four of the seven
   metrics before 2.0.0 (`bi_ripleys_k`, `pair_correlation`, `bi_pair_correlation`,
   `interaction_variable`); those four change value, and the other three gain it.
+* **`Exact CSR` is now filled in when `permute = TRUE`.** It was hard-`NA` on the
+  permutation path, which hid the one comparison that tells you whether your
+  permutation count was enough: under random labelling `E[Permuted CSR]` *is*
+  `Exact CSR`, exactly, so the two converging is the diagnostic. Costs one extra
+  mask over a pair list that has already been built. Does not apply to border.
 * `dixons_s()` and `marker_freq_diff()` gain a correct `Run` column; see Bug fixes.
 
 ### New column: `Permutation p-value`

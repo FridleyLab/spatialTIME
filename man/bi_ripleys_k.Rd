@@ -97,7 +97,9 @@ held fixed across all marker pairs and permutations.
 closed form for the expected \code{Kcross} under random labelling -- the anchor and
 counted sets are drawn from one sample without replacement, so an ordered pair
 survives with probability \eqn{n_i n_j / (n(n-1))} against a denominator of
-\eqn{n_i n_j / area}, and the two cancel. See the fuller discussion, including why \code{"border"} is excluded, under
+\eqn{n_i n_j / area}, and the two cancel. It is filled in whether or not
+\code{permute} is set, so \verb{Permuted CSR} can be read against it as a convergence
+check. See the fuller discussion, including why \code{"border"} is excluded, under
 \code{\link[=ripleys_k]{ripleys_k()}}. Cells positive for both markers of a pair belong to neither set.
 }
 

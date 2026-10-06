@@ -59,7 +59,9 @@
 #' closed form for the expected `Kcross` under random labelling -- the anchor and
 #' counted sets are drawn from one sample without replacement, so an ordered pair
 #' survives with probability \eqn{n_i n_j / (n(n-1))} against a denominator of
-#' \eqn{n_i n_j / area}, and the two cancel. See the fuller discussion, including why `"border"` is excluded, under
+#' \eqn{n_i n_j / area}, and the two cancel. It is filled in whether or not
+#' `permute` is set, so `Permuted CSR` can be read against it as a convergence
+#' check. See the fuller discussion, including why `"border"` is excluded, under
 #' [ripleys_k()]. Cells positive for both markers of a pair belong to neither set.
 #'
 #' @export
@@ -147,7 +149,7 @@ bi_ripleys_k = function(mif,
     #cancellation needs a denominator fixed by n_i and n_j alone. See the longer
     #note in R/ripleys_k.R and the "Why there is no exact CSR for G" section of
     #?NN_G for the same situation in the G estimators.
-    exact = if(permute || pairs$edge_correction == "border") rep(NA_real_, length(r_range))
+    exact = if(pairs$edge_correction == "border") rep(NA_real_, length(r_range))
             else k_from_pairs(pairs, rep(TRUE, n))
 
     res = lapply(seq_len(nrow(m_combos)), function(combo){
@@ -191,13 +193,13 @@ bi_ripleys_k = function(mif,
 
       if(keep_permutation_distribution){
         bi_k_result_frame(label, anchor, counted, r_range, theo, observed,
-                          permuted = as.vector(permuted), exact = NA_real_,
+                          permuted = as.vector(permuted), exact = exact,
                           iter = as.character(seq_len(num_permutations)),
                           sample_id = mif$sample_id, larger = ps$larger,
                           p_value = ps$p_value)
       } else {
         bi_k_result_frame(label, anchor, counted, r_range, theo, observed,
-                          permuted = rowMeans(permuted, na.rm = TRUE), exact = NA_real_,
+                          permuted = rowMeans(permuted, na.rm = TRUE), exact = exact,
                           iter = "Permuted", sample_id = mif$sample_id,
                           larger = ps$larger, p_value = ps$p_value)
       }
