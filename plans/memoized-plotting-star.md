@@ -363,6 +363,48 @@ Retire the old fixture **last**: get `test-parity-v1.4.0.R` green, then delete
 `baseline-v1.4.0.rds`, `test-regression-vs-baseline.R` and
 `test-disk-backed-parity.R:216-245` in one commit.
 
+### What Phase 3 actually found
+
+All 30 entries agree with the contract, but four results differed from what this plan
+predicted. Recorded because each narrows a claim in the delta table above.
+
+**A new correctness bug in 1.4.0's `interaction_variable()`, not previously known.**
+`get_bi_rows()` returns rows marker-major, so `cells$cell` is not globally ascending
+— but `subset(sample_ppp, cells$cell)` returns points in *sorted* order, and
+`marks(ps) <- cells$Marker` then attached labels in marker-major order to points in
+index order. 1.4.0 measured distances between **scrambled marker sets**. Verified by
+brute force on `TMA3_[9,K].tif` with FOXP3/CD8 at `r = 20`: exactly 4 of 109 anchors
+lie within 20 units (fifth-nearest is 20.55), so `3.669725` is right; 1.4.0 reported
+`4.587156` (= 5/109), and re-running its exact code path reproduces that. Both sides
+divide by 109, so the denominator was never the issue. `Observed Interaction` moves
+from MUST_MATCH to MUST_DIFFER.
+
+**The `"none"` binning delta is far narrower than documented.** It requires *evenly
+spaced* `r`, because that is the condition for `Kest` to take its fast C path — with
+the truncation radii in `r_range` the two versions agree exactly. It is also confined
+to quantities `Kest` computes: in `bi_ripleys_k` on an even grid `Observed K` agrees
+(from `Kcross`, which has no fast path) while `Exact CSR` differs (from `Kest` over
+all cells, which does), in the same call. Needed two extra capture entries on an even
+grid to exercise at all.
+
+**`border`'s `Observed K` is unchanged from 1.4.0**, which this plan did not predict.
+1.4.0 passed `border` through to `Kest` on its `permute = FALSE` path, so the new
+reduced-sample engine reproduces those values exactly. The regression was that the
+correction was silently replaced by `"none"` on the `permute = TRUE` path and above
+`big` — not that the estimator itself was wrong there.
+
+**`Exact CSR` for an unestimable marker.** 1.4.0 reported the K of all cells for a
+marker with fewer than 3 positives (that quantity does not depend on the marker);
+2.0.0 NAs the whole stub row. Defensible either way, left as-is, recorded as
+MUST_DIFFER so the change is not silent.
+
+Two deltas this plan predicted needed deliberate fixtures to exercise at all, because
+nothing in the shipped markers triggers them: the sparse-marker row drops needed
+`CD3..PD.L1.` (1 positive) for `pair_correlation`, and the non-nested `CD8`/`PD1`
+pair for `interaction_variable` — `FOXP3` at 3 sits just inside the `< 3` guard, and
+every other sparse marker is entirely nested inside CD3, which empties the counted
+set on *both* cores rather than one.
+
 ---
 
 ## Phase 4 — Slow diagnostics (manual, never in `R CMD check`)

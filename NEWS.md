@@ -266,6 +266,28 @@ re-run it.
   exceeded the observation" — maximal clustering — rather than "not estimated". Both
   it and the new p-value are now `NA` there.
 
+* **`interaction_variable()` measured distances between scrambled marker sets.**
+  Found by the cross-version parity harness (`tools/parity/`), not previously known.
+  `get_bi_rows()` returns its rows marker-major — every anchor cell, then every
+  counted cell — so `cells$cell` is not globally ascending. But
+  `subset(sample_ppp, cells$cell)` returns points in *sorted* order, and the
+  following `marks(ps) <- cells$Marker` then attached the marker labels in
+  marker-major order to points in index order. Every anchor/counted assignment was
+  therefore permuted, and the nearest-neighbour distances were measured between the
+  wrong cells.
+
+  Verified by brute force on `example_spatial[["TMA3_[9,K].tif"]]` with FOXP3 as
+  anchor and CD8 as counted: exactly 4 of the 109 anchor cells lie within 20 units
+  (the fifth-nearest is at 20.55), so `Observed Interaction` at `r = 20` is
+  `4/109 = 3.669725`. 1.4.0 reported `4.587156`, which is `5/109`, and re-running
+  1.4.0's exact code path reproduces that figure. The denominator was never the
+  problem — both versions divide by 109.
+
+  Every `Observed Interaction` 1.4.0 produced is affected whenever the two markers'
+  cell indices interleave, which is essentially always. 2.0.0 uses
+  `nncross(pp[keep_i], pp[keep_j])` over masks computed in place, so no reordering
+  is possible.
+
 * **`marker_freq_diff()` p-values were all wrong.** The Fisher contingency table
   was built with the compartment *total* as its second row instead of the count of
   marker-*negative* cells, so the margin double-counted the positives. On the
@@ -491,6 +513,41 @@ cells gives 0.52 at a radius where the mean permuted G is 0.13. See `?NN_G`.
   backticks and dead cross-references.
 * `vignettes/spatialexperiment.Rmd` is now excluded from the CRAN tarball while
   remaining published on the pkgdown site.
+
+## Verifying this against 1.4.0 yourself
+
+`tools/parity/` captures 1.4.0 and the current tree in two separate R processes and
+diffs them against a declared contract:
+
+```sh
+bash tools/parity/run.sh
+```
+
+It writes `tests/testthat/fixtures/parity-v1.4.0.rds` and exits non-zero if any
+measured result contradicts its declared verdict — so it is a check, not only a
+generator. `tests/testthat/test-parity-v1.4.0.R` then replays the captured calls on
+every test run. 30 entries, covering both corrections and both degenerate-marker
+paths, all agreeing with the contract.
+
+Neither the harness nor the fixture ships: `^tools$` and the fixture are in
+`.Rbuildignore`, so `R CMD check` on the tarball skips those tests ("v1.4.0 parity
+fixture not present") and CRAN never sees them. `devtools::test()` from a git
+checkout runs them.
+
+Three results from it worth knowing, because they are narrower than they sound:
+
+* **The `"none"` binning difference only exists for evenly spaced `r`.** `Kest`
+  takes its fast C path — which bins `d <= r` where `whist` bins left-closed — only
+  when `r` is evenly spaced. With unevenly spaced radii 1.4.0 routed through `whist`
+  too and the two versions agree exactly.
+* **And only for quantities `Kest` computes.** In `bi_ripleys_k` on an even grid,
+  `Observed K` *agrees* while `Exact CSR` *differs*, in the same call:
+  `Kcross`/`Kmulti` have no fast path, but 1.4.0 computed the bivariate `Exact CSR`
+  with `Kest()` over all cells, which did take it.
+* **`border`'s `Observed K` is unchanged from 1.4.0.** 1.4.0 passed `border` through
+  to `Kest` on its `permute = FALSE` path, and the new reduced-sample engine
+  reproduces those values exactly. What changed is that the correction is no longer
+  silently replaced by `"none"` (see above), and that `Exact CSR` is now `NA` for it.
 
 ## Note for maintainers
 

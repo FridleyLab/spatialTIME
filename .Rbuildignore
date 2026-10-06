@@ -7,6 +7,7 @@
 ^tic\.R$
 ^dev$
 ^docs$
+^_pkgdown\.yml$
 ^pkgdown$
 ^Meta$
 ^doc$
@@ -16,3 +17,5 @@
 ^vignettes/deriving_functions\.Rmd$
 ^vignettes/spatialexperiment\.Rmd$
 ^SplittingTissue$
+^tools$
+^tests/testthat/fixtures/parity-v1\.4\.0\.rds$
