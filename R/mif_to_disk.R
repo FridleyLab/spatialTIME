@@ -88,6 +88,27 @@
 #' `length(mif$spatial) <- n` error rather than destroying the index. Use
 #' [collect_mif()] to bring the data into memory if you need to modify it.
 #'
+#' @section The store is shared state:
+#' A metric writes its results into the store as well as into the `mif` it returns,
+#' so they survive a reopen. One consequence is worth knowing, because it is the one
+#' place a disk-backed `mif` does not behave like an ordinary R object:
+#'
+#' \preformatted{
+#' a <- ripleys_k(xd, ...)                      # result goes to `a`
+#' identical(open_mif(store)$derived, xd$derived)   # FALSE
+#' identical(open_mif(store)$derived, a$derived)    # TRUE
+#' }
+#'
+#' The in-memory `xd` is untouched, exactly as copy-on-modify implies — but `xd` and
+#' `a` point at the same directory, and the metric wrote there. The store reflects
+#' whichever `mif` most recently ran a metric against it.
+#'
+#' Nothing is silently dropped: each run carries forward the derived slots it
+#' inherited, so only the slot being written is replaced. Assigning the result back
+#' to the same name (`xd <- ripleys_k(xd, ...)`) keeps object and store in step. To
+#' hold two parameterisations at once, give them separate stores rather than separate
+#' variables.
+#'
 #' **Row names are not preserved**; they come back as `1:nrow`. A columnar file has
 #' nowhere to put them, and storing them would mean an extra column per sample for
 #' something no function in this package reads -- every metric indexes cells by

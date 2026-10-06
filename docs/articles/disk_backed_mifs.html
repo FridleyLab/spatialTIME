@@ -188,7 +188,7 @@ first reads 34 GB and the second reads one slide at a time.</p>
 <div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span></span>
 <span><span class="co">#&gt; &lt;mif_store&gt; 5 samples, 12,782 cells</span></span>
-<span><span class="co">#&gt;   root: /var/folders/63/qj4bjln95bs911vg920503rh001s8k/T//Rtmp4GHmlh/spatialTIME-vignette/cohort.mif</span></span>
+<span><span class="co">#&gt;   root: /var/folders/63/qj4bjln95bs911vg920503rh001s8k/T//Rtmp5QmNGP/spatialTIME-vignette/cohort.mif</span></span>
 <span><span class="co">#&gt;   TMA1_[3,B].tif (3,803), TMA2_[3,B].tif (3,008), TMA3_[7,B].tif (1,850), ... and 2 more</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/format.html" class="external-link">format</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/utils/object.size.html" class="external-link">object.size</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span>, units <span class="op">=</span> <span class="st">"KB"</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] "7.9 Kb"</span></span>
@@ -261,8 +261,18 @@ few samples out to look at them:</p>
 <span><span class="co">#&gt; 4      TMA1_[3,B].tif CD3..Opal.570..Positive 30       0.00  3892.93725</span></span>
 <span><span class="co">#&gt; 5      TMA1_[3,B].tif CD3..Opal.570..Positive 40       0.00  6896.66270</span></span>
 <span><span class="co">#&gt; 6      TMA1_[3,B].tif CD3..Opal.570..Positive 50   28741.79 10376.44414</span></span></code></pre></div>
-<p>The results are the same numbers. Not approximately — the same:</p>
+<p>Derived results are written to the store as they are computed, so
+they survive a reopen rather than living only in the session that
+produced them:</p>
 <div class="sourceCode" id="cb12"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_mif.html">open_mif</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">derived</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] "univariate_Count"</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span>, <span class="va">xd</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>The results are the same numbers as the in-memory <code>mif</code>
+gives. Not approximately — the same:</p>
+<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">x</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span>mif <span class="op">=</span> <span class="va">x</span>, mnames <span class="op">=</span> <span class="va">mnames</span>, r_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">100</span>, <span class="fl">10</span><span class="op">)</span>,</span>
 <span>               edge_correction <span class="op">=</span> <span class="st">"translation"</span>, permute <span class="op">=</span> <span class="cn">FALSE</span>,</span>
 <span>               workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -277,7 +287,7 @@ metric, at one and two workers, with and without permutation.</p>
 <p>Permuted results match too. Seeds are drawn once in the parent
 process and handed to the workers, so a run depends only on your
 <code><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed()</a></code> and not on <code>workers</code>:</p>
-<div class="sourceCode" id="cb13"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Random.html" class="external-link">set.seed</a></span><span class="op">(</span><span class="fl">42</span><span class="op">)</span></span>
 <span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span><span class="va">xd</span>, mnames <span class="op">=</span> <span class="va">mnames</span><span class="op">[</span><span class="fl">1</span><span class="op">]</span>, r_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">50</span>, <span class="fl">10</span><span class="op">)</span>, permute <span class="op">=</span> <span class="cn">TRUE</span>,</span>
 <span>               num_permutations <span class="op">=</span> <span class="fl">10</span>, workers <span class="op">=</span> <span class="fl">1</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
@@ -287,14 +297,37 @@ process and handed to the workers, so a run depends only on your
 <span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/all.equal.html" class="external-link">all.equal</a></span><span class="op">(</span><span class="va">a</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span>, <span class="va">b</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
-<p>Derived results are written back to the store as they are computed,
-so they survive a reopen:</p>
-<div class="sourceCode" id="cb14"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="va">z</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/open_mif.html">open_mif</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">derived</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] "univariate_Count"</span></span>
-<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="va">z</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span>, <span class="va">xd</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span><span class="op">)</span></span>
-<span><span class="co">#&gt; [1] FALSE</span></span></code></pre></div>
+<div class="section level3">
+<h3 id="the-store-is-shared-state">The store is shared state<a class="anchor" aria-label="anchor" href="#the-store-is-shared-state"></a>
+</h3>
+<p>That last chunk did something worth noticing. The result went to
+<code>a</code> rather than back to <code>xd</code>, but the run still
+wrote its results into the store — so the store and the in-memory
+<code>xd</code> no longer agree, while the store and <code>a</code>
+do:</p>
+<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/open_mif.html">open_mif</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span>, <span class="va">xd</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] FALSE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/open_mif.html">open_mif</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span>,  <span class="va">a</span><span class="op">$</span><span class="va">derived</span><span class="op">$</span><span class="va">univariate_Count</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>This is the one place a disk-backed <code>mif</code> does not behave
+like an ordinary R object. <code>a &lt;- ripleys_k(xd, ...)</code>
+leaves the in-memory <code>xd</code> alone, exactly as copy-on-modify
+would lead you to expect — but <code>a</code> and <code>xd</code> point
+at the same directory, and the metric wrote there. The store reflects
+whichever <code>mif</code> most recently ran a metric against it.</p>
+<p>Nothing is silently dropped: each run carries forward the derived
+slots it inherited, so only the slot being written is replaced. But if
+you want two parameterisations side by side, give them separate stores
+rather than separate variables:</p>
+<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">iso</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/mif_to_disk.html">mif_to_disk</a></span><span class="op">(</span><span class="fu"><a href="../reference/collect_mif.html">collect_mif</a></span><span class="op">(</span><span class="va">xd</span><span class="op">)</span>, <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">store_dir</span>, <span class="st">"iso.mif"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">iso</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span><span class="va">iso</span>, mnames <span class="op">=</span> <span class="va">mnames</span>, r_range <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/seq.html" class="external-link">seq</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">100</span>, <span class="fl">10</span><span class="op">)</span>,</span>
+<span>                 edge_correction <span class="op">=</span> <span class="st">"isotropic"</span>, permute <span class="op">=</span> <span class="cn">FALSE</span>, overwrite <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span></code></pre></div>
+<p>For the ordinary case, assigning the result back to the same name —
+<code>xd &lt;- ripleys_k(xd, ...)</code> — keeps the object and the
+store in step and the question does not arise.</p>
+</div>
 </div>
 <div class="section level2">
 <h2 id="pointing-at-files-you-already-have">Pointing at files you already have<a class="anchor" aria-label="anchor" href="#pointing-at-files-you-already-have"></a>
@@ -302,7 +335,7 @@ so they survive a reopen:</p>
 <p>If your data is already parquet, <code><a href="../reference/create_mif.html">create_mif()</a></code> accepts a
 named character vector of file paths instead of a list of data frames.
 Nothing is copied.</p>
-<div class="sourceCode" id="cb15"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">files</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/list.files.html" class="external-link">list.files</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">store</span>, <span class="st">"spatial"</span><span class="op">)</span>, full.names <span class="op">=</span> <span class="cn">TRUE</span><span class="op">)</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">files</span><span class="op">)</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/names.html" class="external-link">names</a></span><span class="op">(</span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">)</span></span>
 <span></span>
@@ -336,7 +369,7 @@ so <code><a href="../reference/split_tissue.html">split_tissue()</a></code> refu
 <p><code><a href="../reference/subset_mif.html">subset_mif()</a></code> needs somewhere to put the result, for the
 same reason <code><a href="../reference/mif_to_disk.html">mif_to_disk()</a></code> does: the subset of a cohort too
 large for memory usually is too.</p>
-<div class="sourceCode" id="cb16"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">sub</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/subset_mif.html">subset_mif</a></span><span class="op">(</span><span class="va">xd</span>, classifier <span class="op">=</span> <span class="st">"Classifier.Label"</span>, level <span class="op">=</span> <span class="st">"Tumor"</span>,</span>
 <span>                  markers <span class="op">=</span> <span class="va">mnames</span>, path <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/file.path.html" class="external-link">file.path</a></span><span class="op">(</span><span class="va">store_dir</span>, <span class="st">"tumor.mif"</span><span class="op">)</span><span class="op">)</span></span>
 <span></span>
@@ -369,7 +402,7 @@ everything and reports the first file that no longer matches.</p>
 <p>It returns <code>TRUE</code> invisibly and errors otherwise, so it is
 safe to put at the top of a script — wrap it in <code><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE()</a></code> if
 you want to see the answer.</p>
-<div class="sourceCode" id="cb17"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="../reference/verify_mif.html">verify_mif</a></span><span class="op">(</span><span class="va">xd</span><span class="op">)</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span>
 <span><span class="fu"><a href="https://rdrr.io/r/base/Logic.html" class="external-link">isTRUE</a></span><span class="op">(</span><span class="fu"><a href="../reference/verify_mif.html">verify_mif</a></span><span class="op">(</span><span class="va">ref</span><span class="op">)</span><span class="op">)</span></span>
@@ -385,7 +418,7 @@ not have to branch on the representation to call it.</p>
 <p><code><a href="../reference/split_tissue.html">split_tissue()</a></code> writes three per-cell columns, and on a
 store those go to a per-sample <em>overlay</em> file rather than into
 the base parquet.</p>
-<div class="sourceCode" id="cb18"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/split_tissue.html">split_tissue</a></span><span class="op">(</span><span class="va">xd</span>, classifier <span class="op">=</span> <span class="st">"Classifier.Label"</span>,</span>
 <span>                   class1 <span class="op">=</span> <span class="st">"Tumor"</span>, class2 <span class="op">=</span> <span class="st">"Stroma"</span>,</span>
 <span>                   sigma <span class="op">=</span> <span class="fl">40</span>, interface_width <span class="op">=</span> <span class="fl">100</span>, workers <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
@@ -424,7 +457,7 @@ only if you compare with <code><a href="https://rdrr.io/r/base/identical.html" c
 them yourself.</p>
 <p>A few column types are refused outright rather than stored badly, and
 the check runs before anything is written:</p>
-<div class="sourceCode" id="cb19"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">bad</span> <span class="op">&lt;-</span> <span class="va">example_spatial</span><span class="op">[[</span><span class="st">"TMA3_[9,K].tif"</span><span class="op">]</span><span class="op">]</span><span class="op">[</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span>, <span class="op">]</span></span>
 <span><span class="va">bad</span><span class="op">$</span><span class="va">notes</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/raw.html" class="external-link">as.raw</a></span><span class="op">(</span><span class="fl">1</span><span class="op">:</span><span class="fl">5</span><span class="op">)</span></span>
 <span></span>
@@ -445,7 +478,7 @@ that, drop it before writing or keep the <code>mif</code> in memory.</p>
 look like they should work on a named list will not, because underneath
 the slot is a vector of file paths and assigning to it would quietly
 destroy the index:</p>
-<div class="sourceCode" id="cb20"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb22"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="va">xd</span><span class="op">$</span><span class="va">spatial</span><span class="op">[[</span><span class="fl">1</span><span class="op">]</span><span class="op">]</span> <span class="op">&lt;-</span> <span class="fu"><a href="https://rdrr.io/r/base/data.frame.html" class="external-link">data.frame</a></span><span class="op">(</span>a <span class="op">=</span> <span class="fl">1</span><span class="op">)</span></span>
 <span><span class="co">#&gt; Error: A disk-backed spatial slot is read-only.</span></span>
 <span><span class="co">#&gt;   Use `collect_mif(mif)` to bring it into memory first, or `split_tissue()` to add per-cell columns through the overlay.</span></span></code></pre></div>
@@ -463,7 +496,7 @@ which is about the worst failure mode available. Reading parquet in a
 child is fine; it is only the resize that hangs.</p>
 <p>If you need to limit arrow’s threads, set the count in the parent
 before calling a metric and the workers will inherit it safely.</p>
-<div class="sourceCode" id="cb21"><pre class="downlit sourceCode r">
+<div class="sourceCode" id="cb23"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu">arrow</span><span class="fu">::</span><span class="fu"><a href="https://arrow.apache.org/docs/r/reference/cpu_count.html" class="external-link">set_cpu_count</a></span><span class="op">(</span><span class="fl">2</span><span class="op">)</span>        <span class="co"># in the parent, before the metric</span></span>
 <span><span class="va">xd</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span><span class="va">xd</span>, mnames <span class="op">=</span> <span class="va">mnames</span>, r_range <span class="op">=</span> <span class="fl">0</span><span class="op">:</span><span class="fl">100</span>, workers <span class="op">=</span> <span class="fl">6</span><span class="op">)</span></span></code></pre></div>
 </div>

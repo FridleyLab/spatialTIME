@@ -195,7 +195,17 @@ head(xd$derived$univariate_Count[, c("deidentified_sample", "Marker", "r",
                                      "Observed K", "Exact CSR")])
 ```
 
-The results are the same numbers. Not approximately — the same:
+Derived results are written to the store as they are computed, so they survive a
+reopen rather than living only in the session that produced them:
+
+```{r, derived-persist}
+z <- open_mif(store)
+names(z$derived)
+identical(z$derived$univariate_Count, xd$derived$univariate_Count)
+```
+
+The results are the same numbers as the in-memory `mif` gives. Not approximately —
+the same:
 
 ```{r, parity}
 x <- ripleys_k(mif = x, mnames = mnames, r_range = seq(0, 100, 10),
@@ -225,14 +235,37 @@ b <- ripleys_k(x, mnames = mnames[1], r_range = seq(0, 50, 10), permute = TRUE,
 all.equal(a$derived$univariate_Count, b$derived$univariate_Count)
 ```
 
-Derived results are written back to the store as they are computed, so they survive
-a reopen:
+## The store is shared state
 
-```{r, derived-persist}
-z <- open_mif(store)
-names(z$derived)
-identical(z$derived$univariate_Count, xd$derived$univariate_Count)
+That last chunk did something worth noticing. The result went to `a` rather than
+back to `xd`, but the run still wrote its results into the store — so the store and
+the in-memory `xd` no longer agree, while the store and `a` do:
+
+```{r, aliasing}
+identical(open_mif(store)$derived$univariate_Count, xd$derived$univariate_Count)
+identical(open_mif(store)$derived$univariate_Count,  a$derived$univariate_Count)
 ```
+
+This is the one place a disk-backed `mif` does not behave like an ordinary R object.
+`a <- ripleys_k(xd, ...)` leaves the in-memory `xd` alone, exactly as
+copy-on-modify would lead you to expect — but `a` and `xd` point at the same
+directory, and the metric wrote there. The store reflects whichever `mif` most
+recently ran a metric against it.
+
+Nothing is silently dropped: each run carries forward the derived slots it
+inherited, so only the slot being written is replaced. But if you want two
+parameterisations side by side, give them separate stores rather than separate
+variables:
+
+```{r, two-stores, eval = FALSE}
+iso <- mif_to_disk(collect_mif(xd), file.path(store_dir, "iso.mif"))
+iso <- ripleys_k(iso, mnames = mnames, r_range = seq(0, 100, 10),
+                 edge_correction = "isotropic", permute = FALSE, overwrite = TRUE)
+```
+
+For the ordinary case, assigning the result back to the same name — `xd <-
+ripleys_k(xd, ...)` — keeps the object and the store in step and the question does
+not arise.
 
 # Pointing at files you already have
 

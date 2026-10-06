@@ -280,3 +280,42 @@ test_that("every metric's derived slot is byte-identical after a store round tri
   expect_equal(open_mif(root)$derived$univariate_Count,
                mem$derived$univariate_Count)
 })
+
+
+test_that("the store tracks whichever mif last ran a metric against it", {
+  # A metric writes to the store as well as to the mif it returns, so two mifs
+  # pointing at one directory are not independent: `a <- ripleys_k(xd, ...)` leaves
+  # the in-memory xd alone, as copy-on-modify implies, but the store now matches `a`.
+  # This is the one place a disk-backed mif departs from ordinary R semantics, and it
+  # is documented in ?mif_to_disk and the vignette. Pinned here because it is a
+  # consequence of write_derived() syncing, not an intended feature in itself -- if
+  # the sync is ever made conditional this test says what changes.
+  dir <- withr::local_tempdir()
+  root <- file.path(dir, "s.mif")
+  xd <- mif_to_disk(two_sample_mif(), root)
+  mk <- mnames_good()[1:2]
+
+  xd <- ripleys_k(xd, mnames = mk, r_range = seq(0, 40, 10), permute = FALSE,
+                  workers = 1, overwrite = TRUE)
+  # Assigned back to the same name: object and store agree.
+  expect_identical(open_mif(root)$derived$univariate_Count,
+                   xd$derived$univariate_Count)
+
+  # Assigned elsewhere: the store follows the RUN, not the variable.
+  set.seed(42)
+  a <- ripleys_k(xd, mnames = mk[1], r_range = seq(0, 20, 10), permute = TRUE,
+                 num_permutations = 5, workers = 1, overwrite = TRUE)
+  stored <- open_mif(root)$derived$univariate_Count
+  expect_identical(stored, a$derived$univariate_Count)
+  expect_false(identical(stored, xd$derived$univariate_Count))
+  # And the in-memory xd really is untouched, rather than merely different.
+  expect_equal(nrow(xd$derived$univariate_Count),
+               length(mk) * 5L * 2L)   # 2 markers x 5 radii x 2 samples
+
+  # Only the slot being written is replaced; inherited slots carry forward.
+  xd <- NN_G(xd, mnames = mk[1], r_range = seq(0, 20, 10), num_permutations = 2,
+             workers = 1, overwrite = TRUE)
+  reopened <- open_mif(root)
+  expect_setequal(names(reopened$derived), c("univariate_Count", "univariate_NN"))
+  expect_identical(reopened$derived$univariate_NN, xd$derived$univariate_NN)
+})

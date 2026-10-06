@@ -124,6 +124,27 @@ instead and only one sample is resident at a time:</p>
 <p>Writing to the slot is refused outright — <code>mif$spatial[[i]] &lt;- x</code> and
 <code>length(mif$spatial) &lt;- n</code> error rather than destroying the index. Use
 <code><a href="collect_mif.html">collect_mif()</a></code> to bring the data into memory if you need to modify it.</p>
+    </div>
+    <div class="section level2">
+    <h2 id="the-store-is-shared-state">The store is shared state<a class="anchor" aria-label="anchor" href="#the-store-is-shared-state"></a></h2>
+
+
+<p>A metric writes its results into the store as well as into the <code>mif</code> it returns,
+so they survive a reopen. One consequence is worth knowing, because it is the one
+place a disk-backed <code>mif</code> does not behave like an ordinary R object:</p>
+<div class="sourceCode"><pre><code><span></span>
+<span><span class="va">a</span> <span class="op">&lt;-</span> <span class="fu"><a href="../reference/ripleys_k.html">ripleys_k</a></span><span class="op">(</span><span class="va">xd</span>, <span class="va">...</span><span class="op">)</span>                      <span class="co"># result goes to `a`</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/open_mif.html">open_mif</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span><span class="op">$</span><span class="va">derived</span>, <span class="va">xd</span><span class="op">$</span><span class="va">derived</span><span class="op">)</span>   <span class="co"># FALSE</span></span>
+<span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="../reference/open_mif.html">open_mif</a></span><span class="op">(</span><span class="va">store</span><span class="op">)</span><span class="op">$</span><span class="va">derived</span>, <span class="va">a</span><span class="op">$</span><span class="va">derived</span><span class="op">)</span>    <span class="co"># TRUE</span></span></code></pre></div>
+
+<p>The in-memory <code>xd</code> is untouched, exactly as copy-on-modify implies — but <code>xd</code> and
+<code>a</code> point at the same directory, and the metric wrote there. The store reflects
+whichever <code>mif</code> most recently ran a metric against it.</p>
+<p>Nothing is silently dropped: each run carries forward the derived slots it
+inherited, so only the slot being written is replaced. Assigning the result back
+to the same name (<code>xd &lt;- ripleys_k(xd, ...)</code>) keeps object and store in step. To
+hold two parameterisations at once, give them separate stores rather than separate
+variables.</p>
 <p><strong>Row names are not preserved</strong>; they come back as <code>1:nrow</code>. A columnar file has
 nowhere to put them, and storing them would mean an extra column per sample for
 something no function in this package reads – every metric indexes cells by

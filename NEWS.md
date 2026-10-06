@@ -97,6 +97,23 @@ nothing in the suite noticed because the tests computed *before* writing the sto
 caller who does not want a metric run to touch disk, and it is a no-op for in-memory
 mifs and for reference mode.
 
+One consequence is worth knowing, because it is the only place a disk-backed `mif`
+departs from ordinary R semantics: **the store tracks whichever `mif` last ran a
+metric against it**, not the variable you assigned the result to.
+
+```r
+a <- ripleys_k(xd, ...)                            # result goes to `a`
+identical(open_mif(store)$derived, xd$derived)     # FALSE
+identical(open_mif(store)$derived, a$derived)      # TRUE
+```
+
+The in-memory `xd` is untouched, exactly as copy-on-modify implies — but `xd` and
+`a` point at the same directory and the metric wrote there. Nothing is silently
+dropped, since each run carries forward the derived slots it inherited and only the
+slot being written is replaced. Assigning back to the same name keeps object and
+store in step; to hold two parameterisations at once, give them separate stores
+rather than separate variables.
+
 ### The store now refuses what it used to accept and corrupt
 
 Each of these was verified as silently accepted before:
