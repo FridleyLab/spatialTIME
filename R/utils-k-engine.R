@@ -77,6 +77,40 @@
 #    integration of the true arc fraction: spatstat's crosspairs-side value is the
 #    accurate one, and the discrepancy is confined to that one degenerate pair.
 #    Translation -- the package default -- is exact for both.
+#
+# Why border needs its own branch
+# -------------------------------
+# Translation and isotropic are per-pair WEIGHTS, so they slot into the shared
+# `cumsum(whist(d, breaks, w)) / (denom/area)` path. Border is not a weight: it is
+# the reduced-sample estimator, where a pair contributes only while the radius is
+# below the anchor's distance to the window edge, and the denominator counts only
+# the anchors still eligible at that radius. So border is the one correction whose
+# DENOMINATOR DEPENDS ON r, and it needs k_border() rather than k_cumsum().
+#
+# It still fits the reuse architecture, for the same reason the weights do:
+# bdist.points() depends only on a point's own location and the window, never on
+# which other points are present. So boundary distances are computed once per
+# sample alongside the pair list and then masked per marker and per permutation.
+#
+# The arithmetic deliberately mirrors spatstat.explore:::Kount() plus
+# spatstat.univar::reduced.sample() rather than re-deriving the censoring
+# bookkeeping -- verified max|diff| = 0 against Kest(correction = c("border",
+# "translation"))$border and Kcross(...)$border, on continuous AND integer
+# coordinates, for all cells and for marker subsets, including the NaN region past
+# the window's inradius where the eligible set empties and spatstat returns 0/0.
+#
+# Note the reference is Kest(correction = c("border", "translation")), not
+# Kest(correction = "border"): border is one of Kest's `fastcorrections`, so asking
+# for it alone takes the fast C path (Kborder.engine) with its right-closed binning.
+# Pairing it with a non-fast correction routes it through whist() like everything
+# else here. Same reasoning as note 1 above, and the same reason "none" is pinned
+# against Kest(correction = c("none", "translation")).
+#
+# Before 2.0.0 this branch did not exist and "border" fell through k_pairs() with
+# weight 1 -- bit-identical to "none", while match_edge_correction() accepted it and
+# the docs advertised it. On 400 uniform points that was 174 off Kest$border, with
+# no warning. Do not remove the border entries from test-k-engine.R's CORR vector;
+# their absence is why that shipped.
 
 
 #' Bin edges matching those spatstat would use
@@ -109,8 +143,9 @@ k_breaks <- function(r_range, win, lambda) {
 #'   the weights are computed in chunks to bound peak memory. Results are
 #'   identical either way -- weighted-histogram counts are additive.
 #' @return list with `i`, `j`, `d` (pair indices into `pp` and their distances),
-#'   `w` (per-pair edge weight), `rmax_valid` (radius at or beyond which spatstat
-#'   returns NA for this correction), and the `breaks` object.
+#'   `w` (per-pair edge weight), `bd` (per-cell distance to the window edge, used
+#'   only by the border correction), `rmax_valid` (radius at or beyond which
+#'   spatstat returns NA for this correction), and the `breaks` object.
 #' @keywords internal
 #' @noRd
 k_pairs <- function(pp, r_range, edge_correction, block = 5e6) {
@@ -155,7 +190,18 @@ k_pairs <- function(pp, r_range, edge_correction, block = 5e6) {
     rmax_valid <- spatstat.geom::boundingradius(win)
   }
 
-  list(i = cp$i, j = cp$j, d = cp$d, w = w,
+  # Boundary distances for the border correction. Computed for every cell, like
+  # the pair weights, because bdist.points() depends only on a point's own
+  # location and the window -- so this is reusable across every marker and every
+  # permutation. Only computed when asked for: it is O(n * window complexity),
+  # which is not free on a whole-slide hull.
+  #
+  # rmax_valid stays Inf for border. spatstat applies no explicit truncation
+  # there; past the window's inradius the eligible-anchor count reaches zero and
+  # the estimator becomes 0/0, which surfaces as NaN from both implementations.
+  bd <- if (edge_correction == "border") spatstat.geom::bdist.points(pp) else NULL
+
+  list(i = cp$i, j = cp$j, d = cp$d, w = w, bd = bd,
        n = n, area = area, win = win, breaks = breaks,
        r_range = r_range, edge_correction = edge_correction,
        rmax_valid = rmax_valid)
@@ -183,11 +229,73 @@ k_from_pairs <- function(pairs, keep_i, keep_j = keep_i,
   if (is.na(denom) || denom <= 0) return(rep(NA_real_, length(r)))
 
   sel <- keep_i[pairs$i] & keep_j[pairs$j]
-  if (!any(sel)) return(rep(0, length(r)))
 
-  k <- k_cumsum(pairs$d[sel], pairs$w[sel], pairs) / (denom / pairs$area)
+  # No early return for the empty-selection case. whist() on an empty input
+  # already returns a zero vector of the right length, so the general path gives
+  # the same zeros -- and, unlike an early `return(rep(0, length(r)))`, it still
+  # applies the rmax truncation below. That early return was a bug: a marker whose
+  # only positive cells were farther apart than rmax reported 0 at every radius,
+  # including radii where every other marker correctly reported NA, and under
+  # permute = TRUE those zeros were then averaged in with genuine NAs by
+  # rowMeans(na.rm = TRUE).
+  k <- if (pairs$edge_correction == "border") {
+    k_border(pairs, sel, keep_i, n_j)
+  } else {
+    k_cumsum(pairs$d[sel], pairs$w[sel], pairs) / (denom / pairs$area)
+  }
   k[r >= pairs$rmax_valid] <- NA_real_
   k
+}
+
+
+#' Border (reduced-sample) K from a precomputed pair list
+#'
+#' Mirrors `spatstat.explore:::Kount()` followed by
+#' `spatstat.univar::reduced.sample()`. A pair contributes to the numerator at
+#' radius `r` only while `r` is below the anchor's distance to the window edge,
+#' and the denominator counts the anchors still eligible at that radius -- so
+#' unlike every other correction here, the denominator varies with `r`.
+#'
+#' @param pairs value of [k_pairs()]; must carry `bd`.
+#' @param sel logical vector over the pair list, already masked for marker
+#'   membership by [k_from_pairs()].
+#' @param keep_i logical vector over cells selecting the anchor type, whose
+#'   boundary distances drive eligibility.
+#' @param n_j number of cells of the counted type, supplying the intensity in the
+#'   denominator (`n_j` equals `n_i` in the univariate case, which is what makes
+#'   this match `Kest` and `Kcross` with one expression).
+#' @return numeric vector of length `length(pairs$r_range)`.
+#' @keywords internal
+#' @noRd
+k_border <- function(pairs, sel, keep_i, n_j) {
+  if (is.null(pairs$bd)) {
+    stop("internal error: border correction needs `bd` from k_pairs().",
+         call. = FALSE)
+  }
+  bk  <- pairs$breaks$val
+  dIJ <- pairs$d[sel]
+  bI  <- pairs$bd[pairs$i[sel]]
+
+  # Uncensored pairs: those still inside the anchor's boundary distance. A pair
+  # with d > bI never contributes at any radius, because by the time r reaches d
+  # the anchor has already dropped out of the eligible set.
+  uncen <- dIJ <= bI
+  nco <- spatstat.univar::whist(dIJ[uncen], bk)   # pairs entering, by distance
+  ncc <- spatstat.univar::whist(bI[uncen], bk)    # pairs leaving, by censoring time
+
+  b_elig <- pairs$bd[keep_i]
+  cen <- spatstat.univar::whist(b_elig, bk)
+  # Anchors whose boundary distance exceeds the last bin edge are eligible at
+  # every radius considered and so are missing from `cen`; reduced.sample() calls
+  # this `uppercen` and adds it to every denominator.
+  uppercen <- sum(b_elig > max(bk))
+
+  nb <- length(nco)
+  denom_count <- rev(cumsum(rev(cen))) + uppercen
+  numer <- cumsum(nco) - c(0, cumsum(ncc)[seq_len(nb - 1L)])
+
+  # 0/0 past the inradius is deliberate -- it is what spatstat returns there too.
+  numer / ((n_j / pairs$area) * denom_count)
 }
 
 

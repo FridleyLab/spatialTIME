@@ -133,7 +133,7 @@ interaction_variable = function(mif,
         unname(interaction_of(ki, kj))
       }, numeric(length(r_range)))
 
-      larger   = rowSums(permuted > obs, na.rm = TRUE)
+      ps       = permutation_summary(permuted, obs)
       keep_all = keep_permutation_distribution
 
       d = data.frame(
@@ -149,7 +149,8 @@ interaction_variable = function(mif,
         `Observed Interaction` = obs,
         check.names = FALSE
       )
-      d[["Permutations Larger than Observed"]] = larger
+      d[["Permutations Larger than Observed"]] = ps$larger
+      d[["Permutation p-value"]] = ps$p_value
       names(d)[names(d) == "Label"] = mif$sample_id
       d
     })

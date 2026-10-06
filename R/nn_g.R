@@ -100,7 +100,8 @@ NN_G = function(mif,
                               theo = NA_real_, observed = NA_real_, permuted = NA_real_,
                               iter = if(keep_permutation_distribution)
                                        as.character(seq_len(num_permutations)) else "Permuted",
-                              sample_id = mif$sample_id, larger = NA_integer_))
+                              sample_id = mif$sample_id, larger = NA_integer_,
+                              p_value = NA_real_))
       }
 
       obs = g_univariate(pp, keep, r_range, edge_correction)
@@ -111,17 +112,19 @@ NN_G = function(mif,
         g_univariate(pp, keep_p, r_range, edge_correction)$est
       }, numeric(length(r_range)))
 
-      larger = rowSums(permuted > obs$est, na.rm = TRUE)
+      ps = permutation_summary(permuted, obs$est)
 
       if(keep_permutation_distribution){
         g_result_frame(label, marker, r_range, obs$theo, obs$est,
                        permuted = as.vector(permuted),
                        iter = as.character(seq_len(num_permutations)),
-                       sample_id = mif$sample_id, larger = larger)
+                       sample_id = mif$sample_id, larger = ps$larger,
+                       p_value = ps$p_value)
       } else {
         g_result_frame(label, marker, r_range, obs$theo, obs$est,
                        permuted = rowMeans(permuted, na.rm = TRUE),
-                       iter = "Permuted", sample_id = mif$sample_id, larger = larger)
+                       iter = "Permuted", sample_id = mif$sample_id,
+                       larger = ps$larger, p_value = ps$p_value)
       }
     })
 
@@ -144,7 +147,7 @@ NN_G = function(mif,
 #' @keywords internal
 #' @noRd
 g_result_frame <- function(label, marker, r_range, theo, observed, permuted,
-                           iter, sample_id, larger) {
+                           iter, sample_id, larger, p_value) {
   d <- data.frame(
     Label             = label,
     Marker            = marker,
@@ -157,6 +160,7 @@ g_result_frame <- function(label, marker, r_range, theo, observed, permuted,
     check.names = FALSE
   )
   d[["Permutations Larger than Observed"]] <- larger
+  d[["Permutation p-value"]] <- p_value
   names(d)[names(d) == "Label"] <- sample_id
   d
 }

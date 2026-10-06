@@ -119,7 +119,7 @@ bi_pair_correlation = function(mif,
         pcf_of(ki, kj)[[ncol(obs)]]
       }, numeric(nrow(obs)))
 
-      larger   = rowSums(permuted > est, na.rm = TRUE)
+      ps       = permutation_summary(permuted, est)
       keep_all = keep_permutation_distribution
 
       d = data.frame(
@@ -135,7 +135,8 @@ bi_pair_correlation = function(mif,
         `Observed g`        = est,
         check.names = FALSE
       )
-      d[["Permutations Larger than Observed"]] = larger
+      d[["Permutations Larger than Observed"]] = ps$larger
+      d[["Permutation p-value"]] = ps$p_value
       names(d)[names(d) == "Label"] = mif$sample_id
       d
     })

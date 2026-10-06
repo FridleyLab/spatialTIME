@@ -32,7 +32,10 @@ when \code{permute = FALSE}.}
 
 \item{edge_correction}{edge correction method: one of "translation",
 "isotropic", "border" or "none". Unlike previous versions this is never
-silently downgraded for large samples.}
+silently downgraded for large samples. All four agree with
+\code{\link[spatstat.explore:Kest]{spatstat.explore::Kest()}} to floating-point precision; note that \code{"border"}
+reports no \verb{Exact CSR} (see below) and that \code{"none"} applies no correction at
+all and so is biased downward near the window edge.}
 
 \item{permute}{whether to estimate CSR by permutation (\code{TRUE}) or to use the
 exact closed-form CSR estimate (\code{FALSE}, the default and much faster)}
@@ -73,6 +76,46 @@ still useful if you want the full null distribution rather than its mean --
 run 1000 and treat an observed value outside the 95th percentile as
 significant.
 }
+\section{The CSR columns, and which to trust}{
+
+Three references are reported for each radius, and \verb{Degree of Clustering X} is
+always \verb{Observed K - X CSR}:
+\itemize{
+\item \verb{Theoretical CSR} is \eqn{\pi r^2}, the K of a homogeneous Poisson process.
+It ignores the shape of the window and the cell density actually present, so
+it is the weakest of the three on real tissue.
+\item \verb{Exact CSR} is the K of every cell in the sample. Under random labelling of a
+fixed set of cell locations this is \emph{exactly} the expected K of a marker-positive
+subset -- not an approximation -- for translation, isotropic and none. It is
+the reference to prefer.
+\item \verb{Permuted CSR} is the mean over \code{num_permutations} random relabellings.
+}
+
+\verb{Exact CSR} is \code{NA} for \code{edge_correction = "border"}. Border is a reduced-sample
+estimator whose denominator counts only the cells still further than \code{r} from
+the window edge, and that count changes with which cells are marker-positive. So
+the cancellation that makes the other three exact does not apply, and the K of
+all cells is \emph{not} the expected K of a subset: measured on 600 cells with 120
+positive, it sits about 1\% below the mean permuted K at larger radii. Rather
+than report a number that is quietly wrong in a column called "Exact", it is
+omitted -- as it is for \code{\link[=NN_G]{NN_G()}} and \code{\link[=pair_correlation]{pair_correlation()}}, for the same reason.
+Use \code{permute = TRUE} with border.
+}
+
+\section{Permutation p-values}{
+
+\verb{Permutations Larger than Observed} counts the permutations at least as extreme
+as the observation (\code{>=}), so ties count toward the count and therefore toward a
+larger p-value. \verb{Permutation p-value} is the standard Monte Carlo p-value,
+\eqn{(1 + \#\{perm \ge obs\}) / (B + 1)}, where \code{B} is the number of
+permutations that actually produced a value at that radius. The \code{+1}s mean it
+can never be exactly 0, which a raw count divided by \code{B} can be, and which would
+read as infinite significance rather than "nothing in this sample was more
+extreme".
+
+Both are \code{NA} at radii where \verb{Observed K} is \code{NA}.
+}
+
 \section{Accuracy}{
 
 Values agree with \code{\link[spatstat.explore:Kest]{spatstat.explore::Kest()}} to floating-point precision. The

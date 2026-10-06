@@ -1,10 +1,73 @@
 # spatialTIME 2.0.0
 
-A cleanup and correctness release, plus one new capability. Roughly 1,100 lines of
+A cleanup and correctness release, plus two new capabilities. Roughly 1,100 lines of
 unreachable code are gone, the count-based measures now agree with **spatstat** to
 floating-point precision on samples of any size, every metric returns the same
-columns, density-based tissue segmentation is new, and test coverage went from 4
-assertions to 732.
+columns, density-based tissue segmentation and disk-backed `mif` objects are new, and
+test coverage went from 4 assertions to 732.
+
+## New: disk-backed `mif` objects
+
+A `mif`'s spatial slot can now be a manifest of parquet files rather than a list of
+in-memory data frames, so each worker reads only the columns it needs for the one
+sample it is handling. **Peak memory stops scaling with the number of samples.**
+
+* **`mif_to_disk(mif, path)`** writes a self-describing store and returns a
+  disk-backed `mif`; **`open_mif(path)`** reopens one; **`collect_mif(mif)`** loads it
+  back into memory. `path` has **no default** — a store can be tens of GB, so it is
+  always written where you say, following the same reasoning as `sigma` in
+  `split_tissue()`.
+* **`create_mif(spatial_list = <named character vector of parquet paths>)`** points a
+  `mif` at files you already have, with no copying. This was previously an error
+  (`spatial_list` had to be a list of data frames), so no existing code changes.
+* Measured on 283 whole slide images, 342,267,952 cells, 21 columns: **2.19 GB of
+  parquet against 34.2 GB as R data frames** (100.0 bytes/row). On a 38.7 GB machine
+  the in-memory `mif` is 89% of RAM before a single worker forks, so
+  `ripleys_k(workers = 12)` on that cohort could not start at all. Reproduced on 60
+  of those slides (60,823,803 cells, `workers = 6`, `r_range = seq(0, 30, 1)`): a
+  **30 KB** index in place of a 6.08 GB spatial slot, and a **425 MB** peak memory
+  footprint. On a 5-slide subset, in-memory and disk-backed give **the same
+  `Observed K` to the last digit** in the same wall-clock time, with peak footprint
+  900 MB against 300 MB (−67%).
+* **It is not a general speed-up.** For Ripley's K the per-worker close-pair list
+  from `k_pairs()` overtakes the spatial frame at about `max(r_range) = 30`, and at
+  the default `r_range = seq(0, 100, 1)` it is roughly 12x the frame (1.23 GB against
+  0.10 GB on a 1,000,977-cell slide). What disk-backing removes is the parent
+  process's copy of the whole cohort — a fixed cost you cannot trade against
+  `workers`. Bounding the pair list is what `big` is for.
+* `split_tissue()`'s three per-cell columns go to a per-sample **overlay** file; the
+  base parquet is never rewritten. In reference mode those files are your primary
+  data, so a function that adds a covariate must not modify them — and
+  `split_tissue()` refuses rather than doing so.
+* `subset_mif()` gains `path`, required on a disk-backed `mif`: the subset of a
+  cohort too large for memory generally is too, so it is written out sample by
+  sample.
+* `length()`, `names()` and `mif$spatial[[i]]` work exactly as before, so code that
+  indexes the slot directly — including this package's vignettes and its reverse
+  dependencies — works unchanged against a disk-backed `mif`.
+* Row names are **not** preserved by a round trip; they come back as `1:nrow`. A
+  columnar file has nowhere to put them and no function here reads them. See
+  `?mif_to_disk`.
+* **Never resize arrow's thread pool inside a worker.** `arrow::set_cpu_count()` /
+  `set_io_thread_count()` called from an `mclapply()` child **deadlocks** on arrow
+  25.0.1 / R 4.6.1 — the run hangs at 0% CPU with no error, which is the worst
+  failure mode available. Reading parquet in a child is fine (verified on arrow
+  23.0.1.2 and 25.0.1); it is only the resize that hangs. If you need to limit
+  arrow's threads, set the count in the parent before calling a metric and the
+  children will inherit it safely. `tests/testthat/test-mif-store.R` guards this by
+  reading the package sources rather than by forking, because a test that reproduced
+  the bug would hang the suite instead of failing it.
+* **Reader note for anyone extending this:** the parquet backend uses
+  `arrow::read_parquet(file, col_select = ...)` and must keep doing so.
+  `arrow::open_dataset() |> collect()` **does not preserve row order** — it matched
+  file order in only 72 of the cohort's 283 files, diverging at multiples of arrow's
+  2^15 read-batch size with an identical sorted multiset. Every mask and write-back
+  in this package is positional, so a Dataset read would attach markers to the wrong
+  cells and return plausible, wrong numbers. `tests/testthat/test-mif-store.R`
+  asserts both halves of this.
+* **`arrow` and `jsonlite` are new hard dependencies (`Imports`), and the R floor
+  rises from `R (>= 4.1)` to `R (>= 4.2)`**, which CRAN `arrow` requires. This is
+  user-visible: an R 4.1 installation will no longer take this package.
 
 ## New: density-based tissue segmentation
 
@@ -97,7 +160,44 @@ assertions to 732.
 
 ## Read this first: results that were wrong
 
-Two functions were producing incorrect output. If you have used either, re-run it.
+Several functions were producing incorrect output. If you have used any of them,
+re-run it.
+
+* **`edge_correction = "border"` returned the uncorrected estimator.** The K engine
+  had branches for `"translation"` and `"isotropic"` only, so `"border"` fell
+  through with an edge weight of 1 and was bit-identical to `"none"` — while
+  `match_edge_correction()` accepted the spelling and the documentation advertised
+  it as supported. On 400 uniform points it was 174 away from
+  `Kest(correction = "border")$border`. Nothing caught it because `"border"` was
+  the one correction missing from the engine's own test loop.
+
+  It is now a real reduced-sample estimator: only cells further than `r` from the
+  window edge contribute, with an `r`-dependent denominator, mirroring
+  `spatstat.explore:::Kount()` and `spatstat.univar::reduced.sample()`. Verified to
+  `max|diff| = 0` against `Kest(correction = c("border", "translation"))$border` and
+  the matching `Kcross()`, on continuous and integer coordinates, for whole samples
+  and marker subsets, including the `NaN` region past the window's inradius where
+  the eligible set empties. Boundary distances are computed once per sample and
+  re-masked, so border keeps the permutation reuse the other corrections get.
+
+  **`Exact CSR` is now `NA` for border.** Its denominator depends on which cells are
+  marker-positive, so the K of all cells is *not* the expected K of a subset the way
+  it is for the other three — measured 1% low at larger radii (600 cells, 120
+  positive, 3000 permutations, z = −7.9). Use `permute = TRUE` with border.
+
+* **K was reported as 0 instead of `NA` past the valid radius for sparse markers.**
+  When a marker's positive cells had no pair closer than `max(r_range)`,
+  `k_from_pairs()` took an early return that skipped the `r >= rmax_valid`
+  truncation, so it reported 0 at every radius — including radii where every other
+  marker correctly reported `NA`. Under `permute = TRUE` those zeros were then
+  averaged in with genuine `NA`s by `rowMeans(na.rm = TRUE)`, pulling `Permuted CSR`
+  toward zero and biasing `Degree of Clustering Permutation`.
+
+* **`Permutations Larger than Observed` was 0 where nothing had been estimated.**
+  It was computed with `rowSums(..., na.rm = TRUE)`, which returns 0 when every term
+  is `NA`. A radius where `Observed K` was `NA` therefore reported "no permutation
+  exceeded the observation" — maximal clustering — rather than "not estimated". Both
+  it and the new p-value are now `NA` there.
 
 * **`marker_freq_diff()` p-values were all wrong.** The Fisher contingency table
   was built with the compartment *total* as its second row instead of the count of
@@ -146,7 +246,27 @@ Two functions were producing incorrect output. If you have used either, re-run i
 * `subset_mif()`'s `% ` columns are now true **percentages**. They held proportions
   (`sum/nrow`) while `marker_freq_diff()` put percentages in its `%` columns, so the
   two disagreed on what `%` meant. Values change by 100x.
+* **`Permutations Larger than Observed` now counts ties.** It uses `>=` rather than
+  `>`, so permutations equalling the observed value count toward it and therefore
+  toward a *larger* p-value. Tied permuted values are common at small radii — on a
+  600-cell fixture only 20 of 300 relabellings gave distinct values at `r = 5`, and
+  at `r = 0` every K is 0 — and under `>` every one of those ties was silently
+  treated as evidence of clustering. The column existed in only four of the seven
+  metrics before 2.0.0 (`bi_ripleys_k`, `pair_correlation`, `bi_pair_correlation`,
+  `interaction_variable`); those four change value, and the other three gain it.
 * `dixons_s()` and `marker_freq_diff()` gain a correct `Run` column; see Bug fixes.
+
+### New column: `Permutation p-value`
+
+Every metric that permutes now reports
+\eqn{(1 + \#\{perm \ge obs\}) / (B + 1)} alongside the raw count, where `B` counts
+the permutations that actually produced a value at that radius rather than
+`num_permutations`. The two differ wherever the estimator returns `NA`, and dividing
+by the requested count there understates the p-value.
+
+The `+1`s make it a valid p-value at any `B`: unlike `count / B` it can never be
+exactly 0, which would read as infinite significance rather than "nothing in this
+sample was more extreme". The raw count is kept so nothing downstream breaks.
 
 ## Breaking changes
 

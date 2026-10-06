@@ -29,7 +29,8 @@ of specific anchor/counted marker combinations to run}
 \item{r_range}{vector range of radii at which to calculate co-localization \emph{K}}
 
 \item{edge_correction}{edge correction method: one of "translation",
-"isotropic", "border" or "none"}
+"isotropic", "border" or "none". \code{"border"} reports no \verb{Exact CSR} -- see the
+CSR columns section of \code{\link[=ripleys_k]{ripleys_k()}} for why.}
 
 \item{num_permutations}{integer number of permutations used to estimate CSR.
 Ignored when \code{permute = FALSE}.}
@@ -88,6 +89,16 @@ cell-count threshold.
 Values agree with \code{\link[spatstat.explore:Kcross]{spatstat.explore::Kcross()}} to floating-point precision. The
 observation window is the convex hull of \strong{every} cell in the sample and is
 held fixed across all marker pairs and permutations.
+}
+
+\section{The CSR columns}{
+
+\verb{Exact CSR} here is the \emph{univariate} K of all cells in the sample, which is the
+closed form for the expected \code{Kcross} under random labelling -- the anchor and
+counted sets are drawn from one sample without replacement, so an ordered pair
+survives with probability \eqn{n_i n_j / (n(n-1))} against a denominator of
+\eqn{n_i n_j / area}, and the two cancel. See the fuller discussion, including why \code{"border"} is excluded, under
+\code{\link[=ripleys_k]{ripleys_k()}}. Cells positive for both markers of a pair belong to neither set.
 }
 
 \examples{

@@ -5,7 +5,8 @@
 #'   of specific anchor/counted marker combinations to run
 #' @param r_range vector range of radii at which to calculate co-localization *K*
 #' @param edge_correction edge correction method: one of "translation",
-#'   "isotropic", "border" or "none"
+#'   "isotropic", "border" or "none". `"border"` reports no `Exact CSR` -- see the
+#'   CSR columns section of [ripleys_k()] for why.
 #' @param num_permutations integer number of permutations used to estimate CSR.
 #'   Ignored when `permute = FALSE`.
 #' @param permute whether to estimate CSR by permutation (`TRUE`) or to use the
@@ -52,6 +53,14 @@
 #' Values agree with [spatstat.explore::Kcross()] to floating-point precision. The
 #' observation window is the convex hull of **every** cell in the sample and is
 #' held fixed across all marker pairs and permutations.
+#'
+#' @section The CSR columns:
+#' `Exact CSR` here is the *univariate* K of all cells in the sample, which is the
+#' closed form for the expected `Kcross` under random labelling -- the anchor and
+#' counted sets are drawn from one sample without replacement, so an ordered pair
+#' survives with probability \eqn{n_i n_j / (n(n-1))} against a denominator of
+#' \eqn{n_i n_j / area}, and the two cancel. See the fuller discussion, including why `"border"` is excluded, under
+#' [ripleys_k()]. Cells positive for both markers of a pair belong to neither set.
 #'
 #' @export
 #'
@@ -123,8 +132,23 @@ bi_ripleys_k = function(mif,
 
     theo  = pi * r_range^2
     #Exact CSR: the univariate K of all cells is the closed form for E[Kcross]
-    #under random labelling.
-    exact = if(permute) rep(NA_real_, length(r_range)) else k_from_pairs(pairs, rep(TRUE, n))
+    #under random labelling. The anchor/counted blocks are drawn from one
+    #sample.int() without replacement, so an ordered pair is retained with
+    #probability n_i*n_j/(n(n-1)) while the denominator is n_i*n_j/area -- the two
+    #cancel to the K of all cells, exactly as in the univariate case.
+    #
+    #Computed whether or not `permute` is set, so `Permuted CSR` can be read
+    #against `Exact CSR` to see whether the permutation count converged. Before
+    #2.0.0 this was hard-NA under `permute = TRUE`, hiding that comparison.
+    #Proved by enumeration in tests/testthat/test-csr-null.R.
+    #
+    #Not for border, whose denominator counts the selected anchors still further
+    #than r from the window edge and so varies across relabellings -- the
+    #cancellation needs a denominator fixed by n_i and n_j alone. See the longer
+    #note in R/ripleys_k.R and the "Why there is no exact CSR for G" section of
+    #?NN_G for the same situation in the G estimators.
+    exact = if(permute || pairs$edge_correction == "border") rep(NA_real_, length(r_range))
+            else k_from_pairs(pairs, rep(TRUE, n))
 
     res = lapply(seq_len(nrow(m_combos)), function(combo){
       anchor  = as.character(m_combos$anchor[combo])
@@ -139,7 +163,8 @@ bi_ripleys_k = function(mif,
 
       if(n_i < 2 || n_j < 2){
         return(bi_k_result_frame(label, anchor, counted, r_range, theo,
-                                 observed = NA_real_, permuted = NA_real_, exact = NA_real_,
+                                 observed = NA_real_, permuted = NA_real_,
+                                 exact = NA_real_, p_value = NA_real_,
                                  iter = if(permute) as.character(seq_len(num_permutations)) else "Estimate",
                                  sample_id = mif$sample_id, larger = NA_integer_))
       }
@@ -149,7 +174,8 @@ bi_ripleys_k = function(mif,
       if(!permute){
         return(bi_k_result_frame(label, anchor, counted, r_range, theo, observed,
                                  permuted = NA_real_, exact = exact, iter = "Estimate",
-                                 sample_id = mif$sample_id, larger = NA_integer_))
+                                 sample_id = mif$sample_id, larger = NA_integer_,
+                                 p_value = NA_real_))
       }
 
       #Random labelling: draw n_i + n_j cells from all cells in the sample and
@@ -161,17 +187,19 @@ bi_ripleys_k = function(mif,
         k_from_pairs(pairs, ki, kj, n_i, n_j, univariate = FALSE)
       }, numeric(length(r_range)))
 
-      larger = rowSums(permuted > observed, na.rm = TRUE)
+      ps = permutation_summary(permuted, observed)
 
       if(keep_permutation_distribution){
         bi_k_result_frame(label, anchor, counted, r_range, theo, observed,
                           permuted = as.vector(permuted), exact = NA_real_,
                           iter = as.character(seq_len(num_permutations)),
-                          sample_id = mif$sample_id, larger = larger)
+                          sample_id = mif$sample_id, larger = ps$larger,
+                          p_value = ps$p_value)
       } else {
         bi_k_result_frame(label, anchor, counted, r_range, theo, observed,
                           permuted = rowMeans(permuted, na.rm = TRUE), exact = NA_real_,
-                          iter = "Permuted", sample_id = mif$sample_id, larger = larger)
+                          iter = "Permuted", sample_id = mif$sample_id,
+                          larger = ps$larger, p_value = ps$p_value)
       }
     })
 
@@ -222,7 +250,8 @@ marker_combinations <- function(mnames) {
 #' @keywords internal
 #' @noRd
 bi_k_result_frame <- function(label, anchor, counted, r_range, theo,
-                              observed, permuted, exact, iter, sample_id, larger) {
+                              observed, permuted, exact, iter, sample_id, larger,
+                              p_value) {
   d <- data.frame(
     Label               = label,
     Anchor              = anchor,
@@ -236,6 +265,7 @@ bi_k_result_frame <- function(label, anchor, counted, r_range, theo,
     check.names = FALSE
   )
   d[["Permutations Larger than Observed"]] <- larger
+  d[["Permutation p-value"]] <- p_value
   names(d)[names(d) == "Label"] <- sample_id
   d
 }

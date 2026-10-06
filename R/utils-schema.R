@@ -36,9 +36,66 @@ standard_metric_cols <- function(sample_id, observed, bivariate) {
     "Exact CSR",
     observed,
     "Permutations Larger than Observed",
+    "Permutation p-value",
     "Degree of Clustering Theoretical",
     "Degree of Clustering Permutation",
     "Degree of Clustering Exact")
+}
+
+
+#' Summarise a permutation distribution into a count and a p-value
+#'
+#' Both quantities come from the same comparison, so they are derived together in
+#' one place rather than per metric.
+#'
+#' `Permutations Larger than Observed` counts permutations at least as extreme as
+#' the observation (`>=`). Ties count toward the count, and therefore raise the
+#' p-value: with a heavily tied permutation distribution -- which happens at small
+#' radii, where many relabellings produce the identical statistic -- a strict `>`
+#' silently treats every tie as evidence of clustering. Before 2.0.0 this column
+#' existed in only four of the seven metrics and used strict `>`.
+#'
+#' `Permutation p-value` is the standard Monte Carlo p-value,
+#' `(1 + #{perm >= obs}) / (B + 1)`. The `+1`s are what make it a valid p-value for
+#' any number of permutations: it can never be exactly 0, which a raw `count / B`
+#' can, and which reads as infinite significance rather than "no permutation in
+#' this sample was more extreme".
+#'
+#' `B` is the number of permutations that actually produced a value at that radius,
+#' not `num_permutations`. Those differ wherever the estimator returns NA -- past
+#' `rmax_valid` for Ripley's K, for instance -- and dividing by the requested count
+#' there would understate the p-value.
+#'
+#' Where the observation itself is NA, both columns are NA. Previously the count
+#' was computed with `rowSums(..., na.rm = TRUE)`, which returned `0` when every
+#' term was NA and so reported "no permutation exceeded the observation" -- i.e.
+#' maximal clustering -- for radii where nothing had been estimated at all.
+#'
+#' @param permuted numeric matrix of permuted statistics, radii down the rows and
+#'   permutations across the columns, as the `vapply(..., numeric(n_r))` in every
+#'   metric produces. Reshaped defensively, because `vapply` returns a bare vector
+#'   when there is only one radius.
+#' @param observed numeric vector of observed statistics, one per radius.
+#' @return list with `larger` (integer), `p_value` (numeric) and `n_perm`
+#'   (integer), each of length `length(observed)`.
+#' @keywords internal
+#' @noRd
+permutation_summary <- function(permuted, observed) {
+  n_r <- length(observed)
+  permuted <- matrix(as.numeric(permuted), nrow = n_r)
+
+  usable <- !is.na(permuted)
+  n_perm <- rowSums(usable)
+  at_least <- rowSums(permuted >= observed & usable, na.rm = TRUE)
+
+  larger <- as.integer(at_least)
+  p_value <- (1 + at_least) / (n_perm + 1)
+
+  unusable <- is.na(observed) | n_perm == 0L
+  larger[unusable] <- NA_integer_
+  p_value[unusable] <- NA_real_
+
+  list(larger = larger, p_value = p_value, n_perm = as.integer(n_perm))
 }
 
 

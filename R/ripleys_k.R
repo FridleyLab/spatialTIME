@@ -7,7 +7,10 @@
 #'   when `permute = FALSE`.
 #' @param edge_correction edge correction method: one of "translation",
 #'   "isotropic", "border" or "none". Unlike previous versions this is never
-#'   silently downgraded for large samples.
+#'   silently downgraded for large samples. All four agree with
+#'   [spatstat.explore::Kest()] to floating-point precision; note that `"border"`
+#'   reports no `Exact CSR` (see below) and that `"none"` applies no correction at
+#'   all and so is biased downward near the window edge.
 #' @param permute whether to estimate CSR by permutation (`TRUE`) or to use the
 #'   exact closed-form CSR estimate (`FALSE`, the default and much faster)
 #' @param keep_permutation_distribution whether to keep each permutation's result
@@ -37,6 +40,42 @@
 #' still useful if you want the full null distribution rather than its mean --
 #' run 1000 and treat an observed value outside the 95th percentile as
 #' significant.
+#'
+#'
+#' @section The CSR columns, and which to trust:
+#' Three references are reported for each radius, and `Degree of Clustering X` is
+#' always `Observed K - X CSR`:
+#'
+#' * `Theoretical CSR` is \eqn{\pi r^2}, the K of a homogeneous Poisson process.
+#'   It ignores the shape of the window and the cell density actually present, so
+#'   it is the weakest of the three on real tissue.
+#' * `Exact CSR` is the K of every cell in the sample. Under random labelling of a
+#'   fixed set of cell locations this is *exactly* the expected K of a marker-positive
+#'   subset -- not an approximation -- for translation, isotropic and none. It is
+#'   the reference to prefer.
+#' * `Permuted CSR` is the mean over `num_permutations` random relabellings.
+#'
+#' `Exact CSR` is `NA` for `edge_correction = "border"`. Border is a reduced-sample
+#' estimator whose denominator counts only the cells still further than `r` from
+#' the window edge, and that count changes with which cells are marker-positive. So
+#' the cancellation that makes the other three exact does not apply, and the K of
+#' all cells is *not* the expected K of a subset: measured on 600 cells with 120
+#' positive, it sits about 1% below the mean permuted K at larger radii. Rather
+#' than report a number that is quietly wrong in a column called "Exact", it is
+#' omitted -- as it is for [NN_G()] and [pair_correlation()], for the same reason.
+#' Use `permute = TRUE` with border.
+#'
+#' @section Permutation p-values:
+#' `Permutations Larger than Observed` counts the permutations at least as extreme
+#' as the observation (`>=`), so ties count toward the count and therefore toward a
+#' larger p-value. `Permutation p-value` is the standard Monte Carlo p-value,
+#' \eqn{(1 + \#\{perm \ge obs\}) / (B + 1)}, where `B` is the number of
+#' permutations that actually produced a value at that radius. The `+1`s mean it
+#' can never be exactly 0, which a raw count divided by `B` can be, and which would
+#' read as infinite significance rather than "nothing in this sample was more
+#' extreme".
+#'
+#' Both are `NA` at radii where `Observed K` is `NA`.
 #'
 #' @section Accuracy:
 #' Values agree with [spatstat.explore::Kest()] to floating-point precision. The
@@ -128,7 +167,32 @@ ripleys_k = function(mif,
 
     theo = pi * r_range^2
     #Exact CSR is the K of all cells: the closed form for E[K] of a random subset.
-    exact = if(permute) rep(NA_real_, length(r_range)) else k_from_pairs(pairs, rep(TRUE, n))
+    #
+    #Computed whether or not `permute` is set. Under random labelling E[K_perm] is
+    #EXACTLY this quantity -- sample.int() is sampling without replacement, so a
+    #pair is retained with probability m(m-1)/(n(n-1)) while the denominator is
+    #m(m-1)/area, and the two cancel to the K of all cells. So with `permute = TRUE`
+    #the user can read `Permuted CSR` against `Exact CSR` and see directly whether
+    #their permutation count was large enough to converge. Before 2.0.0 this was
+    #hard-NA whenever `permute = TRUE`, which hid exactly that comparison. It costs
+    #one extra mask over a pair list that has already been built.
+    #See tests/testthat/test-csr-null.R, which proves the identity by enumeration.
+    #
+    #BUT NOT FOR BORDER. The cancellation above needs a denominator that is fixed
+    #once m is fixed. Translation, isotropic and none all have one: m(m-1)/area.
+    #Border does not -- its denominator counts the SELECTED cells still further
+    #than r from the window edge, which varies from one relabelling to the next, so
+    #E[numerator/denominator] is not E[numerator]/E[denominator]. Measured on 600
+    #cells with m = 120 and 3000 permutations, the K of all cells sits below the
+    #mean permuted K by 0.3% at r = 20 rising to 1.0% at r = 80 (z = -0.9 to -7.9),
+    #i.e. a real bias and not Monte Carlo noise, growing with r.
+    #
+    #So border gets NA here rather than a number that is 1% wrong in a column
+    #called "Exact CSR". Same precedent as G and the pair correlation function --
+    #see the "Why there is no exact CSR for G" section of ?NN_G. Use
+    #`permute = TRUE` with border; `Permuted CSR` is still correct for it.
+    exact = if(permute || pairs$edge_correction == "border") rep(NA_real_, length(r_range))
+            else k_from_pairs(pairs, rep(TRUE, n))
 
     res = lapply(mnames, function(marker){
       keep = !is.na(spat[[marker]]) & spat[[marker]] == 1
@@ -139,7 +203,8 @@ ripleys_k = function(mif,
         return(k_result_frame(label, marker, r_range, theo,
                               observed = NA_real_, permuted = NA_real_, exact = NA_real_,
                               iter = if(permute) as.character(seq_len(num_permutations)) else "Estimate",
-                              sample_id = mif$sample_id, larger = NA_integer_))
+                              sample_id = mif$sample_id, larger = NA_integer_,
+                              p_value = NA_real_))
       }
 
       observed = k_from_pairs(pairs, keep)
@@ -147,7 +212,8 @@ ripleys_k = function(mif,
       if(!permute){
         return(k_result_frame(label, marker, r_range, theo, observed,
                               permuted = NA_real_, exact = exact, iter = "Estimate",
-                              sample_id = mif$sample_id, larger = NA_integer_))
+                              sample_id = mif$sample_id, larger = NA_integer_,
+                              p_value = NA_real_))
       }
 
       #Random labelling: re-mask the same pair list, which is exactly equivalent
@@ -158,17 +224,19 @@ ripleys_k = function(mif,
         k_from_pairs(pairs, keep_p)
       }, numeric(length(r_range)))
 
-      larger = rowSums(permuted > observed, na.rm = TRUE)
+      ps = permutation_summary(permuted, observed)
 
       if(keep_permutation_distribution){
         k_result_frame(label, marker, r_range, theo, observed,
                        permuted = as.vector(permuted), exact = NA_real_,
                        iter = as.character(seq_len(num_permutations)),
-                       sample_id = mif$sample_id, larger = larger)
+                       sample_id = mif$sample_id, larger = ps$larger,
+                       p_value = ps$p_value)
       } else {
         k_result_frame(label, marker, r_range, theo, observed,
                        permuted = rowMeans(permuted, na.rm = TRUE), exact = NA_real_,
-                       iter = "Permuted", sample_id = mif$sample_id, larger = larger)
+                       iter = "Permuted", sample_id = mif$sample_id,
+                       larger = ps$larger, p_value = ps$p_value)
       }
     })
 
@@ -191,7 +259,7 @@ ripleys_k = function(mif,
 #' @keywords internal
 #' @noRd
 k_result_frame <- function(label, marker, r_range, theo, observed, permuted, exact,
-                           iter, sample_id, larger) {
+                           iter, sample_id, larger, p_value) {
   d <- data.frame(
     iter                = rep(iter, each = length(r_range)),
     Label               = label,
@@ -204,6 +272,7 @@ k_result_frame <- function(label, marker, r_range, theo, observed, permuted, exa
     check.names = FALSE
   )
   d[["Permutations Larger than Observed"]] <- larger
+  d[["Permutation p-value"]] <- p_value
   names(d)[names(d) == "Label"] <- sample_id
   d
 }

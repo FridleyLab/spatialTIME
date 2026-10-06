@@ -10,19 +10,35 @@ skip_if_not_installed("spatstat.geom")
 skip_if_not_installed("spatstat.explore")
 
 # spatstat names its output column differently from its `correction` argument.
-CORR <- c(translation = "trans", isotropic = "iso", none = "un")
+#
+# EVERY correction the engine accepts must appear here. Before 2.0.0 "border" was
+# missing from this vector, and that omission is the entire reason a border
+# estimator that silently returned the UNCORRECTED numbers shipped: k_pairs() had
+# no border branch, so "border" fell through with weight 1 and was bit-identical
+# to "none", while match_edge_correction() accepted it and the docs advertised it.
+# Nothing failed because nothing compared it to Kest. Do not shorten this vector.
+CORR <- c(translation = "trans", isotropic = "iso", none = "un", border = "border")
+
+# "none" and "border" are both in Kest's `fastcorrections`, so requesting either
+# ALONE takes a fast C path that bins right-closed (d <= r). Pairing it with a
+# non-fast correction routes it through whist() instead, which bins left-closed and
+# is the convention this engine uses throughout. The two disagree whenever a pair
+# distance lands exactly on a bin edge -- never on continuous coordinates, but
+# constantly on the integer coordinates HALO and Vectra emit.
+FAST_CORR <- c("none", "border")
+
+ref_corrections <- function(ec) {
+  if (ec %in% FAST_CORR) c(ec, "translation") else ec
+}
 
 kest_ref <- function(X, r, ec) {
-  # Ask for translation alongside "none" so Kest routes through its whist path
-  # rather than its fast C path. The two disagree on tied distances and only the
-  # whist path is consistent with Kest's own translation/isotropic binning.
-  corr <- if (ec == "none") c("none", "translation") else ec
-  as.data.frame(spatstat.explore::Kest(X, r = r, correction = corr))[[CORR[[ec]]]]
+  as.data.frame(spatstat.explore::Kest(
+    X, r = r, correction = ref_corrections(ec)))[[CORR[[ec]]]]
 }
 
 kcross_ref <- function(Y, r, ec) {
-  corr <- if (ec == "none") c("none", "translation") else ec
-  as.data.frame(spatstat.explore::Kcross(Y, "a", "b", r = r, correction = corr))[[CORR[[ec]]]]
+  as.data.frame(spatstat.explore::Kcross(
+    Y, "a", "b", r = r, correction = ref_corrections(ec)))[[CORR[[ec]]]]
 }
 
 # --- fixtures -----------------------------------------------------------------
@@ -82,11 +98,14 @@ for (case_name in c("continuous", "integer")) {
 
 # --- bivariate ----------------------------------------------------------------
 
-test_that("bivariate K equals Kcross for translation and none", {
+test_that("bivariate K equals Kcross for translation, none and border", {
   for (case_name in c("continuous", "integer")) {
     cs <- if (case_name == "continuous") continuous_case() else integer_case()
     Y <- marked(cs$X, cs$lab)
-    for (ec in c("translation", "none")) {
+    # Isotropic is excluded here and tested separately below -- it has a genuine
+    # closepairs/crosspairs degeneracy. Border has no such problem: its denominator
+    # comes from boundary distances, which are identical either way.
+    for (ec in c("translation", "none", "border")) {
       mine <- k_from_pairs(k_pairs(cs$X, cs$r, ec),
                            cs$lab == "a", cs$lab == "b", univariate = FALSE)
       expect_equal(mine, kcross_ref(Y, cs$r, ec), tolerance = 1e-12,
@@ -124,6 +143,42 @@ test_that("bivariate isotropic K matches Kcross except at circle-through-vertex 
   )
 })
 
+# --- border is the one correction with an r-dependent denominator -------------
+
+test_that("border is a reduced-sample estimator, not a reweighting of 'none'", {
+  # The bug this guards: border with no implementation falls through k_pairs() with
+  # weight 1, which makes it bit-identical to "none". Agreement with Kest$border
+  # (above) already catches that, but assert the inequality directly so the failure
+  # names the actual confusion rather than showing two long numeric vectors.
+  cs <- continuous_case()
+  n <- spatstat.geom::npoints(cs$X)
+  bord <- k_from_pairs(k_pairs(cs$X, cs$r, "border"), rep(TRUE, n))
+  none <- k_from_pairs(k_pairs(cs$X, cs$r, "none"), rep(TRUE, n))
+  expect_gt(max(abs(bord - none), na.rm = TRUE), 1e-6)
+})
+
+test_that("border eligibility shrinks with r and empties past the inradius", {
+  # Unlike every other correction, border's denominator counts only the anchors
+  # whose distance to the window edge still exceeds r. Past the inradius that count
+  # is zero and the estimator is genuinely 0/0 -- spatstat returns NaN there and so
+  # must we, rather than silently reporting 0 or carrying the last finite value.
+  set.seed(21)
+  x <- runif(300, 0, 100); y <- runif(300, 0, 100)
+  W <- spatstat.geom::convexhull.xy(x, y)
+  X <- spatstat.geom::ppp(x, y, window = W, check = FALSE)
+  n <- spatstat.geom::npoints(X)
+  inradius <- max(spatstat.geom::bdist.points(X))
+  r <- c(0, 10, 20, 40, inradius + 10, inradius + 30)
+
+  mine <- k_from_pairs(k_pairs(X, r, "border"), rep(TRUE, n))
+  ref  <- kest_ref(X, r, "border")
+  expect_equal(mine, ref, tolerance = 1e-12)
+  # Same NaN placement as spatstat, not merely the same finite values.
+  expect_identical(is.nan(mine), is.nan(ref))
+  expect_true(any(is.nan(mine)))
+  expect_false(anyNA(mine[r < inradius]))
+})
+
 # --- memory bounding must not change the answer -------------------------------
 
 test_that("chunked edge-weight computation is exact", {
@@ -135,6 +190,27 @@ test_that("chunked edge-weight computation is exact", {
       k_from_pairs(k_pairs(cs$X, cs$r, ec, block = Inf), rep(TRUE, n)),
       info = ec
     )
+  }
+})
+
+test_that("ripleys_k's `big` changes memory only, never the numbers", {
+  # `big` is documented as a memory knob: above that cell count the per-pair edge
+  # weights are computed in chunks. It must not be observable in the output. This
+  # matters because `big` USED to mean something else entirely -- in v1.4.0,
+  # exceeding it silently replaced the requested edge correction with "none" -- so
+  # an invariance test here is what keeps the new meaning honest.
+  # bi_ripleys_k has had such a test since 2.0.0; ripleys_k did not.
+  skip_if_not_installed("spatstat.explore")
+  m <- example_mif_full()
+  rr <- c(0, 10, 20, 30, 40, 50)
+  run <- function(ec, b) {
+    ripleys_k(m, mnames = mnames_good()[1], r_range = rr, permute = FALSE,
+              edge_correction = ec, big = b, workers = 1,
+              overwrite = TRUE)$derived$univariate_Count
+  }
+  for (ec in names(CORR)) {
+    # 1803 cells in this fixture, so big = 500 genuinely chunks and big = 1e9 does not.
+    expect_identical(run(ec, 500), run(ec, 1e9), info = ec)
   }
 })
 
